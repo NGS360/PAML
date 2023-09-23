@@ -13,4 +13,4 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint --max-line-length=120 --ignore-imports $(git ls-files '*.py')
+        pylint --max-line-length=120 --ignore-imports=y $(git ls-files '*.py')
