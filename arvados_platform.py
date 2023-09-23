@@ -159,7 +159,7 @@ class ArvadosPlatform():
         if len(search_result['items']) > 0:
             reference_input_collection = search_result['items'][0]
         else:
-            return None
+            return
 
         # Get the destination project "inputs" collection
         search_result = self.api.collections().list(filters=[
@@ -176,7 +176,8 @@ class ArvadosPlatform():
                 "preserve_version":True}).execute()
 
         # Copy the files from the reference project to the destination project
-        self._copy_files_from_source_dest_collection(reference_input_collection["uuid"], destination_input_collection["uuid"])
+        self._copy_files_from_source_dest_collection(reference_input_collection["uuid"],
+                                                     destination_input_collection["uuid"])
 
     def copy_workflow(self, src_workflow, destination_project):
         '''
@@ -229,11 +230,11 @@ class ArvadosPlatform():
             ["owner_uuid", "=", destination_project["uuid"]]]
             ).execute()
         # Copy the workflow if it doesn't already exist in the destination project
-        for wf in reference_workflows["items"]:
-            if wf["name"] not in [wf["name"] for wf in destination_workflows["items"]]:
-                wf['owner_uuid'] = destination_project["uuid"]
-                del wf['uuid']
-                destination_workflows.append(self.api.workflows().create(body=wf).execute())
+        for workflow in reference_workflows["items"]:
+            if workflow["name"] not in [workflow["name"] for workflow in destination_workflows["items"]]:
+                workflow['owner_uuid'] = destination_project["uuid"]
+                del workflow['uuid']
+                destination_workflows.append(self.api.workflows().create(body=workflow).execute())
         return destination_workflows
 
     def delete_task(self, task):
@@ -276,7 +277,7 @@ class ArvadosPlatform():
         if len(search_result['items']) > 0:
             collection = search_result['items'][0]
         else:
-            raise Exception(f"Collection {collection_name} not found in project {project['uuid']}")
+            raise ValueError(f"Collection {collection_name} not found in project {project['uuid']}")
         # TODO: Add check for file in collection
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
@@ -306,12 +307,13 @@ class ArvadosPlatform():
         Get workflow/task state
 
         :param project: The project to search
-        :param task: The task to search for.  Task is a dictionary containing a container_request_uuid and container dictionary.
+        :param task: The task to search for. Task is a dictionary containing a container_request_uuid and
+            container dictionary.
         :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
         '''
         if refresh:
             # On newly submitted jobs, we'll only have a container_request, uuid.
-            task.container_request = arvados.api().container_requests().get(uuid = task.container_request['uuid']).execute()
+            task.container_request = arvados.api().container_requests().get(uuid = task.container_request['uuid']).execute() # pylint: disable=line-too-long
             task.container = arvados.api().containers().get(uuid = task.container_request['container_uuid']).execute()
 
         if task.container['exit_code'] == 0:
@@ -324,7 +326,7 @@ class ArvadosPlatform():
             return 'Cancelled'
         if task.container['state'] in ['Locked','Queued']:
             return 'Queued'
-        raise Exception(f"TODO: Unknown task state: {task.container['state']}")
+        raise ValueError(f"TODO: Unknown task state: {task.container['state']}")
 
     def get_task_output(self, task, output_name):
         ''' Retrieve the output field of the task '''

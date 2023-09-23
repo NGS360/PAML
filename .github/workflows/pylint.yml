@@ -1,0 +1,16 @@
+name: Pylint
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ngs
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip install pylint
+    - name: Analysing the code with pylint
+      run: |
+        pylint --max-line-length=120 --ignore-imports $(git ls-files '*.py')
