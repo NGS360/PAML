@@ -335,8 +335,18 @@ class SevenBridgesPlatform():
         return sbg_state[task.status]
 
     def get_task_output(self, task, output_name):
-        ''' Retrieve the output field of the task '''
-        raise Exception("TODO: Implement get_task_output")
+        '''
+        Retrieve the output field of the task
+        
+        :param task: The task object to retrieve the output from
+        :param output_name: The name of the output to retrieve
+        '''
+        alloutputs = task.outputs
+        if output_name in alloutputs:
+            outputfile = alloutputs[output_name]
+            if outputfile:
+                return outputfile.id
+        raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
     def get_tasks_by_name(self, project, process_name):
         ''' Get a process by its name '''
