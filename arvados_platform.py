@@ -176,7 +176,8 @@ class ArvadosPlatform():
                 "preserve_version":True}).execute()
 
         # Copy the files from the reference project to the destination project
-        self._copy_files_from_source_dest_collection(reference_input_collection["uuid"], destination_input_collection["uuid"])
+        self._copy_files_from_source_dest_collection(reference_input_collection["uuid"],
+                                                     destination_input_collection["uuid"])
 
     def copy_workflow(self, src_workflow, destination_project):
         '''
@@ -306,7 +307,8 @@ class ArvadosPlatform():
         Get workflow/task state
 
         :param project: The project to search
-        :param task: The task to search for.  Task is a dictionary containing a container_request_uuid and container dictionary.
+        :param task: The task to search for. Task is a dictionary containing a container_request_uuid and
+            container dictionary.
         :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
         '''
         if refresh:

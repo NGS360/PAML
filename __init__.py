@@ -73,7 +73,8 @@ class Platform(ABC):
         '''
         Get workflow/task state
 
-        :param task: The task to search for.  Task is a dictionary containing a container_request_uuid and container dictionary.
+        :param task: The task to search for.  Task is a dictionary containing a
+            container_request_uuid and container dictionary.
         :param refresh: Refresh task state before returning (Default: False)
         :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
         '''
