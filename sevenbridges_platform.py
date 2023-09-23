@@ -17,7 +17,7 @@ class SevenBridgesPlatform():
         if not self._session_id and os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
             self.api_config = sevenbridges.Config(profile='default')
         else:
-            raise Exception('No SevenBridges credentials found')
+            raise ValueError('No SevenBridges credentials found')
 
     def _find_or_create_path(self, project, path):
         """
@@ -73,14 +73,14 @@ class SevenBridgesPlatform():
         :return: List of files and paths
         '''
         files = []
-        for f in folder.list_files().all():
-            if f.type == 'folder':
-                files += self._get_folder_contents(f, tag, f"{path}/{f.name}")
+        for file in folder.list_files().all():
+            if file.type == 'folder':
+                files += self._get_folder_contents(file, tag, f"{path}/{file.name}")
             else:
                 if tag is None:
-                    files.append((f, path))
-                elif f.tags and (tag in f.tags):
-                    files.append((f, path))
+                    files.append((file, path))
+                elif file.tags and (tag in file.tags):
+                    files.append((file, path))
         return files
 
     def _get_project_files(self, sb_project_id, tag=None, name=None):
@@ -97,20 +97,20 @@ class SevenBridgesPlatform():
         sb_files = []
         limit = 1000
         if name is None:
-            for f in self.api.files.query(project, cont_token='init', limit=limit).all():
-                if f.type == 'folder':
-                    sb_files += self._get_folder_contents(f, tag, f'/{f.name}')
+            for file in self.api.files.query(project, cont_token='init', limit=limit).all():
+                if file.type == 'folder':
+                    sb_files += self._get_folder_contents(file, tag, f'/{file.name}')
                 else:
                     if tag is None:
-                        sb_files.append((f, '/'))
-                    elif f.tags and (tag in f.tags):
-                        sb_files.append((f, '/'))
+                        sb_files.append((file, '/'))
+                    elif file.tags and (tag in file.tags):
+                        sb_files.append((file, '/'))
         else:
             for i in range(0, len(name), limit):
                 files_chunk = name[i:i+limit]
                 sb_files_chunk = self.api.files.query(project=sb_project_id, names=[files_chunk])
-                for f in sb_files_chunk:
-                    sb_files.append((f, '/'))
+                for file in sb_files_chunk:
+                    sb_files.append((file, '/'))
         return sb_files
 
     def _list_all_files(self, files=None, project=None):
@@ -295,7 +295,7 @@ class SevenBridgesPlatform():
             return file_list[0].id
 
         raise ValueError("File not found in specified folder")
-        
+
     def get_folder_id(self, project, folder_path):
         '''
         Get the folder id in a project
@@ -365,6 +365,7 @@ class SevenBridgesPlatform():
 
     def submit_task(self, name, project, workflow, parameters):
         ''' Submit a workflow on the platform '''
-        task = self.api.tasks.create(name=name, project=project, app=workflow, inputs=parameters, execution_settings={'use_elastic_disk': True, 'use_memoization': True})
+        task = self.api.tasks.create(name=name, project=project, app=workflow, inputs=parameters,
+                                     execution_settings={'use_elastic_disk': True, 'use_memoization': True})
         task.run()
         return task
