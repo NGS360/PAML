@@ -9,10 +9,17 @@ from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sle
 class SevenBridgesPlatform():
     ''' SevenBridges Platform class '''
     def __init__(self, api_endpoint='https://bms-api.sbgenomics.com/v2', token='dummy'):
+        '''
+        Initialize SevenBridges Platform 
+        
+        We need either a session id or an api_config object to connect to SevenBridges
+        '''
         self.api = None
+        self.api_config = None
+        self._session_id = os.environ.get('SESSION_ID')
+
         self.api_endpoint = api_endpoint
         self.token = token
-        self._session_id = os.environ.get('SESSION_ID')
 
         if not self._session_id and os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
             self.api_config = sevenbridges.Config(profile='default')
@@ -167,7 +174,11 @@ class SevenBridgesPlatform():
         ''' Connect to Sevenbridges '''
         if self._session_id:
             self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
-                      error_handlers=[rate_limit_sleeper, maintenance_sleeper, general_error_sleeper])
+                                        error_handlers=[rate_limit_sleeper,
+                                                        maintenance_sleeper,
+                                                        general_error_sleeper],
+                                        advance_access=True)
+            # TODO: Do we really need to do this?
             self.api._session_id = self._session_id
         else:
             self.api = sevenbridges.Api(config=self.api_config,
@@ -337,10 +348,11 @@ class SevenBridgesPlatform():
     def get_task_output(self, task, output_name):
         '''
         Retrieve the output field of the task
-        
+
         :param task: The task object to retrieve the output from
         :param output_name: The name of the output to retrieve
         '''
+        task = self.api.tasks.get(id=task.id)
         alloutputs = task.outputs
         if output_name in alloutputs:
             outputfile = alloutputs[output_name]
