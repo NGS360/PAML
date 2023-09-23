@@ -313,7 +313,7 @@ class ArvadosPlatform():
         '''
         if refresh:
             # On newly submitted jobs, we'll only have a container_request, uuid.
-            task.container_request = arvados.api().container_requests().get(uuid = task.container_request['uuid']).execute()
+            task.container_request = arvados.api().container_requests().get(uuid = task.container_request['uuid']).execute() # pylint: disable=line-too-long
             task.container = arvados.api().containers().get(uuid = task.container_request['container_uuid']).execute()
 
         if task.container['exit_code'] == 0:

@@ -10,7 +10,7 @@ jobs:
     - name: Install dependencies
       run: |
         python3 -m pip install --upgrade pip
-        pip install pylint
+        pip install pylint arvados-python-client
     - name: Analysing the code with pylint
       run: |
         pylint --max-line-length=120 $(git ls-files '*.py')
