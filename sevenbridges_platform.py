@@ -178,8 +178,8 @@ class SevenBridgesPlatform():
                                                         maintenance_sleeper,
                                                         general_error_sleeper],
                                         advance_access=True)
-            # TODO: Do we really need to do this?
-            self.api._session_id = self._session_id
+            # We were doing this before, but I'm not convinced we need to.
+            #self.api._session_id = self._session_id
         else:
             self.api = sevenbridges.Api(config=self.api_config,
                                         error_handlers=[rate_limit_sleeper,
@@ -257,7 +257,7 @@ class SevenBridgesPlatform():
         destination_workflows = list(destination_project.get_apps().all())
         # Copy the workflow if it doesn't already exist in the destination project
         for workflow in reference_workflows:
-            # TODO: This is also copying archived app.  How do we filter those out?  Ask Nikola
+            # NOTE This is also copies archived apps.  How do we filter those out?  Asked Nikola, waiting for response.
             if workflow.name not in [wf.name for wf in destination_workflows]:
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows

@@ -32,7 +32,7 @@ class ArvadosTask():
         ''' Convert from dictionary '''
         return cls(task_dict['container_request'], task_dict['container'])
 
-# custom JSON encoder
+# custom JSON encoder - this is needed if we want to dump this to a file i.e. save state
 class ArvadosTaskEncoder(json.JSONEncoder):
     ''' Arvados Task Encoder class '''
     def default(self, o):
@@ -69,62 +69,32 @@ class ArvadosPlatform():
             return [fl for fl in file_list if os.path.basename(fl.stream_name()) == subdirectory_path]
         return list(file_list)
 
-    def _copy_files_from_source_dest_collection(self, source_coll_uuid, dest_coll_uuid, overwrite=False):
-        '''
-        copies all files from source collection sub-path to target collection sub-path
-        When output is True, this copies all files from source collection to target collection sub-path
-
-        :param source_coll_uuid: uuid of the source collection
-        :param dest_coll_uuid: uuid of the target collection
-        :param overwrite: overwrite the file if it exists in the target collection
-        :param output: copy all files from source collection to target collection sub-path
-        '''
-        source = arvados.collection.CollectionReader(source_coll_uuid)
-        target = arvados.collection.Collection(dest_coll_uuid, api_client=self.api, keep_client=self.keep_client)
-
-        # Get all files from source coll without passing sub_path to get_files_list_in_collection
-        all_files = self._get_files_list_in_collection(source_coll_uuid)
-        for res_file in all_files:
-            if res_file.name() not in ['cwl.input.json', 'cwl.output.json']:
-                # when copying the output results, sub_path is the sample name,
-                # we are re-using it to rename the output file for this usecase
-                target_path = f"{res_file.stream_name()}/{res_file.name()}"
-                try:
-                    # TODO: We need to check if the file exists in the target collection before copying
-                    target.copy(target_path,
-                                target_path = target_path,
-                                source_collection = source,
-                                overwrite = overwrite)
-                except IOError:
-                    continue
-        target.save()
-
     def connect(self):
         ''' Connect to Arvados '''
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
         self.keep_client = arvados.KeepClient(self.api)
 
-    def copy_folder(self, reference_project, reference_folder, destination_project):
+    def copy_folder(self, source_project, source_folder, destination_project):
         '''
-        Copy reference folder to destination project
+        Copy folder to destination project
 
-        :param reference_project: The reference project
-        :param reference_folder: The reference folder
+        :param source_project: The source project
+        :param source_folder: The source folder
         :param destination_project: The destination project
-        :return: The destination folder
+        :return: The destination folder or None if not found
         '''
-        # The first element of the reference_folder path is the name of the collection.
-        if reference_folder.startswith('/'):
-            collection_name = reference_folder.split('/')[1]
+        # The first element of the source_folder path is the name of the collection.
+        if source_folder.startswith('/'):
+            collection_name = source_folder.split('/')[1]
         else:
-            collection_name = reference_folder.split('/')[0]
+            collection_name = source_folder.split('/')[0]
 
         search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", reference_project["uuid"]],
+            ["owner_uuid", "=", source_project["uuid"]],
             ["name", "=", collection_name]
             ]).execute()
         if len(search_result['items']) > 0:
-            reference_collection = search_result['items'][0]
+            source_collection = search_result['items'][0]
         else:
             return None
 
@@ -139,45 +109,17 @@ class ArvadosPlatform():
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": destination_project["uuid"],
                 "name": collection_name,
-                "description": reference_collection["description"],
+                "description": source_collection["description"],
                 "preserve_version":True}).execute()
 
         # Copy the files from the reference project to the destination project
-        self._copy_files_from_source_dest_collection(reference_collection["uuid"], destination_collection["uuid"])
+        reference_files = self._get_files_list_in_collection(source_collection["uuid"])
+        destination_files = list(self._get_files_list_in_collection(destination_collection["uuid"]))
+        for reference_file in reference_files:
+            if reference_file.name() not in [destination_file.name() for destination_file in destination_files]:
+                destination_collection.copy(reference_file.stream_name(), reference_file.name(),
+                                            source_collection=source_collection)
         return destination_collection
-
-    def copy_reference_data(self, reference_project, destination_project):
-        '''
-        Copy all data from the reference_project to project, IF the data (by name) does not already
-        exist in the project.
-        '''
-        # Get the reference project "reference_input" collection
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", reference_project["uuid"]],
-            ["name", "=", "reference_input"]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            reference_input_collection = search_result['items'][0]
-        else:
-            return
-
-        # Get the destination project "inputs" collection
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", destination_project["uuid"]],
-            ["name", "=", reference_input_collection["name"]]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            destination_input_collection = search_result['items'][0]
-        else:
-            destination_input_collection = self.api.collections().create(body={
-                "owner_uuid": destination_project["uuid"],
-                "name": reference_input_collection["name"],
-                "description": reference_input_collection["description"],
-                "preserve_version":True}).execute()
-
-        # Copy the files from the reference project to the destination project
-        self._copy_files_from_source_dest_collection(reference_input_collection["uuid"],
-                                                     destination_input_collection["uuid"])
 
     def copy_workflow(self, src_workflow, destination_project):
         '''
@@ -278,7 +220,9 @@ class ArvadosPlatform():
             collection = search_result['items'][0]
         else:
             raise ValueError(f"Collection {collection_name} not found in project {project['uuid']}")
-        # TODO: Add check for file in collection
+
+        # Do we need to check for the file in the collection?  That could add a lot of overhead to query the collection
+        # for the file.  Lets see if this comes up before implementing it.
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
     def get_folder_id(self, project, folder_path):
