@@ -220,7 +220,9 @@ class ArvadosPlatform():
             collection = search_result['items'][0]
         else:
             raise ValueError(f"Collection {collection_name} not found in project {project['uuid']}")
-        # TODO: Add check for file in collection
+
+        # Do we need to check for the file in the collection?  That could add a lot of overhead to query the collection
+        # for the file.  Lets see if this comes up before implementing it.
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
     def get_folder_id(self, project, folder_path):
