@@ -7,12 +7,14 @@ import os
 
 from .arvados_platform import ArvadosPlatform
 from .sevenbridges_platform import SevenBridgesPlatform
+from .omics_platform import OmicsPlatform
 
 logger = logging.getLogger(__name__)
 
 # Move this for a config file
 SUPPORTED_PLATFORMS = {
     'Arvados': ArvadosPlatform,
+    'Omics': OmicsPlatform,
     'SevenBridges': SevenBridgesPlatform
 }
 
@@ -25,13 +27,6 @@ class Platform(ABC):
     @abstractmethod
     def copy_folder(self, reference_project, reference_folder, destination_project):
         ''' Copy reference folder to destination project '''
-
-    @abstractmethod
-    def copy_reference_data(self, reference_project, destination_project):
-        '''
-        Copy all data from the reference_project to project, IF the data (by name) does not already
-        exist in the project.
-        '''
 
     @abstractmethod
     def copy_workflow(self, src_workflow, destination_project):

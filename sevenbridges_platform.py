@@ -207,21 +207,6 @@ class SevenBridgesPlatform():
                 reference_file.copy_to_folder(parent=sbg_destination_folder)
         return sbg_destination_folder
 
-    def copy_reference_data(self, reference_project, destination_project):
-        '''
-        Copy all data from the reference_project to project, IF the data (by name) does not already
-        exist in the project.
-        '''
-        # Get all the files from the source project
-        reference_tag = "reference_files"
-        source_files = self._get_project_files(reference_project.id, tag=reference_tag)
-
-        for source_file, folder_path in source_files:
-            parent = self._find_or_create_path(destination_project, folder_path)
-            files = self._list_files_in_folder(folder=parent)
-            if source_file.name not in [f.name for f in files]:
-                source_file.copy_to_folder(parent=parent)
-
     def copy_workflow(self, src_workflow, destination_project):
         '''
         Copy a workflow from one project to another, if a workflow with the same name
@@ -338,7 +323,8 @@ class SevenBridgesPlatform():
             'FAILED': 'Failed',
             'QUEUED': 'Queued',
             'RUNNING': 'Running',
-            'ABORTED': 'Cancelled'
+            'ABORTED': 'Cancelled',
+            'DRAFT': 'Cancelled'
         }
         if refresh:
             task = self.api.tasks.get(id=task.id)
@@ -386,7 +372,27 @@ class SevenBridgesPlatform():
 
     def submit_task(self, name, project, workflow, parameters):
         ''' Submit a workflow on the platform '''
-        task = self.api.tasks.create(name=name, project=project, app=workflow, inputs=parameters,
-                                     execution_settings={'use_elastic_disk': True, 'use_memoization': True})
+        execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
+
+        # TODO: This metadata code will come out as part of the metadata removal effort.
+        # Take the metadata from the output files and set it on the input files
+        ## set metadata
+        for i in parameters:
+            ##if the parameter type is an array
+            if type(parameters[i]) == list:
+                for j in parameters[i]:
+                    if 'metadata' in j and j['class'] == 'File':
+                        sbgfile = self.api.files.get(id=j['path'])
+                        if sbgfile.metadata != j['metadata']:
+                            sbgfile.metadata = j['metadata']
+                            sbgfile.save()
+
+            ##if the parameter type is a regular file
+            elif 'metadata' in parameters[i]:
+                sbgfile = self.api.files.get(id=parameters[i]['path'])
+                sbgfile.metadata = parameters[i]['metadata']
+                sbgfile.save()
+
+        task = self.api.tasks.create(name=name, project=project, app=workflow, inputs=parameters, execution_settings=execution_settings)
         task.run()
         return task
