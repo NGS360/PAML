@@ -7,14 +7,14 @@ import os
 
 from .arvados_platform import ArvadosPlatform
 from .sevenbridges_platform import SevenBridgesPlatform
-from .omics_platform import OmicsPlatform
+#from .omics_platform import OmicsPlatform
 
 logger = logging.getLogger(__name__)
 
 # Move this for a config file
 SUPPORTED_PLATFORMS = {
     'Arvados': ArvadosPlatform,
-    'Omics': OmicsPlatform,
+#    'Omics': OmicsPlatform,
     'SevenBridges': SevenBridgesPlatform
 }
 
