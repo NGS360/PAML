@@ -374,12 +374,10 @@ class SevenBridgesPlatform():
         ''' Submit a workflow on the platform '''
         execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
 
-        # TODO: This metadata code will come out as part of the metadata removal effort.
-        # Take the metadata from the output files and set it on the input files
-        ## set metadata
+        # This metadata code will come out as part of the metadata removal effort.
         for i in parameters:
             ##if the parameter type is an array
-            if type(parameters[i]) == list:
+            if isinstance(parameters[i], list):
                 for j in parameters[i]:
                     if 'metadata' in j and j['class'] == 'File':
                         sbgfile = self.api.files.get(id=j['path'])
@@ -387,12 +385,13 @@ class SevenBridgesPlatform():
                             sbgfile.metadata = j['metadata']
                             sbgfile.save()
 
-            ##if the parameter type is a regular file
+            ## if the parameter type is a regular file
             elif 'metadata' in parameters[i]:
                 sbgfile = self.api.files.get(id=parameters[i]['path'])
                 sbgfile.metadata = parameters[i]['metadata']
                 sbgfile.save()
 
-        task = self.api.tasks.create(name=name, project=project, app=workflow, inputs=parameters, execution_settings=execution_settings)
+        task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
+                                     execution_settings=execution_settings)
         task.run()
         return task
