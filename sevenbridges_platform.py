@@ -49,8 +49,7 @@ class SevenBridgesPlatform():
                     project=None if parent else project
                 )
         elif not parent[0].is_folder():
-            logging.error("Folder cannot be created with the same name as an "
-                        "existing file")
+            logging.error("Folder cannot be created with the same name as an existing file")
             raise FileExistsError(f"File with name {parent[0].name} already exists!")
         else:
             parent = parent[0]
@@ -134,8 +133,7 @@ class SevenBridgesPlatform():
 
         if project and not files:
             logging.info("Recursively listing all files in project %s", project)
-            files = self.api.files.query(project=project,
-                                    limit=100).all()
+            files = self.api.files.query(project=project, limit=100).all()
         file_list = []
         for file in files:
             if not file.is_folder():
@@ -279,6 +277,7 @@ class SevenBridgesPlatform():
     def get_file_id(self, project, file_path):
         '''
         Get the file id for a file in a project
+
         :param project: The project to search for the file
         :param file_path: The path to the file
         :return: The file id
