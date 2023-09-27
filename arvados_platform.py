@@ -268,7 +268,7 @@ class ArvadosPlatform():
             return 'Running'
         if task.container['state'] == 'Cancelled':
             return 'Cancelled'
-        if task.container['state'] in ['Locked','Queued']:
+        if task.container['state'] in ['Locked', 'Queued']:
             return 'Queued'
         raise ValueError(f"TODO: Unknown task state: {task.container['state']}")
 
