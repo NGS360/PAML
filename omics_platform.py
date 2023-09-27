@@ -17,7 +17,9 @@ class OmicsPlatform():
         self.api = boto3.client('omics')
 
     def copy_folder(self, reference_project, reference_folder, destination_project):
-        '''Do nothing and return reference files'''
+        '''
+        Do nothing and return reference folder, which should be an S3 path.
+        '''
         return reference_folder
 
     def copy_workflow(self, src_workflow, destination_project):
@@ -37,8 +39,11 @@ class OmicsPlatform():
         return file_path
 
     def get_folder_id(self, project, folder_path):
-        ''' There is not unique ID for a folder in s3, so just return the folder_path '''
-        return folder_path
+        '''
+        There is not unique ID for a folder in s3, so just return the folder_path
+        The one caveat is that Omics wants trailing slashes on folder paths, so add one.
+        '''
+        return folder_path + "/"
 
     def get_task_state(self, task, refresh=False):
         ''' 
