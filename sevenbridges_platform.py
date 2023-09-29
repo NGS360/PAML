@@ -283,7 +283,7 @@ class SevenBridgesPlatform():
             file_name = path_parts[0]
             file_list = self.api.files.query(
                 project=project,
-                names=[file_path],
+                names=[file_name],
                 limit=100
             ).all()
         else:
