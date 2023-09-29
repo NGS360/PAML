@@ -2,14 +2,10 @@
 CWL Execution Platform Implementations
 '''
 from abc import ABC, abstractmethod
-import logging
-import os
 
 from .arvados_platform import ArvadosPlatform
 from .sevenbridges_platform import SevenBridgesPlatform
 #from .omics_platform import OmicsPlatform
-
-logger = logging.getLogger(__name__)
 
 # Move this for a config file
 SUPPORTED_PLATFORMS = {
@@ -29,6 +25,13 @@ class Platform(ABC):
         ''' Copy reference folder to destination project '''
 
     @abstractmethod
+    def copy_reference_data(self, reference_project, destination_project):
+        '''
+        Copy all data from the reference_project to project, IF the data (by name) does not already
+        exist in the project.
+        '''
+
+    @abstractmethod
     def copy_workflow(self, src_workflow, destination_project):
         '''
         Copy a workflow from one project to another, if a workflow with the same name
@@ -42,8 +45,8 @@ class Platform(ABC):
     @abstractmethod
     def copy_workflows(self, reference_project, destination_project):
         '''
-        Copy all workflows from the reference_project to project, IF the workflow (by name) does
-        not already exist in the project.
+        Copy all workflows from the reference_project to project, IF the workflow (by name) does not already
+        exist in the project.
 
         :param reference_project: The project to copy workflows from
         :param destination_project: The project to copy workflows to
@@ -71,8 +74,7 @@ class Platform(ABC):
         '''
         Get workflow/task state
 
-        :param task: The task to search for. Task is a dictionary containing a
-            container_request_uuid and container dictionary.
+        :param task: The task to search for.  Task is a dictionary containing a container_request_uuid and container dictionary.
         :param refresh: Refresh task state before returning (Default: False)
         :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
         '''
@@ -116,12 +118,6 @@ class PlatformFactory():
         for platform, creator in SUPPORTED_PLATFORMS.items():
             if creator.detect():
                 return platform
-
-        # If we can't detect the platform, print out environment variables and raise an error
-        logging.info("Environment Variables:")
-        for name, value in os.environ.items():
-            logging.info("%s: %s", name, value)
-
         raise ValueError("Unable to detect platform")
 
     def get_platform(self, platform):
