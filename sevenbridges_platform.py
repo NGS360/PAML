@@ -9,11 +9,6 @@ from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sle
 class SevenBridgesPlatform():
     ''' SevenBridges Platform class '''
     def __init__(self, api_endpoint='https://bms-api.sbgenomics.com/v2', token='dummy'):
-        '''
-        Initialize SevenBridges Platform 
-        
-        We need either a session id or an api_config object to connect to SevenBridges
-        '''
         self.api = None
         self._session_id = None
         self.api_endpoint = api_endpoint
@@ -49,7 +44,8 @@ class SevenBridgesPlatform():
                     project=None if parent else project
                 )
         elif not parent[0].is_folder():
-            logging.error("Folder cannot be created with the same name as an existing file")
+            logging.error("Folder cannot be created with the same name as an "
+                        "existing file")
             raise FileExistsError(f"File with name {parent[0].name} already exists!")
         else:
             parent = parent[0]
@@ -79,14 +75,14 @@ class SevenBridgesPlatform():
         :return: List of files and paths
         '''
         files = []
-        for file in folder.list_files().all():
-            if file.type == 'folder':
-                files += self._get_folder_contents(file, tag, f"{path}/{file.name}")
+        for f in folder.list_files().all():
+            if f.type == 'folder':
+                files += self._get_folder_contents(f, tag, f"{path}/{f.name}")
             else:
                 if tag is None:
-                    files.append((file, path))
-                elif file.tags and (tag in file.tags):
-                    files.append((file, path))
+                    files.append((f, path))
+                elif f.tags and (tag in f.tags):
+                    files.append((f, path))
         return files
 
     def _get_project_files(self, sb_project_id, tag=None, name=None):
@@ -103,20 +99,20 @@ class SevenBridgesPlatform():
         sb_files = []
         limit = 1000
         if name is None:
-            for file in self.api.files.query(project, cont_token='init', limit=limit).all():
-                if file.type == 'folder':
-                    sb_files += self._get_folder_contents(file, tag, f'/{file.name}')
+            for f in self.api.files.query(project, cont_token='init', limit=limit).all():
+                if f.type == 'folder':
+                    sb_files += self._get_folder_contents(f, tag, f'/{f.name}')
                 else:
                     if tag is None:
-                        sb_files.append((file, '/'))
-                    elif file.tags and (tag in file.tags):
-                        sb_files.append((file, '/'))
+                        sb_files.append((f, '/'))
+                    elif f.tags and (tag in f.tags):
+                        sb_files.append((f, '/'))
         else:
             for i in range(0, len(name), limit):
                 files_chunk = name[i:i+limit]
                 sb_files_chunk = self.api.files.query(project=sb_project_id, names=[files_chunk])
-                for file in sb_files_chunk:
-                    sb_files.append((file, '/'))
+                for f in sb_files_chunk:
+                    sb_files.append((f, '/'))
         return sb_files
 
     def _list_all_files(self, files=None, project=None):
@@ -133,7 +129,9 @@ class SevenBridgesPlatform():
 
         if project and not files:
             logging.info("Recursively listing all files in project %s", project)
-            files = self.api.files.query(project=project, limit=100).all()
+            files = self.api.files.query(project=project,
+                                    cont_token=cfg['sb_api_cont_token'],
+                                    limit=100).all()
         file_list = []
         for file in files:
             if not file.is_folder():
@@ -169,7 +167,7 @@ class SevenBridgesPlatform():
         return file_list
 
     def connect(self):
-        ''' Connect to Sevenbridges '''
+        ''' Connect to SevenBridges '''
         if self._session_id:
             self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
                       error_handlers=[rate_limit_sleeper, maintenance_sleeper, general_error_sleeper])
@@ -202,6 +200,21 @@ class SevenBridgesPlatform():
             if reference_file.name not in [f.name for f in destination_files]:
                 reference_file.copy_to_folder(parent=sbg_destination_folder)
         return sbg_destination_folder
+
+    def copy_reference_data(self, reference_project, destination_project):
+        '''
+        Copy all data from the reference_project to project, IF the data (by name) does not already
+        exist in the project.
+        '''
+        # Get all the files from the source project
+        reference_tag = "reference_files"
+        source_files = self._get_project_files(reference_project.id, tag=reference_tag)
+
+        for source_file, folder_path in source_files:
+            parent = self._find_or_create_path(destination_project, folder_path)
+            files = self._list_files_in_folder(folder=parent)
+            if source_file.name not in [f.name for f in files]:
+                source_file.copy_to_folder(parent=parent)
 
     def copy_workflow(self, src_workflow, destination_project):
         '''
@@ -236,7 +249,7 @@ class SevenBridgesPlatform():
         destination_workflows = list(destination_project.get_apps().all())
         # Copy the workflow if it doesn't already exist in the destination project
         for workflow in reference_workflows:
-            # NOTE This is also copies archived apps.  How do we filter those out?  Asked Nikola, waiting for response.
+            # TODO: This is also copying archived app.  How do we filter those out?  Ask Nikola
             if workflow.name not in [wf.name for wf in destination_workflows]:
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
@@ -265,7 +278,6 @@ class SevenBridgesPlatform():
         '''
         if file_path.startswith('http'):
             raise ValueError('File path cannot be a URL')
-
         path_parts = list(filter(None, file_path.rsplit("/", 1)))
         if len(path_parts) == 1 :
             file_name = path_parts[0]
@@ -327,12 +339,7 @@ class SevenBridgesPlatform():
         return sbg_state[task.status]
 
     def get_task_output(self, task, output_name):
-        '''
-        Retrieve the output field of the task
-
-        :param task: The task object to retrieve the output from
-        :param output_name: The name of the output to retrieve
-        '''
+        ''' Retrieve the output field of the task '''
         task = self.api.tasks.get(id=task.id)
         alloutputs = task.outputs
         if output_name in alloutputs:
