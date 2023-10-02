@@ -270,6 +270,9 @@ class SevenBridgesPlatform():
         if file_path.startswith('http'):
             raise ValueError('File path cannot be a URL')
 
+        if file_path.startswith('s3://'):
+            file_path = file_path.split('/')[-1]
+
         path_parts = list(filter(None, file_path.rsplit("/", 1)))
         if len(path_parts) == 1 :
             file_name = path_parts[0]
@@ -345,6 +348,16 @@ class SevenBridgesPlatform():
                 return outputfile.id
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
+    def get_task_output_filename(self, task, output_name):
+        ''' Retrieve the output field of the task and return filename'''
+        task = self.api.tasks.get(id=task.id)
+        alloutputs = task.outputs
+        if output_name in alloutputs:
+            outputfile = alloutputs[output_name]
+            if outputfile:
+                return outputfile.name
+        raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
+
     def get_tasks_by_name(self, project, process_name):
         ''' Get a process by its name '''
         tasks = []
@@ -395,3 +408,12 @@ class SevenBridgesPlatform():
                                      execution_settings=execution_settings)
         task.run()
         return task
+
+    def upload_file_to_project(self, filename, project, filepath):
+        '''
+        Upload a local file to project
+        Parameter filepath is not used in sbg. Files are uploaded to root.
+        '''
+        self.api.files.upload(filename, project, overwrite=True)
+        fileid = self.get_file_id(project, filename)
+        return fileid
