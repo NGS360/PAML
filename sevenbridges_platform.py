@@ -178,7 +178,7 @@ class SevenBridgesPlatform():
                                                         general_error_sleeper],
                                         advance_access=True)
             # We were doing this before, but I'm not convinced we need to.
-            self.api._session_id = self._session_id
+            self.api._session_id = self._session_id  # pylint: disable=protected-access
         else:
             self.api = sevenbridges.Api(config=self.api_config,
                                         error_handlers=[rate_limit_sleeper,
