@@ -372,7 +372,7 @@ class ArvadosPlatform():
 
     def upload_file_to_project(self, filename, project, path):
         ''' Upload a local file to project '''
-    
+
         # Get the metadata collection
         search_result = self.api.collections().list(filters=[
             ["owner_uuid", "=", project["uuid"]],
@@ -388,12 +388,12 @@ class ArvadosPlatform():
                 ["owner_uuid", "=", project["uuid"]],
                 ["name", "=", path]
                 ]).execute()['items'][0]
-        
+
         metadata_collection = arvados.collection.Collection(destination_collection['uuid'])
-        
-        arv_file = metadata_collection.open(filename, 'w')
-        local_content = open(filename, 'r').read()
-        arv_file.write(local_content)
-        arv_file.close()
+
+        with open(filename, 'r', encoding='utf-8') as local_file:
+            local_content = local_file.read()
+        with metadata_collection.open(filename, 'w') as arv_file:
+            arv_file.write(local_content) # pylint: disable=no-member
         metadata_collection.save()
         return f"keep:{destination_collection['uuid']}/{filename}"
