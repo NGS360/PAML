@@ -283,6 +283,16 @@ class ArvadosPlatform():
         output_file_location = f"keep:{task.container_request['output_uuid']}/{output_file}"
         return output_file_location
 
+    def get_task_output_filename(self, task, output_name):
+        ''' Retrieve the output field of the task and return filename'''
+        cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
+                                                              api_client=self.api,
+                                                              keep_client=self.keep_client)
+        with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
+            cwl_output = json.load(cwl_output_file)
+        output_file = cwl_output[output_name]['basename']
+        return output_file
+
     def get_tasks_by_name(self, project, task_name):
         '''
         Get all processes (jobs) in a project with a specified name
@@ -359,3 +369,46 @@ class ArvadosPlatform():
             except IOError as err:
                 logger.error("ERROR LOG: %s", str(err))
         return None
+
+    def upload_file_to_project(self, filename, project, filepath):
+        '''
+        Upload a lcoal local file to project
+
+        :filename: Path to local file
+        :project: Project to upload file to
+        :filepath: Path to upload file to
+        '''
+        # TODO:
+        # filepath should be used.  Value can be:
+        # filename -> how to handle this?
+
+        # /full/path/to/folder/and/file
+        # /full/path/to/folder/and/    then filename is inferred as the name of the file
+        # full is the collection name, in these examples, then the rest of the path is the 
+        # path in the collection.  This is how the reference data is handled when copied by 
+        # the launcher
+
+
+        # Get the metadata collection
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", filepath]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            destination_collection = search_result['items'][0]
+        else:
+            destination_collection = self.api.collections().create(body={
+                "owner_uuid": project["uuid"],
+                "name": filepath}).execute()
+            destination_collection = self.api.collections().list(filters=[
+                ["owner_uuid", "=", project["uuid"]],
+                ["name", "=", filepath]
+                ]).execute()['items'][0]
+
+        metadata_collection = arvados.collection.Collection(destination_collection['uuid'])
+        with open(filename, mode='r', encoding="utf-8") as file:
+            local_content = file.read()
+        with metadata_collection.open(filename, 'w') as arv_file:
+            arv_file.write(local_content)
+        metadata_collection.save()
+        return f"keep:{destination_collection['uuid']}/{filename}"

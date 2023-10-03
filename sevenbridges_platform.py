@@ -21,10 +21,11 @@ class SevenBridgesPlatform():
         self.api_endpoint = api_endpoint
         self.token = token
 
-        if not self._session_id and os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
-            self.api_config = sevenbridges.Config(profile='default')
-        else:
-            raise ValueError('No SevenBridges credentials found')
+        if not self._session_id:
+            if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
+                self.api_config = sevenbridges.Config(profile='default')
+            else:
+                raise ValueError('No SevenBridges credentials found')
 
     def _find_or_create_path(self, project, path):
         """
@@ -177,7 +178,7 @@ class SevenBridgesPlatform():
                                                         general_error_sleeper],
                                         advance_access=True)
             # We were doing this before, but I'm not convinced we need to.
-            #self.api._session_id = self._session_id
+            self.api._session_id = self._session_id
         else:
             self.api = sevenbridges.Api(config=self.api_config,
                                         error_handlers=[rate_limit_sleeper,
@@ -270,6 +271,9 @@ class SevenBridgesPlatform():
         if file_path.startswith('http'):
             raise ValueError('File path cannot be a URL')
 
+        if file_path.startswith('s3://'):
+            file_path = file_path.split('/')[-1]
+
         path_parts = list(filter(None, file_path.rsplit("/", 1)))
         if len(path_parts) == 1 :
             file_name = path_parts[0]
@@ -345,6 +349,16 @@ class SevenBridgesPlatform():
                 return outputfile.id
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
+    def get_task_output_filename(self, task, output_name):
+        ''' Retrieve the output field of the task and return filename'''
+        task = self.api.tasks.get(id=task.id)
+        alloutputs = task.outputs
+        if output_name in alloutputs:
+            outputfile = alloutputs[output_name]
+            if outputfile:
+                return outputfile.name
+        raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
+
     def get_tasks_by_name(self, project, process_name):
         ''' Get a process by its name '''
         tasks = []
@@ -395,3 +409,20 @@ class SevenBridgesPlatform():
                                      execution_settings=execution_settings)
         task.run()
         return task
+
+    def upload_file_to_project(self, filename, project, filepath):
+        '''
+        Upload a lcoal local file to project
+
+        :filename: Path to local file
+        :project: Project to upload file to
+        :path: Path to upload file to
+        '''
+        # TODO: overwrite should be False
+        # filepath should be used.  Value can be:
+        # filename -> this should upload to root folder of project.
+        # /full/path/to/folder/and/file
+        # /full/path/to/folder/and/    then filename is inferred as the name of the file
+        self.api.files.upload(filename, project, overwrite=True)
+        fileid = self.get_file_id(project, filename)
+        return fileid
