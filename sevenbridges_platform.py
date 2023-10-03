@@ -21,10 +21,11 @@ class SevenBridgesPlatform():
         self.api_endpoint = api_endpoint
         self.token = token
 
-        if not self._session_id and os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
-            self.api_config = sevenbridges.Config(profile='default')
-        else:
-            raise ValueError('No SevenBridges credentials found')
+        if not self._session_id:
+            if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
+                self.api_config = sevenbridges.Config(profile='default')
+            else:
+                raise ValueError('No SevenBridges credentials found')
 
     def _find_or_create_path(self, project, path):
         """
@@ -177,7 +178,7 @@ class SevenBridgesPlatform():
                                                         general_error_sleeper],
                                         advance_access=True)
             # We were doing this before, but I'm not convinced we need to.
-            #self.api._session_id = self._session_id
+            self.api._session_id = self._session_id  # pylint: disable=protected-access
         else:
             self.api = sevenbridges.Api(config=self.api_config,
                                         error_handlers=[rate_limit_sleeper,
@@ -399,10 +400,11 @@ class SevenBridgesPlatform():
                             sbgfile.save()
 
             ## if the parameter type is a regular file
-            elif 'metadata' in parameters[i]:
-                sbgfile = self.api.files.get(id=parameters[i]['path'])
-                sbgfile.metadata = parameters[i]['metadata']
-                sbgfile.save()
+            if isinstance(parameters[i], dict):
+                if 'metadata' in parameters[i]:
+                    sbgfile = self.api.files.get(id=parameters[i]['path'])
+                    sbgfile.metadata = parameters[i]['metadata']
+                    sbgfile.save()
 
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
                                      execution_settings=execution_settings)
