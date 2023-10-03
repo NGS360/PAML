@@ -4,6 +4,7 @@ AWS HealthOmics class
 
 import logging
 import boto3
+import botocore
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +144,6 @@ class OmicsPlatform():
                                      outputUri=outfilepath)
             logger.info('Started run for %s, RunID: %s',name,job['id'])
             return job
-        except:
-            logger.error('Could not start run for %s',name)
+        except botocore.exceptions.ClientError as err:
+            logger.error('Could not start run for %s: %s', name, err)
             return None
