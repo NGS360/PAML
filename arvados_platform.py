@@ -370,30 +370,30 @@ class ArvadosPlatform():
                 logger.error("ERROR LOG: %s", str(err))
         return None
 
-    def upload_file_to_project(self, filename, project, path):
+    def upload_file_to_project(self, filename, project, filepath):
         ''' Upload a local file to project '''
-    
+
         # Get the metadata collection
         search_result = self.api.collections().list(filters=[
             ["owner_uuid", "=", project["uuid"]],
-            ["name", "=", path]
+            ["name", "=", filepath]
             ]).execute()
         if len(search_result['items']) > 0:
             destination_collection = search_result['items'][0]
         else:
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": project["uuid"],
-                "name": path}).execute()
+                "name": filepath}).execute()
             destination_collection = self.api.collections().list(filters=[
                 ["owner_uuid", "=", project["uuid"]],
-                ["name", "=", path]
+                ["name", "=", filepath]
                 ]).execute()['items'][0]
-        
+
         metadata_collection = arvados.collection.Collection(destination_collection['uuid'])
-        
-        arv_file = metadata_collection.open(filename, 'w')
-        local_content = open(filename, 'r').read()
-        arv_file.write(local_content)
-        arv_file.close()
+
+        with open(filename, 'r', encoding='utf-8') as local_file:
+            local_content = local_file.read()
+        with metadata_collection.open(filename, 'w') as arv_file:
+            arv_file.write(local_content) # pylint: disable=no-member
         metadata_collection.save()
         return f"keep:{destination_collection['uuid']}/{filename}"
