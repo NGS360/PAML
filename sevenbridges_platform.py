@@ -349,16 +349,6 @@ class SevenBridgesPlatform():
                 return outputfile.id
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def get_task_output_filename(self, task, output_name):
-        ''' Retrieve the output field of the task and return filename'''
-        task = self.api.tasks.get(id=task.id)
-        alloutputs = task.outputs
-        if output_name in alloutputs:
-            outputfile = alloutputs[output_name]
-            if outputfile:
-                return outputfile.name
-        raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
-
     def get_tasks_by_name(self, project, process_name):
         ''' Get a process by its name '''
         tasks = []
@@ -400,29 +390,13 @@ class SevenBridgesPlatform():
                             sbgfile.save()
 
             ## if the parameter type is a regular file
-            elif 'metadata' in parameters[i]:
-                sbgfile = self.api.files.get(id=parameters[i]['path'])
-                sbgfile.metadata = parameters[i]['metadata']
-                sbgfile.save()
+            if isinstance(parameters[i], dict):
+                if 'metadata' in parameters[i]:
+                    sbgfile = self.api.files.get(id=parameters[i]['path'])
+                    sbgfile.metadata = parameters[i]['metadata']
+                    sbgfile.save()
 
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
                                      execution_settings=execution_settings)
         task.run()
         return task
-
-    def upload_file_to_project(self, filename, project, filepath):
-        '''
-        Upload a lcoal local file to project
-
-        :filename: Path to local file
-        :project: Project to upload file to
-        :path: Path to upload file to
-        '''
-        # TODO: overwrite should be False
-        # filepath should be used.  Value can be:
-        # filename -> this should upload to root folder of project.
-        # /full/path/to/folder/and/file
-        # /full/path/to/folder/and/    then filename is inferred as the name of the file
-        self.api.files.upload(filename, project, overwrite=True)
-        fileid = self.get_file_id(project, filename)
-        return fileid

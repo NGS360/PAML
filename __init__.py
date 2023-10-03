@@ -82,10 +82,6 @@ class Platform(ABC):
         ''' Retrieve the output field of the task '''
 
     @abstractmethod
-    def get_task_output_filename(self, task, output_name):
-        ''' Retrieve the output field of the task and return filename'''
-
-    @abstractmethod
     def get_tasks_by_name(self, project, task_name):
         ''' Get a tasks by its name '''
 
@@ -104,10 +100,6 @@ class Platform(ABC):
     @abstractmethod
     def submit_task(self, name, project, workflow, parameters):
         ''' Submit a workflow on the platform '''
-
-    @abstractmethod
-    def upload_file_to_project(self, filename, project, filepath):
-        ''' Upload a lcoal local file to project '''
 
 class PlatformFactory():
     ''' PlatformFactory '''
