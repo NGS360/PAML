@@ -200,7 +200,6 @@ class SevenBridgesPlatform():
         # get the destination project folder
         sbg_destination_folder = self._find_or_create_path(destination_project, reference_folder)
 
-        print(f"Reference folder {reference_folder} -> destination {sbg_destination_folder}")
         # Copy the files from the reference project to the destination project
         reference_files = self._list_files_in_folder(project=reference_project, folder=reference_folder)
         destination_files = list(self._list_files_in_folder(project=destination_project, folder=reference_folder))
