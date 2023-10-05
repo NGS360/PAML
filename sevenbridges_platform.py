@@ -204,11 +204,12 @@ class SevenBridgesPlatform():
         reference_files = self._list_files_in_folder(project=reference_project, folder=reference_folder)
         destination_files = list(self._list_files_in_folder(project=destination_project, folder=reference_folder))
         for reference_file in reference_files:
-            if reference_file.is_folder() :
-                self.copy_folder( reference_project, os.path.join(reference_folder, reference_file.name), destination_project)
+            if reference_file.is_folder():
+                source_folder = os.path.join(reference_folder, reference_file.name)
+                self.copy_folder(reference_project, source_folder, destination_project)
             if reference_file.name not in [f.name for f in destination_files]:
                 if reference_file.is_folder():
-                    continue 
+                    continue
                 reference_file.copy_to_folder(parent=sbg_destination_folder)
         return sbg_destination_folder
 
