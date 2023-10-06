@@ -115,10 +115,20 @@ class ArvadosPlatform():
         # Copy the files from the reference project to the destination project
         reference_files = self._get_files_list_in_collection(source_collection["uuid"])
         destination_files = list(self._get_files_list_in_collection(destination_collection["uuid"]))
+
         for reference_file in reference_files:
             if reference_file.name() not in [destination_file.name() for destination_file in destination_files]:
-                destination_collection.copy(reference_file.stream_name(), reference_file.name(),
-                                            source_collection=source_collection)
+                # Write the file to the destination collection
+                collection_object = arvados.collection.Collection(
+                    manifest_locator_or_text=destination_collection['uuid'], api_client=self.api)
+                with collection_object.open(reference_file.name(), "wb") as writer:
+                    content = reference_file.read(128*1024)
+                    while content:
+                        writer.write(content) # pylint: disable=E1101
+                        content = reference_file.read(128*1024)
+                # Should we be saving the collection after each file or wait until the end?
+                collection_object.save()
+
         return destination_collection
 
     def copy_workflow(self, src_workflow, destination_project):
