@@ -119,11 +119,12 @@ class ArvadosPlatform():
         for reference_file in reference_files:
             if reference_file.name() not in [destination_file.name() for destination_file in destination_files]:
                 # Write the file to the destination collection
-                collection_object = arvados.collection.Collection(manifest_locator_or_text=destination_collection['uuid'], api_client=self.api)
+                collection_object = arvados.collection.Collection(
+                    manifest_locator_or_text=destination_collection['uuid'], api_client=self.api)
                 with collection_object.open(reference_file.name(), "wb") as writer:
                     content = reference_file.read(128*1024)
                     while content:
-                        writer.write(content)
+                        writer.write(content) # pylint: disable=E1101
                         content = reference_file.read(128*1024)
                 # Should we be saving the collection after each file or wait until the end?
                 collection_object.save()
