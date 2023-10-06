@@ -125,6 +125,7 @@ class ArvadosPlatform():
                     while content:
                         writer.write(content)
                         content = reference_file.read(128*1024)
+                # Should we be saving the collection after each file or wait until the end?
                 collection_object.save()
 
         return destination_collection
