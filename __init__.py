@@ -5,19 +5,6 @@ from abc import ABC, abstractmethod
 import logging
 import os
 
-from .arvados_platform import ArvadosPlatform
-from .sevenbridges_platform import SevenBridgesPlatform
-#from .omics_platform import OmicsPlatform
-
-logger = logging.getLogger(__name__)
-
-# Move this for a config file
-SUPPORTED_PLATFORMS = {
-    'Arvados': ArvadosPlatform,
-#    'Omics': OmicsPlatform,
-    'SevenBridges': SevenBridgesPlatform
-}
-
 class Platform(ABC):
     ''' abstract Platform class '''
     @abstractmethod
@@ -101,6 +88,10 @@ class Platform(ABC):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
 
+    def set_logger(self, logger):
+        ''' Set the logger '''
+        self.logger = logger
+
     @abstractmethod
     def submit_task(self, name, project, workflow, parameters):
         ''' Submit a workflow on the platform '''
@@ -149,3 +140,14 @@ class PlatformFactory():
         Register a platform with the factory
         '''
         self._creators[platform] = creator
+
+from .arvados_platform import ArvadosPlatform
+from .sevenbridges_platform import SevenBridgesPlatform
+#from .omics_platform import OmicsPlatform
+
+# Move this for a config file
+SUPPORTED_PLATFORMS = {
+    'Arvados': ArvadosPlatform,
+#    'Omics': OmicsPlatform,
+    'SevenBridges': SevenBridgesPlatform
+}

@@ -6,7 +6,9 @@ import logging
 import sevenbridges
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
-class SevenBridgesPlatform():
+from . import Platform
+
+class SevenBridgesPlatform(Platform):
     ''' SevenBridges Platform class '''
     def __init__(self, api_endpoint='https://bms-api.sbgenomics.com/v2', token='dummy'):
         '''

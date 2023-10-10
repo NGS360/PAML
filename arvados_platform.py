@@ -9,8 +9,7 @@ import subprocess
 import tempfile
 
 import arvados
-
-logger = logging.getLogger(__name__)
+from . import Platform
 
 class ArvadosTask():
     '''
@@ -48,12 +47,13 @@ def arvados_task_decoder(obj):
         return ArvadosTask(obj['container_request'], obj['container'])
     return obj
 
-class ArvadosPlatform():
+class ArvadosPlatform(Platform):
     ''' Arvados Platform class '''
     def __init__(self):
         self.api_config = arvados.config.settings()
         self.api = None
         self.keep_client = None
+        self.logger = logging.getLogger(__name__)
 
     def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
         '''
@@ -83,6 +83,8 @@ class ArvadosPlatform():
         :param destination_project: The destination project
         :return: The destination folder or None if not found
         '''
+        self.logger.debug("Copying folder %s from project %s to project %s",
+                     source_folder, source_project["uuid"], destination_project["uuid"])
         # The first element of the source_folder path is the name of the collection.
         if source_folder.startswith('/'):
             collection_name = source_folder.split('/')[1]
@@ -94,8 +96,10 @@ class ArvadosPlatform():
             ["name", "=", collection_name]
             ]).execute()
         if len(search_result['items']) > 0:
+            self.logger.debug("Found source folder %s in project %s", collection_name, source_project["uuid"])
             source_collection = search_result['items'][0]
         else:
+            self.logger.error("Source folder %s not found in project %s", collection_name, source_project["uuid"])
             return None
 
         # Get the destination project collection
@@ -104,8 +108,10 @@ class ArvadosPlatform():
             ["name", "=", collection_name]
             ]).execute()
         if len(search_result['items']) > 0:
+            self.logger.debug("Found destination folder %s in project %s", collection_name, destination_project["uuid"])
             destination_collection = search_result['items'][0]
         else:
+            self.logger.debug("Destination folder %s not found in project %s, creating", collection_name, destination_project["uuid"])
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": destination_project["uuid"],
                 "name": collection_name,
@@ -113,11 +119,14 @@ class ArvadosPlatform():
                 "preserve_version":True}).execute()
 
         # Copy the files from the reference project to the destination project
+        self.logger.debug("Get list of files in source collection, %s", source_collection["uuid"])
         reference_files = self._get_files_list_in_collection(source_collection["uuid"])
+        self.logger.debug("Getting list of files in destionation collection, %s", destination_collection["uuid"])
         destination_files = list(self._get_files_list_in_collection(destination_collection["uuid"]))
 
         for reference_file in reference_files:
             if reference_file.name() not in [destination_file.name() for destination_file in destination_files]:
+                self.logger.debug("Copying file %s to collection %s", reference_file.name(), destination_collection["uuid"])
                 # Write the file to the destination collection
                 collection_object = arvados.collection.Collection(
                     manifest_locator_or_text=destination_collection['uuid'], api_client=self.api)
@@ -129,6 +138,8 @@ class ArvadosPlatform():
                 # Should we be saving the collection after each file or wait until the end?
                 collection_object.save()
 
+        self.logger.debug("Done copying folder %s from project %s to project %s",
+                     source_folder, source_project["uuid"], destination_project["uuid"])
         return destination_collection
 
     def copy_workflow(self, src_workflow, destination_project):
@@ -140,10 +151,12 @@ class ArvadosPlatform():
         :param destination_project: The project to copy the workflow to
         :return: The workflow that was copied or exists in the destination project
         '''
+        self.logger.debug("Copying workflow %s to project %s", src_workflow, destination_project["uuid"])
         # Get the workflow we want to copy
         try:
             workflow = self.api.workflows().get(uuid=src_workflow).execute()
         except arvados.errors.ApiError:
+            self.logger.error("Source workflow %s not found", src_workflow)
             return None
 
         wf_name = workflow["name"]
@@ -152,6 +165,7 @@ class ArvadosPlatform():
         # If the git hasn is present, strip it.
         if result:
             wf_name = wf_name[0:result.start()]
+        self.logger.debug("Source workflow name: %s", wf_name)
 
         # Get the existing (if any) workflow in the destination project with the same name as the
         # reference workflow
@@ -160,13 +174,16 @@ class ArvadosPlatform():
             ["name", "like", f"{wf_name}%"]
             ]).execute()
         if len(existing_workflows["items"]):
+            self.logger.debug("Workflow %s already exists in project %s", wf_name, destination_project["uuid"])
             # Return existing matching workflow
             return existing_workflows["items"][0]
 
         # Workflow does not exist in project, so copy it
+        self.logger.debug("Workflow %s does not exist in project %s, copying", wf_name, destination_project["uuid"])
         workflow['owner_uuid'] = destination_project['uuid']
         del workflow['uuid']
         copied_workflow = self.api.workflows().create(body=workflow).execute()
+        self.logger.debug("Copied workflow %s to project %s", wf_name, destination_project["uuid"])
         return copied_workflow
 
     def copy_workflows(self, reference_project, destination_project):
@@ -340,9 +357,12 @@ class ArvadosPlatform():
 
     def get_project_by_name(self, project_name):
         ''' Get a project by its name '''
+        self.logger.debug("Searching for project %s", project_name)
         search_result = self.api.groups().list(filters=[["name", "=", project_name]]).execute()
         if len(search_result['items']) > 0:
+            self.logger.debug("Found project %s", search_result['items'][0]['uuid'])
             return search_result['items'][0]
+        self.logger.debug("Could not find project")
         return None
 
     def get_project_by_id(self, project_id):
@@ -368,16 +388,16 @@ class ArvadosPlatform():
                     workflow['uuid'],
                     parameter_file.name]
             try:
-                logger.debug("Calling: %s", " ".join(cmd_str))
+                self.logger.debug("Calling: %s", " ".join(cmd_str))
                 runner_out = subprocess.check_output(cmd_str, stderr = subprocess.STDOUT)
                 runner_log = runner_out.decode("UTF-8")
                 container_request_uuid = list(filter(None, runner_log.split("\n")))[-1]
                 return ArvadosTask({'uuid': container_request_uuid}, None)
             except subprocess.CalledProcessError as err:
-                logger.error("ERROR LOG: %s", str(err))
-                logger.error("ERROR LOG: %s", err.output)
+                self.logger.error("ERROR LOG: %s", str(err))
+                self.logger.error("ERROR LOG: %s", err.output)
             except IOError as err:
-                logger.error("ERROR LOG: %s", str(err))
+                self.logger.error("ERROR LOG: %s", str(err))
         return None
 
     def upload_file_to_project(self, filename, project, filepath):
