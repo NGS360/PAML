@@ -6,7 +6,7 @@ import logging
 import sevenbridges
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
-from . import Platform
+from .platform import Platform
 
 class SevenBridgesPlatform(Platform):
     ''' SevenBridges Platform class '''

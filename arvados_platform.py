@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 
 import arvados
-from . import Platform
+from .platform import Platform
 
 class ArvadosTask():
     '''
