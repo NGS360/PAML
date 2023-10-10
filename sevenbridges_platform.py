@@ -16,6 +16,7 @@ class SevenBridgesPlatform(Platform):
         
         We need either a session id or an api_config object to connect to SevenBridges
         '''
+        super().__init__()
         self.api = None
         self.api_config = None
         self._session_id = os.environ.get('SESSION_ID')
