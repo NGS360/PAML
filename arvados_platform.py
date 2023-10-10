@@ -85,6 +85,8 @@ class ArvadosPlatform(Platform):
         '''
         self.logger.debug("Copying folder %s from project %s to project %s",
                      source_folder, source_project["uuid"], destination_project["uuid"])
+
+        # 1. Get the source collection
         # The first element of the source_folder path is the name of the collection.
         if source_folder.startswith('/'):
             collection_name = source_folder.split('/')[1]
@@ -96,13 +98,13 @@ class ArvadosPlatform(Platform):
             ["name", "=", collection_name]
             ]).execute()
         if len(search_result['items']) > 0:
-            self.logger.debug("Found source folder %s in project %s", collection_name, source_project["uuid"])
+            self.logger.debug("Found source collection %s in project %s", collection_name, source_project["uuid"])
             source_collection = search_result['items'][0]
         else:
-            self.logger.error("Source folder %s not found in project %s", collection_name, source_project["uuid"])
+            self.logger.error("Source collection %s not found in project %s", collection_name, source_project["uuid"])
             return None
 
-        # Get the destination project collection
+        # 2. Get the destination project collection
         search_result = self.api.collections().list(filters=[
             ["owner_uuid", "=", destination_project["uuid"]],
             ["name", "=", collection_name]
@@ -120,26 +122,21 @@ class ArvadosPlatform(Platform):
 
         # Copy the files from the reference project to the destination project
         self.logger.debug("Get list of files in source collection, %s", source_collection["uuid"])
-        reference_files = self._get_files_list_in_collection(source_collection["uuid"])
-        self.logger.debug("Getting list of files in destionation collection, %s", destination_collection["uuid"])
+        source_files = self._get_files_list_in_collection(source_collection["uuid"])
+        self.logger.debug("Getting list of files in destination collection, %s", destination_collection["uuid"])
         destination_files = list(self._get_files_list_in_collection(destination_collection["uuid"]))
 
-        for reference_file in reference_files:
-            if reference_file.name() not in [destination_file.name() for destination_file in destination_files]:
-                self.logger.debug("Copying file %s to collection %s", reference_file.name(), destination_collection["uuid"])
-                # Write the file to the destination collection
-                collection_object = arvados.collection.Collection(
-                    manifest_locator_or_text=destination_collection['uuid'], api_client=self.api)
-                with collection_object.open(reference_file.name(), "wb") as writer:
-                    content = reference_file.read(128*1024)
-                    while content:
-                        writer.write(content) # pylint: disable=E1101
-                        content = reference_file.read(128*1024)
-                # Should we be saving the collection after each file or wait until the end?
-                collection_object.save()
+        source_collection = arvados.collection.Collection(source_collection["uuid"])
+        target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
-        self.logger.debug("Done copying folder %s from project %s to project %s",
-                     source_folder, source_project["uuid"], destination_project["uuid"])
+        for source_file in source_files:
+            source_path = f"{source_file.stream_name()}/{source_file.name()}"
+            if source_path not in [f"{destination_file.stream_name()}/{destination_file.name()}" 
+                                for destination_file in destination_files]:
+                target_collection.copy(source_path, target_path=source_path, source_collection=source_collection)
+        target_collection.save()
+
+        self.logger.debug("Done copying folder.")
         return destination_collection
 
     def copy_workflow(self, src_workflow, destination_project):
