@@ -367,11 +367,11 @@ class SevenBridgesPlatform(Platform):
                 return outputfile.name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def get_tasks_by_name(self, project, process_name):
+    def get_tasks_by_name(self, project, task_name):
         ''' Get a process by its name '''
         tasks = []
         for task in self.api.tasks.query(project=project).all():
-            if task.name == process_name:
+            if task.name == task_name:
                 tasks.append(task)
         return tasks
 
