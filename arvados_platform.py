@@ -113,7 +113,8 @@ class ArvadosPlatform(Platform):
             self.logger.debug("Found destination folder %s in project %s", collection_name, destination_project["uuid"])
             destination_collection = search_result['items'][0]
         else:
-            self.logger.debug("Destination folder %s not found in project %s, creating", collection_name, destination_project["uuid"])
+            self.logger.debug("Destination folder %s not found in project %s, creating",
+                              collection_name, destination_project["uuid"])
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": destination_project["uuid"],
                 "name": collection_name,
@@ -131,7 +132,7 @@ class ArvadosPlatform(Platform):
 
         for source_file in source_files:
             source_path = f"{source_file.stream_name()}/{source_file.name()}"
-            if source_path not in [f"{destination_file.stream_name()}/{destination_file.name()}" 
+            if source_path not in [f"{destination_file.stream_name()}/{destination_file.name()}"
                                 for destination_file in destination_files]:
                 target_collection.copy(source_path, target_path=source_path, source_collection=source_collection)
         target_collection.save()

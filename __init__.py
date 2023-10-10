@@ -7,13 +7,16 @@ import os
 
 class Platform(ABC):
     ''' abstract Platform class '''
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
     @abstractmethod
     def connect(self):
         ''' Connect to the platform '''
 
     @abstractmethod
-    def copy_folder(self, reference_project, reference_folder, destination_project):
-        ''' Copy reference folder to destination project '''
+    def copy_folder(self, source_project, source_folder, destination_project):
+        ''' Copy source folder to destination project '''
 
     @abstractmethod
     def copy_workflow(self, src_workflow, destination_project):

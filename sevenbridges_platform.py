@@ -188,27 +188,27 @@ class SevenBridgesPlatform(Platform):
                                                         general_error_sleeper],
                                         advance_access=True)
 
-    def copy_folder(self, reference_project, reference_folder, destination_project):
+    def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy reference folder to destination project
 
-        :param reference_project: The reference project
-        :param reference_folder: The reference folder
+        :param source_project: The source project
+        :param source_folder: The source folder
         :param destination_project: The destination project
         :return: The destination folder
         '''
         # get the reference project folder
         #sbg_reference_folder = self._find_or_create_path(reference_project, reference_folder)
         # get the destination project folder
-        sbg_destination_folder = self._find_or_create_path(destination_project, reference_folder)
+        sbg_destination_folder = self._find_or_create_path(destination_project, source_folder)
 
         # Copy the files from the reference project to the destination project
-        reference_files = self._list_files_in_folder(project=reference_project, folder=reference_folder)
-        destination_files = list(self._list_files_in_folder(project=destination_project, folder=reference_folder))
+        reference_files = self._list_files_in_folder(project=source_project, folder=source_folder)
+        destination_files = list(self._list_files_in_folder(project=destination_project, folder=source_folder))
         for reference_file in reference_files:
             if reference_file.is_folder():
-                source_folder = os.path.join(reference_folder, reference_file.name)
-                self.copy_folder(reference_project, source_folder, destination_project)
+                source_folder = os.path.join(source_folder, reference_file.name)
+                self.copy_folder(source_project, source_folder, destination_project)
             if reference_file.name not in [f.name for f in destination_files]:
                 if reference_file.is_folder():
                     continue
