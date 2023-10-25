@@ -75,8 +75,9 @@ class OmicsPlatform():
     def get_task_output(self, task, output_name):
         ''' Retrieve the output field of the task '''
         taskinfo = self.api.get_run(id=task)
-        #TODO get_run only returns OutputUri. Get file path based on output_name (filename)?
+        # TODO: get_run only returns OutputUri. Get file path based on output_name (filename)?
         filename = None
+        # TODO: We shouldn't be hard-coding stuff like this.  these functions should be very generic.
         if output_name == 'RecalibratedBAM':
             filename = taskinfo.name + '.bam'
         if filename == None:
@@ -123,8 +124,9 @@ class OmicsPlatform():
         '''
         # This current outfilepath will allow 1 invocation of the workflow to overwrite another
         # invocation of the same workflow.
-        # TODO: We need a unique output path for each invocation of the workflow.  how are we going to track this? We can't have workflow invocations overwriting each other.
-        # Find a space to save output files (outUri)
+        # TODO: We need a unique output path for each invocation of the workflow. How are we going to track this? 
+        #       We can't have workflow invocations overwriting each other.
+        #       Find a space to save output files (outUri)
         if 'ProjectName' in project:
             outfilepath = 's3://bmsrd-ngs-omics/omics_output/'+project['ProjectName']+'/'
         else:
@@ -132,7 +134,8 @@ class OmicsPlatform():
 
         try:
             logger.debug("Starting run for %s", name)
-            # TODO: The roleArn should be a parameter to this function, and not hard-coded.  Put this in the pipeline_config.py.
+            # TODO: The roleArn should be a parameter to this function, and not hard-coded.
+            # Put this in the pipeline_config.py.
             job = self.api.start_run(workflowId=workflow,
                                      workflowType='PRIVATE',
                                      roleArn='arn:aws:iam::483421617021:role/ngs360-servicerole',
