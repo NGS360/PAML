@@ -53,26 +53,24 @@ class OmicsPlatform():
         return status of the run (Complete, Failed, Running, Cancelled, Queued).
         '''
 
-        runinfo = self.api.get_run(id=task['id'])
         try:
-            jobstatus = runinfo['status']
+            run_info = self.api.get_run(id=task['id'])
+            job_status = run_info['status']
         except:
-            logger.error('No Status information found for job %s. Check job status.',task['id'])
-            sys.exit(1)
+            raise ValueError('No Status information found for job %s. Check job status.', task['id'])
 
-        if runinfo['status'] == 'COMPLETED':
+        if job_status == 'COMPLETED':
             return 'Complete'
-        if runinfo['status'] == 'FAILED':
+        if job_status == 'FAILED':
             return 'Failed'
-        if runinfo['status'] in ['STARTING','RUNNING','STOPPING']:
+        if job_status in ['STARTING','RUNNING','STOPPING']:
             return 'Running'
-        if runinfo['status'] in ['CANCELLED','DELETED']:
+        if job_status in ['CANCELLED','DELETED']:
             return 'Cancelled'
-        if runinfo['status'] == 'PENDING':
+        if job_status == 'PENDING':
             return 'Queued'
 
-        logger.error('Unknown task state: %s : %s', task['id'], runinfo['status'])
-        sys.exit(1)
+        raise ValueError('Unknown task state: %s : %s', task['id'], job_status)
 
     def get_task_output(self, task, output_name):
         ''' Retrieve the output field of the task '''
