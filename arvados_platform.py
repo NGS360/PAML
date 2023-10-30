@@ -408,27 +408,36 @@ class ArvadosPlatform(Platform):
         :return: ID of uploaded file.
         '''
 
+        if filepath is None:
+            self.logger.error("Must provide a collection name for Arvados file upload.")
+            return None
+
         # trim slash at beginning and end
         folder_tree = filepath.split('/')
-        if not folder_tree[0]:
-            folder_tree = folder_tree[1:]
-        if not folder_tree[-1]:
-            folder_tree = folder_tree[:-1]
+        try:
+            if not folder_tree[0]:
+                folder_tree = folder_tree[1:]
+            if not folder_tree[-1]:
+                folder_tree = folder_tree[:-1]
+            collection_name = folder_tree[0]
+        except IndexError:
+            self.logger.error("Must provide a collection name for Arvados file upload.")
+            return None
 
         # Get the destination collection
         search_result = self.api.collections().list(filters=[
             ["owner_uuid", "=", project["uuid"]],
-            ["name", "=", folder_tree[0]]
+            ["name", "=", collection_name]
             ]).execute()
         if len(search_result['items']) > 0:
             destination_collection = search_result['items'][0]
         else:
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": project["uuid"],
-                "name": folder_tree[0]}).execute()
+                "name": collection_name}).execute()
             destination_collection = self.api.collections().list(filters=[
                 ["owner_uuid", "=", project["uuid"]],
-                ["name", "=", folder_tree[0]]
+                ["name", "=", collection_name]
                 ]).execute()['items'][0]
 
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
