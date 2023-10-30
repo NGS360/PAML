@@ -99,7 +99,9 @@ class OmicsPlatform():
         raise ValueError("Omics does not support project. Use get_project_by_id or get_project_by_name instead.")
 
     def get_project_by_name(self, project_name):
-        ''' Return a dictionary of project to provide project_name tag info for omics jobs'''
+        ''' Return a dictionary of project to provide project_name tag info for omics jobs '''
+        # NOTE: This function was meant to look up a project by its name and return the UUID of the project
+        # on the platform.  Since there isn't a concept of a project on Omics, we just return the project name.
         project = {
             'ProjectName': project_name
         }
@@ -122,15 +124,11 @@ class OmicsPlatform():
 
         return omics response for start_run.
         '''
-        # This current outfilepath will allow 1 invocation of the workflow to overwrite another
-        # invocation of the same workflow.
-        # TODO: We need a unique output path for each invocation of the workflow. How are we going to track this? 
-        #       We can't have workflow invocations overwriting each other.
-        #       Find a space to save output files (outUri)
+        # A subfolder is created with the Run ID assigned by Omics such that task output is seperate.
         if 'ProjectName' in project:
-            outfilepath = 's3://bmsrd-ngs-omics/omics_output/'+project['ProjectName']+'/'
+            base_output_path = 's3://bmsrd-ngs-omics/omics_output/'+project['ProjectName']
         else:
-            outfilepath = 's3://bmsrd-ngs-omics/omics_output/'+project['ProjectId']+'/'
+            base_output_path = 's3://bmsrd-ngs-omics/omics_output/'+project['ProjectId']
 
         try:
             logger.debug("Starting run for %s", name)
@@ -142,7 +140,7 @@ class OmicsPlatform():
                                      parameters=parameters,
                                      name=name,
                                      tags=project,
-                                     outputUri=outfilepath)
+                                     outputUri=base_output_path)
             logger.info('Started run for %s, RunID: %s',name,job['id'])
             return job
         except botocore.exceptions.ClientError as err:
