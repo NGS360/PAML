@@ -420,10 +420,24 @@ class SevenBridgesPlatform(Platform):
         return task
 
     def upload_file_to_project(self, filename, project, filepath):
-        '''
+        ''' 
         Upload a local file to project
-        Parameter filepath is not used in sbg. Files are uploaded to root.
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
+        :param filepath: The target path to the folder that file will be uploaded to. None will upload to root.
+        :return: ID of uploaded file.
         '''
-        self.api.files.upload(filename, project, overwrite=True)
-        fileid = self.get_file_id(project, filename)
+        if filepath is not None:
+            if filepath[-1] == '/': # remove slash at the end
+                filepath = filepath[:-1]
+            parent_folder = self._find_or_create_path(project, filepath)
+            parent_folder_id = parent_folder.id
+        else:
+            parent_folder_id = None
+        self.api.files.upload(filename, overwrite=True,parent=parent_folder_id, project = None if parent_folder_id else project)
+
+        if filepath is not None:
+            fileid = self.get_file_id(project, filepath+'/'+filename)
+        else:
+            fileid = self.get_file_id(project, filename)
         return fileid
