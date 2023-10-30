@@ -439,7 +439,7 @@ class SevenBridgesPlatform(Platform):
                               project = None if parent_folder_id else project)
 
         if filepath is not None:
-            fileid = self.get_file_id(project, filepath+'/'+filename)
+            fileid = self.get_file_id(project, filepath + '/' + filename.split('/')[-1])
         else:
-            fileid = self.get_file_id(project, filename)
+            fileid = self.get_file_id(project, filename.split('/')[-1])
         return fileid
