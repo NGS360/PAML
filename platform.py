@@ -100,5 +100,8 @@ class Platform(ABC):
     def upload_file_to_project(self, filename, project, filepath, overwrite=False):
         '''
         Upload a local file to project 
-        Parameter filepath is not used in sbg. Files are uploaded to root.
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
+        :param filepath: The target path to the folder that file will be uploaded to. None will upload to root.
+        :return: ID of uploaded file.
         '''
