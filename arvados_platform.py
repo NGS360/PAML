@@ -399,30 +399,49 @@ class ArvadosPlatform(Platform):
                 self.logger.error("ERROR LOG: %s", str(err))
         return None
 
-    def upload_file_to_project(self, filename, project, filepath):
-        ''' Upload a local file to project '''
+    def upload_file_to_project(self, filename, project, filepath, overwrite=False):
+        '''
+        Upload a local file to project
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
+        :param filepath: The target path to the folder that file will be uploaded to. None will upload to root.
+        :return: ID of uploaded file.
+        '''
 
-        # Get the metadata collection
+        # trim slash at beginning and end
+        folder_tree = filepath.split('/')
+        if not folder_tree[0]:
+            folder_tree = folder_tree[1:]
+        if not folder_tree[-1]:
+            folder_tree = folder_tree[:-1]
+
+        # Get the destination collection
         search_result = self.api.collections().list(filters=[
             ["owner_uuid", "=", project["uuid"]],
-            ["name", "=", filepath]
+            ["name", "=", folder_tree[0]]
             ]).execute()
         if len(search_result['items']) > 0:
             destination_collection = search_result['items'][0]
         else:
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": project["uuid"],
-                "name": filepath}).execute()
+                "name": folder_tree[0]}).execute()
             destination_collection = self.api.collections().list(filters=[
                 ["owner_uuid", "=", project["uuid"]],
-                ["name", "=", filepath]
+                ["name", "=", folder_tree[0]]
                 ]).execute()['items'][0]
 
-        metadata_collection = arvados.collection.Collection(destination_collection['uuid'])
+        target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
-        with open(filename, 'r', encoding='utf-8') as local_file:
-            local_content = local_file.read()
-        with metadata_collection.open(filename, 'w') as arv_file:
-            arv_file.write(local_content) # pylint: disable=no-member
-        metadata_collection.save()
-        return f"keep:{destination_collection['uuid']}/{filename}"
+        if len(folder_tree)>1:
+            target_filepath = '/'.join(folder_tree[1:]) + '/' + filename.split('/')[-1]
+        else:
+            target_filepath = filename.split('/')[-1]
+        
+        if overwrite or target_collection.find(target_filepath) is None:
+            with open(filename, 'r', encoding='utf-8') as local_file:
+                local_content = local_file.read()
+            with target_collection.open(target_filepath, 'w') as arv_file:
+                arv_file.write(local_content) # pylint: disable=no-member
+            target_collection.save()
+        return f"keep:{destination_collection['uuid']}/{target_filepath}"
