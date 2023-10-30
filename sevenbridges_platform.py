@@ -419,7 +419,7 @@ class SevenBridgesPlatform(Platform):
         task.run()
         return task
 
-    def upload_file_to_project(self, filename, project, filepath):
+    def upload_file_to_project(self, filename, project, filepath, overwrite=False):
         ''' 
         Upload a local file to project
         :param filename: filename of local file to be uploaded.
@@ -434,7 +434,9 @@ class SevenBridgesPlatform(Platform):
             parent_folder_id = parent_folder.id
         else:
             parent_folder_id = None
-        self.api.files.upload(filename, overwrite=True,parent=parent_folder_id, project = None if parent_folder_id else project)
+        self.api.files.upload(filename, overwrite=overwrite, 
+                              parent=parent_folder_id,
+                              project = None if parent_folder_id else project)
 
         if filepath is not None:
             fileid = self.get_file_id(project, filepath+'/'+filename)

@@ -97,7 +97,7 @@ class Platform(ABC):
         ''' Submit a workflow on the platform '''
 
     @abstractmethod
-    def upload_file_to_project(self, filename, project, filepath):
+    def upload_file_to_project(self, filename, project, filepath, overwrite=False):
         '''
         Upload a local file to project 
         Parameter filepath is not used in sbg. Files are uploaded to root.
