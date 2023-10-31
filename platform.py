@@ -97,11 +97,12 @@ class Platform(ABC):
         ''' Submit a workflow on the platform '''
 
     @abstractmethod
-    def upload_file_to_project(self, filename, project, filepath, overwrite=False):
+    def upload_file_to_project(self, filename, project, filepath, destination_filename=None, overwrite=False):
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
         :param filepath: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param destination_filename: File name after uploaded to destination folder.
         :return: ID of uploaded file.
         '''

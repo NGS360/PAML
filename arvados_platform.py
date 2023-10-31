@@ -399,12 +399,13 @@ class ArvadosPlatform(Platform):
                 self.logger.error("ERROR LOG: %s", str(err))
         return None
 
-    def upload_file_to_project(self, filename, project, filepath, overwrite=False):
+    def upload_file_to_project(self, filename, project, filepath, destination_filename=None, overwrite=False):
         '''
         Upload a local file to project
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
-        :param filepath: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param filepath: The target path to the folder that file will be uploaded to.
+        :param destination_filename: File name after uploaded to destination folder.
         :return: ID of uploaded file.
         '''
 
@@ -442,10 +443,13 @@ class ArvadosPlatform(Platform):
 
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
+        if destination_filename is None:
+            destination_filename = filename.split('/')[-1]
+
         if len(folder_tree)>1:
-            target_filepath = '/'.join(folder_tree[1:]) + '/' + filename.split('/')[-1]
+            target_filepath = '/'.join(folder_tree[1:]) + '/' + destination_filename
         else:
-            target_filepath = filename.split('/')[-1]
+            target_filepath =destination_filename
 
         if overwrite or target_collection.find(target_filepath) is None:
             with open(filename, 'r', encoding='utf-8') as local_file:
