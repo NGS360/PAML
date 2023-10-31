@@ -268,6 +268,16 @@ class SevenBridgesPlatform(Platform):
             return True
         return False
 
+    def get_current_task(self):
+        ''' Get the current task '''
+
+        task_id = os.environ.get('TASK_ID')
+        if not task_id:
+            raise Exception("ERROR: Environment variable TASK_ID not set.")
+        logging.info("TASK_ID: %s", task_id)
+        task = self.api.tasks.get(id=task_id)
+        return task
+
     def get_file_id(self, project, file_path):
         '''
         Get the file id for a file in a project

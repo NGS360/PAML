@@ -218,6 +218,18 @@ class ArvadosPlatform(Platform):
             return True
         return False
 
+    def get_current_task(self):
+        ''' Get the current task '''
+
+        try:
+            current_container = self.api.containers().current().execute()
+        except arvados.errors.ApiError:
+            raise Exception("Current task not associated with a container")
+        request = self.api.container_requests().list(filters=[
+                ["container_uuid", "=", current_container["uuid"]]
+            ]).execute()
+        return request
+
     def get_file_id(self, project, file_path):
         '''
         Get a file id by its full path name
