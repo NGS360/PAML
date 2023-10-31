@@ -447,9 +447,9 @@ class SevenBridgesPlatform(Platform):
         # upload file if overwrite is True or if file does not exists
         if overwrite or len(existing_file) == 0:
             update_state = self.api.files.upload(filename, overwrite=overwrite,
-                                            parent=parent_folder_id,
-                                            file_name=destination_filename,
-                                            project=None if parent_folder_id else project)
+                                                 parent=parent_folder_id,
+                                                 file_name=destination_filename,
+                                                 project=None if parent_folder_id else project)
             return None if update_state.status == 'FAILED' else update_state.result().id
 
         # return file id if file already exists
