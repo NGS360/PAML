@@ -419,39 +419,38 @@ class SevenBridgesPlatform(Platform):
         task.run()
         return task
 
-    def upload_file_to_project(self, filename, project, filepath, destination_filename=None, overwrite=False):
+    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False):
         ''' 
         Upload a local file to project
         :param filename: Filename of local file to be uploaded.
         :param project: Project that the file is uploaded to.
-        :param filepath: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
         :param destination_filename: File name after uploaded to destination folder.
         :return: ID of uploaded file.
         '''
         if destination_filename is None:
             destination_filename = filename.split('/')[-1]
 
-        if filepath is not None:
-            if filepath[-1] == '/': # remove slash at the end
-                filepath = filepath[:-1]
-            parent_folder = self._find_or_create_path(project, filepath)
+        if dest_folder is not None:
+            if dest_folder[-1] == '/': # remove slash at the end
+                dest_folder = dest_folder[:-1]
+            parent_folder = self._find_or_create_path(project, dest_folder)
             parent_folder_id = parent_folder.id
         else:
             parent_folder_id = None
 
         # check if file already exists on SBG
-        existing_file=self.api.files.query(names=[destination_filename],
-                                           parent=parent_folder_id,
-                                           project=None if parent_folder_id else project)
+        existing_file = self.api.files.query(names=[destination_filename],
+                                             parent=parent_folder_id,
+                                             project=None if parent_folder_id else project)
 
-        if overwrite or len(existing_file) == 0:  # upload file if overwrite is True or if file does not exists
-            self.api.files.upload(filename, overwrite=overwrite,
-                              parent=parent_folder_id,
-                              file_name=destination_filename,
-                              project=None if parent_folder_id else project)
-        if filepath is not None:
-            target_filepath = filepath+'/'+destination_filename
-        else:
-            target_filepath = destination_filename
-        fileid = self.get_file_id(project, target_filepath)
-        return fileid
+        # upload file if overwrite is True or if file does not exists
+        if overwrite or len(existing_file) == 0:
+            update_state = self.api.files.upload(filename, overwrite=overwrite,
+                                            parent=parent_folder_id,
+                                            file_name=destination_filename,
+                                            project=None if parent_folder_id else project)
+            return None if update_state.status == 'FAILED' else update_state.result().id
+
+        # return file id if file already exists
+        return existing_file[0].id
