@@ -449,7 +449,7 @@ class ArvadosPlatform(Platform):
         if len(folder_tree)>1:
             target_filepath = '/'.join(folder_tree[1:]) + '/' + destination_filename
         else:
-            target_filepath =destination_filename
+            target_filepath = destination_filename
 
         if overwrite or target_collection.find(target_filepath) is None:
             with open(filename, 'r', encoding='utf-8') as local_file:
