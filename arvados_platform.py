@@ -399,22 +399,22 @@ class ArvadosPlatform(Platform):
                 self.logger.error("ERROR LOG: %s", str(err))
         return None
 
-    def upload_file_to_project(self, filename, project, filepath, destination_filename=None, overwrite=False):
+    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False):
         '''
         Upload a local file to project
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
-        :param filepath: The target path to the folder that file will be uploaded to.
+        :param dest_folder: The target path to the folder that file will be uploaded to.
         :param destination_filename: File name after uploaded to destination folder.
         :return: ID of uploaded file.
         '''
 
-        if filepath is None:
+        if dest_folder is None:
             self.logger.error("Must provide a collection name for Arvados file upload.")
             return None
 
         # trim slash at beginning and end
-        folder_tree = filepath.split('/')
+        folder_tree = dest_folder.split('/')
         try:
             if not folder_tree[0]:
                 folder_tree = folder_tree[1:]
