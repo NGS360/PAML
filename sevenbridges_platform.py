@@ -428,6 +428,9 @@ class SevenBridgesPlatform(Platform):
         :param destination_filename: File name after uploaded to destination folder.
         :return: ID of uploaded file.
         '''
+        if destination_filename is None:
+            destination_filename = filename.split('/')[-1]
+
         if filepath is not None:
             if filepath[-1] == '/': # remove slash at the end
                 filepath = filepath[:-1]
@@ -435,15 +438,20 @@ class SevenBridgesPlatform(Platform):
             parent_folder_id = parent_folder.id
         else:
             parent_folder_id = None
-        self.api.files.upload(filename, overwrite=overwrite,
+
+        # check if file already exists on SBG
+        existing_file=self.api.files.query(names=[destination_filename],
+                                           parent=parent_folder_id,
+                                           project=None if parent_folder_id else project)
+
+        if overwrite or len(existing_file)==0:  # upload file if overwrite is True or if file does not exists
+            self.api.files.upload(filename, overwrite=overwrite,
                               parent=parent_folder_id,
-                              project = None if parent_folder_id else project)
-
-        if destination_filename is None:
-            destination_filename = filename.split('/')[-1]
-
+                              file_name=destination_filename,
+                              project=None if parent_folder_id else project)
         if filepath is not None:
-            fileid = self.get_file_id(project, filepath + '/' + destination_filename)
+            target_filepath = filepath+'/'+destination_filename
         else:
-            fileid = self.get_file_id(project, destination_filename)
+            target_filepath = destination_filename
+        fileid = self.get_file_id(project, target_filepath)
         return fileid
