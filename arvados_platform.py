@@ -446,7 +446,7 @@ class ArvadosPlatform(Platform):
             target_filepath = '/'.join(folder_tree[1:]) + '/' + filename.split('/')[-1]
         else:
             target_filepath = filename.split('/')[-1]
-        
+
         if overwrite or target_collection.find(target_filepath) is None:
             with open(filename, 'r', encoding='utf-8') as local_file:
                 local_content = local_file.read()

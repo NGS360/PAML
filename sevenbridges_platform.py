@@ -434,7 +434,7 @@ class SevenBridgesPlatform(Platform):
             parent_folder_id = parent_folder.id
         else:
             parent_folder_id = None
-        self.api.files.upload(filename, overwrite=overwrite, 
+        self.api.files.upload(filename, overwrite=overwrite,
                               parent=parent_folder_id,
                               project = None if parent_folder_id else project)
 
