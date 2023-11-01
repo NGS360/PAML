@@ -223,8 +223,8 @@ class ArvadosPlatform(Platform):
 
         try:
             current_container = self.api.containers().current().execute()
-        except arvados.errors.ApiError:
-            raise Exception("Current task not associated with a container")
+        except arvados.errors.ApiError as exc:
+            raise ValueError("Current task not associated with a container") from exc
         request = self.api.container_requests().list(filters=[
                 ["container_uuid", "=", current_container["uuid"]]
             ]).execute()

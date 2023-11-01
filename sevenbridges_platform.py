@@ -273,7 +273,7 @@ class SevenBridgesPlatform(Platform):
 
         task_id = os.environ.get('TASK_ID')
         if not task_id:
-            raise Exception("ERROR: Environment variable TASK_ID not set.")
+            raise ValueError("ERROR: Environment variable TASK_ID not set.")
         logging.info("TASK_ID: %s", task_id)
         task = self.api.tasks.get(id=task_id)
         return task
