@@ -101,8 +101,13 @@ class Platform(ABC):
         ''' Submit a workflow on the platform '''
 
     @abstractmethod
-    def upload_file_to_project(self, filename, project, filepath):
+    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         '''
         Upload a local file to project 
-        Parameter filepath is not used in sbg. Files are uploaded to root.
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
+        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param destination_filename: File name after uploaded to destination folder.
+        :param overwrite: Overwrite the file if it already exists.
+        :return: ID of uploaded file.
         '''
