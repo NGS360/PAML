@@ -419,13 +419,14 @@ class SevenBridgesPlatform(Platform):
         task.run()
         return task
 
-    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False):
-        ''' 
-        Upload a local file to project
-        :param filename: Filename of local file to be uploaded.
-        :param project: Project that the file is uploaded to.
+    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+        '''
+        Upload a local file to project 
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
         :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
         :param destination_filename: File name after uploaded to destination folder.
+        :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
         '''
         if destination_filename is None:
