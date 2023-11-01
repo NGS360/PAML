@@ -436,10 +436,6 @@ class ArvadosPlatform(Platform):
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": project["uuid"],
                 "name": collection_name}).execute()
-            destination_collection = self.api.collections().list(filters=[
-                ["owner_uuid", "=", project["uuid"]],
-                ["name", "=", collection_name]
-                ]).execute()['items'][0]
 
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
