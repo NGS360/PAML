@@ -102,7 +102,7 @@ class Platform(ABC):
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
-        :param destination_path: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param destination_path: The target path to the folder that file will be uploaded to.
         :param overwrite: Whether to overwrite the file if it already exists.
         :return: ID of uploaded file.
         '''
