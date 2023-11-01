@@ -442,7 +442,7 @@ class ArvadosPlatform(Platform):
         if destination_filename is None:
             destination_filename = filename.split('/')[-1]
 
-        if len(folder_tree)>1:
+        if len(folder_tree) > 1:
             target_filepath = '/'.join(folder_tree[1:]) + '/' + destination_filename
         else:
             target_filepath = destination_filename
