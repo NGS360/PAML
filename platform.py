@@ -58,6 +58,10 @@ class Platform(ABC):
         ''' Get a folder id by its full path name '''
 
     @abstractmethod
+    def get_task_input(self, task, input_name):
+        ''' Retrieve the input field of the task '''
+
+    @abstractmethod
     def get_task_state(self, task, refresh=False):
         '''
         Get workflow/task state

@@ -205,7 +205,7 @@ class ArvadosPlatform(Platform):
                 destination_workflows.append(self.api.workflows().create(body=workflow).execute())
         return destination_workflows
 
-    def delete_task(self, task):
+    def delete_task(self, task: ArvadosTask):
         ''' Delete a task/workflow/process '''
         self.api.container_requests().delete(uuid=task.container_request["uuid"]).execute()
 
@@ -218,8 +218,11 @@ class ArvadosPlatform(Platform):
             return True
         return False
 
-    def get_current_task(self):
-        ''' Get the current task '''
+    def get_current_task(self) -> ArvadosTask:
+        '''
+        Get the current task
+        :return: ArvadosTask object
+        '''
 
         try:
             current_container = self.api.containers().current().execute()
@@ -228,7 +231,9 @@ class ArvadosPlatform(Platform):
         request = self.api.container_requests().list(filters=[
                 ["container_uuid", "=", current_container["uuid"]]
             ]).execute()
-        return request
+        if 'items' in request and len(request['items']) > 0:
+            return ArvadosTask(request['items'][0], current_container)
+        raise ValueError("Current task not associated with a container")
 
     def get_file_id(self, project, file_path):
         '''
@@ -284,12 +289,16 @@ class ArvadosPlatform(Platform):
             return None
         return f"keep:{collection['uuid']}/{folder_path}"
 
-    def get_task_state(self, task, refresh=False):
+    def get_task_input(self, task, input_name):
+        ''' Retrieve the input field of the task '''
+        return task['container']['mounts']['/var/lib/cwl/cwl.input.json']['content'][input_name]['location']
+
+    def get_task_state(self, task: ArvadosTask, refresh=False):
         '''
         Get workflow/task state
 
         :param project: The project to search
-        :param task: The task to search for. Task is a dictionary containing a container_request_uuid and
+        :param task: The task to search for. Task is an ArvadosTask containing a container_request_uuid and
             container dictionary.
         :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
         '''
@@ -310,7 +319,7 @@ class ArvadosPlatform(Platform):
             return 'Queued'
         raise ValueError(f"TODO: Unknown task state: {task.container['state']}")
 
-    def get_task_output(self, task, output_name):
+    def get_task_output(self, task: ArvadosTask, output_name):
         ''' Retrieve the output field of the task '''
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
@@ -321,7 +330,7 @@ class ArvadosPlatform(Platform):
         output_file_location = f"keep:{task.container_request['output_uuid']}/{output_file}"
         return output_file_location
 
-    def get_task_output_filename(self, task, output_name):
+    def get_task_output_filename(self, task: ArvadosTask, output_name):
         ''' Retrieve the output field of the task and return filename'''
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
@@ -331,7 +340,7 @@ class ArvadosPlatform(Platform):
         output_file = cwl_output[output_name]['basename']
         return output_file
 
-    def get_tasks_by_name(self, project, task_name):
+    def get_tasks_by_name(self, project, task_name): # -> list(ArvadosTask):
         '''
         Get all processes (jobs) in a project with a specified name
 
