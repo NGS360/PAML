@@ -46,12 +46,20 @@ class Platform(ABC):
         ''' Detect platform we are running on '''
 
     @abstractmethod
+    def get_current_task(self):
+        ''' Get the current task '''
+
+    @abstractmethod
     def get_file_id(self, project, file_path):
         ''' Get a file id by its full path name '''
 
     @abstractmethod
     def get_folder_id(self, project, folder_path):
         ''' Get a folder id by its full path name '''
+
+    @abstractmethod
+    def get_task_input(self, task, input_name):
+        ''' Retrieve the input field of the task '''
 
     @abstractmethod
     def get_task_state(self, task, refresh=False):

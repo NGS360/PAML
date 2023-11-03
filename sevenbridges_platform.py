@@ -20,6 +20,7 @@ class SevenBridgesPlatform(Platform):
         self.api = None
         self.api_config = None
         self._session_id = os.environ.get('SESSION_ID')
+        self.logger = logging.getLogger(__name__)
 
         self.api_endpoint = api_endpoint
         self.token = token
@@ -53,7 +54,6 @@ class SevenBridgesPlatform(Platform):
                     project=None if parent else project
                 )
         elif not parent[0].is_folder():
-            logging.error("Folder cannot be created with the same name as an existing file")
             raise FileExistsError(f"File with name {parent[0].name} already exists!")
         else:
             parent = parent[0]
@@ -67,9 +67,6 @@ class SevenBridgesPlatform(Platform):
                 else:
                     parent = nested[0]
                     if not parent.is_folder():
-                        logging.error(
-                            "Folder cannot be created with the same name as an "
-                            "existing file")
                         raise FileExistsError(
                             f"File with name {parent.name} already exists!")
         return parent
@@ -132,11 +129,11 @@ class SevenBridgesPlatform(Platform):
         :return: Flattened list of files (no folder objects)
         """
         if not files and not project:
-            logging.error("Provide either a list of files OR a project object/id")
+            self.logger.error("Provide either a list of files OR a project object/id")
             return []
 
         if project and not files:
-            logging.info("Recursively listing all files in project %s", project)
+            self.logger.info("Recursively listing all files in project %s", project)
             files = self.api.files.query(project=project, limit=100).all()
         file_list = []
         for file in files:
@@ -254,7 +251,7 @@ class SevenBridgesPlatform(Platform):
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
 
-    def delete_task(self, task):
+    def delete_task(self, task: sevenbridges.Task):
         ''' Delete a task/workflow/process '''
         task.delete()
 
@@ -267,6 +264,16 @@ class SevenBridgesPlatform(Platform):
         if session_id:
             return True
         return False
+
+    def get_current_task(self) -> sevenbridges.Task:
+        ''' Get the current task '''
+
+        task_id = os.environ.get('TASK_ID')
+        if not task_id:
+            raise ValueError("ERROR: Environment variable TASK_ID not set.")
+        self.logger.info("TASK_ID: %s", task_id)
+        task = self.api.tasks.get(id=task_id)
+        return task
 
     def get_file_id(self, project, file_path):
         '''
@@ -328,7 +335,11 @@ class SevenBridgesPlatform(Platform):
                     break
         return parent
 
-    def get_task_state(self, task, refresh=False):
+    def get_task_input(self, task, input_name):
+        ''' Retrieve the input field of the task '''
+        return task.inputs[input_name]
+
+    def get_task_state(self, task: sevenbridges.Task, refresh=False):
         ''' Get workflow/task state '''
         sbg_state = {
             'COMPLETED': 'Complete',
@@ -342,7 +353,7 @@ class SevenBridgesPlatform(Platform):
             task = self.api.tasks.get(id=task.id)
         return sbg_state[task.status]
 
-    def get_task_output(self, task, output_name):
+    def get_task_output(self, task: sevenbridges.Task, output_name):
         '''
         Retrieve the output field of the task
 
@@ -357,7 +368,7 @@ class SevenBridgesPlatform(Platform):
                 return outputfile.id
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def get_task_output_filename(self, task, output_name):
+    def get_task_output_filename(self, task: sevenbridges.Task, output_name):
         ''' Retrieve the output field of the task and return filename'''
         task = self.api.tasks.get(id=task.id)
         alloutputs = task.outputs
@@ -367,7 +378,7 @@ class SevenBridgesPlatform(Platform):
                 return outputfile.name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def get_tasks_by_name(self, project, task_name):
+    def get_tasks_by_name(self, project, task_name): # -> list(sevenbridges.Task):
         ''' Get a process by its name '''
         tasks = []
         for task in self.api.tasks.query(project=project).all():
