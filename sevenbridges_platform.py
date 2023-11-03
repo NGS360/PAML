@@ -8,8 +8,6 @@ from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sle
 
 from .platform import Platform
 
-logger = logging.getLogger(__name__)
-
 class SevenBridgesPlatform(Platform):
     ''' SevenBridges Platform class '''
     def __init__(self, api_endpoint='https://bms-api.sbgenomics.com/v2', token='dummy'):
@@ -22,6 +20,7 @@ class SevenBridgesPlatform(Platform):
         self.api = None
         self.api_config = None
         self._session_id = os.environ.get('SESSION_ID')
+        self.logger = logging.getLogger(__name__)
 
         self.api_endpoint = api_endpoint
         self.token = token
@@ -55,7 +54,6 @@ class SevenBridgesPlatform(Platform):
                     project=None if parent else project
                 )
         elif not parent[0].is_folder():
-            logger.error("Folder cannot be created with the same name as an existing file")
             raise FileExistsError(f"File with name {parent[0].name} already exists!")
         else:
             parent = parent[0]
@@ -69,9 +67,6 @@ class SevenBridgesPlatform(Platform):
                 else:
                     parent = nested[0]
                     if not parent.is_folder():
-                        logger.error(
-                            "Folder cannot be created with the same name as an "
-                            "existing file")
                         raise FileExistsError(
                             f"File with name {parent.name} already exists!")
         return parent
@@ -134,11 +129,11 @@ class SevenBridgesPlatform(Platform):
         :return: Flattened list of files (no folder objects)
         """
         if not files and not project:
-            logger.error("Provide either a list of files OR a project object/id")
+            self.logger.error("Provide either a list of files OR a project object/id")
             return []
 
         if project and not files:
-            logger.info("Recursively listing all files in project %s", project)
+            self.logger.info("Recursively listing all files in project %s", project)
             files = self.api.files.query(project=project, limit=100).all()
         file_list = []
         for file in files:
@@ -276,7 +271,7 @@ class SevenBridgesPlatform(Platform):
         task_id = os.environ.get('TASK_ID')
         if not task_id:
             raise ValueError("ERROR: Environment variable TASK_ID not set.")
-        logger.info("TASK_ID: %s", task_id)
+        self.logger.info("TASK_ID: %s", task_id)
         task = self.api.tasks.get(id=task_id)
         return task
 
