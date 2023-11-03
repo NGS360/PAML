@@ -291,7 +291,12 @@ class ArvadosPlatform(Platform):
 
     def get_task_input(self, task, input_name):
         ''' Retrieve the input field of the task '''
-        return task['container']['mounts']['/var/lib/cwl/cwl.input.json']['content'][input_name]['location']
+        if input_name in task.container_request['properties']['cwl_input']:
+            input_field = task.container_request['properties']['cwl_input'][input_name]
+            if 'location' in input_field:
+                return input_field['location']
+            return input_field
+        raise ValueError(f"Could not find input {input_name} in task {task.container_request['uuid']}")
 
     def get_task_state(self, task: ArvadosTask, refresh=False):
         '''
