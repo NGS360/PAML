@@ -335,8 +335,10 @@ class SevenBridgesPlatform(Platform):
                     break
         return parent
 
-    def get_task_input(self, task, input_name):
+    def get_task_input(self, task: sevenbridges.Task, input_name):
         ''' Retrieve the input field of the task '''
+        if isinstance(task.inputs[input_name], sevenbridges.File):
+            return task.inputs[input_name].id
         return task.inputs[input_name]
 
     def get_task_state(self, task: sevenbridges.Task, refresh=False):
@@ -360,13 +362,9 @@ class SevenBridgesPlatform(Platform):
         :param task: The task object to retrieve the output from
         :param output_name: The name of the output to retrieve
         '''
-        task = self.api.tasks.get(id=task.id)
-        alloutputs = task.outputs
-        if output_name in alloutputs:
-            outputfile = alloutputs[output_name]
-            if outputfile:
-                return outputfile.id
-        raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
+        if isinstance(task.outputs[output_name], sevenbridges.File):
+            return task.outputs[output_name].id
+        return task.outputs[output_name]
 
     def get_task_output_filename(self, task: sevenbridges.Task, output_name):
         ''' Retrieve the output field of the task and return filename'''
