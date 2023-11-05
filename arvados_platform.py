@@ -49,8 +49,8 @@ def arvados_task_decoder(obj):
 
 class ArvadosPlatform(Platform):
     ''' Arvados Platform class '''
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name):
+        super().__init__(name)
         self.api_config = arvados.config.settings()
         self.api = None
         self.keep_client = None
