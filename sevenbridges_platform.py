@@ -169,15 +169,17 @@ class SevenBridgesPlatform(Platform):
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
-    def connect(self):
+    def connect(self, **kwargs):
         ''' Connect to Sevenbridges '''
+        self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
+        self.token = kwargs.get('token', self.token)
+
         if self._session_id:
             self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
                                         error_handlers=[rate_limit_sleeper,
                                                         maintenance_sleeper,
                                                         general_error_sleeper],
                                         advance_access=True)
-            # We were doing this before, but I'm not convinced we need to.
             self.api._session_id = self._session_id  # pylint: disable=protected-access
         else:
             self.api = sevenbridges.Api(config=self.api_config,

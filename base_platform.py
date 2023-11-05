@@ -9,7 +9,7 @@ class Platform(ABC):
         self.name = name
 
     @abstractmethod
-    def connect(self):
+    def connect(self, **kwargs):
         ''' Connect to the platform '''
 
     @abstractmethod
