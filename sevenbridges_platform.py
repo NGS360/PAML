@@ -6,20 +6,24 @@ import logging
 import sevenbridges
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
-class SevenBridgesPlatform():
+from .base_platform import Platform
+
+class SevenBridgesPlatform(Platform):
     ''' SevenBridges Platform class '''
-    def __init__(self, api_endpoint='https://bms-api.sbgenomics.com/v2', token='dummy'):
+    def __init__(self, name):
         '''
         Initialize SevenBridges Platform 
         
         We need either a session id or an api_config object to connect to SevenBridges
         '''
+        super().__init__(name)
         self.api = None
         self.api_config = None
         self._session_id = os.environ.get('SESSION_ID')
+        self.logger = logging.getLogger(__name__)
 
-        self.api_endpoint = api_endpoint
-        self.token = token
+        self.api_endpoint = 'https://bms-api.sbgenomics.com/v2'
+        self.token = 'dummy'
 
         if not self._session_id:
             if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
@@ -50,7 +54,6 @@ class SevenBridgesPlatform():
                     project=None if parent else project
                 )
         elif not parent[0].is_folder():
-            logging.error("Folder cannot be created with the same name as an existing file")
             raise FileExistsError(f"File with name {parent[0].name} already exists!")
         else:
             parent = parent[0]
@@ -64,9 +67,6 @@ class SevenBridgesPlatform():
                 else:
                     parent = nested[0]
                     if not parent.is_folder():
-                        logging.error(
-                            "Folder cannot be created with the same name as an "
-                            "existing file")
                         raise FileExistsError(
                             f"File with name {parent.name} already exists!")
         return parent
@@ -129,11 +129,11 @@ class SevenBridgesPlatform():
         :return: Flattened list of files (no folder objects)
         """
         if not files and not project:
-            logging.error("Provide either a list of files OR a project object/id")
+            self.logger.error("Provide either a list of files OR a project object/id")
             return []
 
         if project and not files:
-            logging.info("Recursively listing all files in project %s", project)
+            self.logger.info("Recursively listing all files in project %s", project)
             files = self.api.files.query(project=project, limit=100).all()
         file_list = []
         for file in files:
@@ -169,15 +169,17 @@ class SevenBridgesPlatform():
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
-    def connect(self):
+    def connect(self, **kwargs):
         ''' Connect to Sevenbridges '''
+        self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
+        self.token = kwargs.get('token', self.token)
+
         if self._session_id:
             self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
                                         error_handlers=[rate_limit_sleeper,
                                                         maintenance_sleeper,
                                                         general_error_sleeper],
                                         advance_access=True)
-            # We were doing this before, but I'm not convinced we need to.
             self.api._session_id = self._session_id  # pylint: disable=protected-access
         else:
             self.api = sevenbridges.Api(config=self.api_config,
@@ -186,25 +188,30 @@ class SevenBridgesPlatform():
                                                         general_error_sleeper],
                                         advance_access=True)
 
-    def copy_folder(self, reference_project, reference_folder, destination_project):
+    def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy reference folder to destination project
 
-        :param reference_project: The reference project
-        :param reference_folder: The reference folder
+        :param source_project: The source project
+        :param source_folder: The source folder
         :param destination_project: The destination project
         :return: The destination folder
         '''
         # get the reference project folder
         #sbg_reference_folder = self._find_or_create_path(reference_project, reference_folder)
         # get the destination project folder
-        sbg_destination_folder = self._find_or_create_path(destination_project, reference_folder)
+        sbg_destination_folder = self._find_or_create_path(destination_project, source_folder)
 
         # Copy the files from the reference project to the destination project
-        reference_files = self._list_files_in_folder(project=reference_project, folder=reference_folder)
-        destination_files = list(self._list_files_in_folder(project=destination_project, folder=reference_folder))
+        reference_files = self._list_files_in_folder(project=source_project, folder=source_folder)
+        destination_files = list(self._list_files_in_folder(project=destination_project, folder=source_folder))
         for reference_file in reference_files:
+            if reference_file.is_folder():
+                source_folder = os.path.join(source_folder, reference_file.name)
+                self.copy_folder(source_project, source_folder, destination_project)
             if reference_file.name not in [f.name for f in destination_files]:
+                if reference_file.is_folder():
+                    continue
                 reference_file.copy_to_folder(parent=sbg_destination_folder)
         return sbg_destination_folder
 
@@ -246,7 +253,7 @@ class SevenBridgesPlatform():
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
 
-    def delete_task(self, task):
+    def delete_task(self, task: sevenbridges.Task):
         ''' Delete a task/workflow/process '''
         task.delete()
 
@@ -259,6 +266,16 @@ class SevenBridgesPlatform():
         if session_id:
             return True
         return False
+
+    def get_current_task(self) -> sevenbridges.Task:
+        ''' Get the current task '''
+
+        task_id = os.environ.get('TASK_ID')
+        if not task_id:
+            raise ValueError("ERROR: Environment variable TASK_ID not set.")
+        self.logger.info("TASK_ID: %s", task_id)
+        task = self.api.tasks.get(id=task_id)
+        return task
 
     def get_file_id(self, project, file_path):
         '''
@@ -320,7 +337,13 @@ class SevenBridgesPlatform():
                     break
         return parent
 
-    def get_task_state(self, task, refresh=False):
+    def get_task_input(self, task: sevenbridges.Task, input_name):
+        ''' Retrieve the input field of the task '''
+        if isinstance(task.inputs[input_name], sevenbridges.File):
+            return task.inputs[input_name].id
+        return task.inputs[input_name]
+
+    def get_task_state(self, task: sevenbridges.Task, refresh=False):
         ''' Get workflow/task state '''
         sbg_state = {
             'COMPLETED': 'Complete',
@@ -334,22 +357,18 @@ class SevenBridgesPlatform():
             task = self.api.tasks.get(id=task.id)
         return sbg_state[task.status]
 
-    def get_task_output(self, task, output_name):
+    def get_task_output(self, task: sevenbridges.Task, output_name):
         '''
         Retrieve the output field of the task
 
         :param task: The task object to retrieve the output from
         :param output_name: The name of the output to retrieve
         '''
-        task = self.api.tasks.get(id=task.id)
-        alloutputs = task.outputs
-        if output_name in alloutputs:
-            outputfile = alloutputs[output_name]
-            if outputfile:
-                return outputfile.id
-        raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
+        if isinstance(task.outputs[output_name], sevenbridges.File):
+            return task.outputs[output_name].id
+        return task.outputs[output_name]
 
-    def get_task_output_filename(self, task, output_name):
+    def get_task_output_filename(self, task: sevenbridges.Task, output_name):
         ''' Retrieve the output field of the task and return filename'''
         task = self.api.tasks.get(id=task.id)
         alloutputs = task.outputs
@@ -359,11 +378,11 @@ class SevenBridgesPlatform():
                 return outputfile.name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def get_tasks_by_name(self, project, process_name):
+    def get_tasks_by_name(self, project, task_name): # -> list(sevenbridges.Task):
         ''' Get a process by its name '''
         tasks = []
         for task in self.api.tasks.query(project=project).all():
-            if task.name == process_name:
+            if task.name == task_name:
                 tasks.append(task)
         return tasks
 
@@ -411,11 +430,39 @@ class SevenBridgesPlatform():
         task.run()
         return task
 
-    def upload_file_to_project(self, filename, project, filepath):
+    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         '''
-        Upload a local file to project
-        Parameter filepath is not used in sbg. Files are uploaded to root.
+        Upload a local file to project 
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
+        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param destination_filename: File name after uploaded to destination folder.
+        :param overwrite: Overwrite the file if it already exists.
+        :return: ID of uploaded file.
         '''
-        self.api.files.upload(filename, project, overwrite=True)
-        fileid = self.get_file_id(project, filename)
-        return fileid
+        if destination_filename is None:
+            destination_filename = filename.split('/')[-1]
+
+        if dest_folder is not None:
+            if dest_folder[-1] == '/': # remove slash at the end
+                dest_folder = dest_folder[:-1]
+            parent_folder = self._find_or_create_path(project, dest_folder)
+            parent_folder_id = parent_folder.id
+        else:
+            parent_folder_id = None
+
+        # check if file already exists on SBG
+        existing_file = self.api.files.query(names=[destination_filename],
+                                             parent=parent_folder_id,
+                                             project=None if parent_folder_id else project)
+
+        # upload file if overwrite is True or if file does not exists
+        if overwrite or len(existing_file) == 0:
+            update_state = self.api.files.upload(filename, overwrite=overwrite,
+                                                 parent=parent_folder_id,
+                                                 file_name=destination_filename,
+                                                 project=None if parent_folder_id else project)
+            return None if update_state.status == 'FAILED' else update_state.result().id
+
+        # return file id if file already exists
+        return existing_file[0].id
