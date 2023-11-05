@@ -44,7 +44,7 @@ class PlatformFactory():
         '''
         creator = self._creators.get(platform)
         if creator:
-            return creator()
+            return creator(platform)
         raise ValueError(f"Unknown platform: {platform}")
 
     def register_platform_type(self, platform, creator):

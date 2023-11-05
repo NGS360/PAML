@@ -4,8 +4,9 @@ import logging
 
 class Platform(ABC):
     ''' abstract Platform class '''
-    def __init__(self):
+    def __init__(self, name):
         self.logger = logging.getLogger(__name__)
+        self.name = name
 
     @abstractmethod
     def connect(self):

@@ -10,20 +10,20 @@ from .base_platform import Platform
 
 class SevenBridgesPlatform(Platform):
     ''' SevenBridges Platform class '''
-    def __init__(self, api_endpoint='https://bms-api.sbgenomics.com/v2', token='dummy'):
+    def __init__(self, name):
         '''
         Initialize SevenBridges Platform 
         
         We need either a session id or an api_config object to connect to SevenBridges
         '''
-        super().__init__()
+        super().__init__(name)
         self.api = None
         self.api_config = None
         self._session_id = os.environ.get('SESSION_ID')
         self.logger = logging.getLogger(__name__)
 
-        self.api_endpoint = api_endpoint
-        self.token = token
+        self.api_endpoint = 'https://bms-api.sbgenomics.com/v2'
+        self.token = 'dummy'
 
         if not self._session_id:
             if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
