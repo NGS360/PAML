@@ -70,7 +70,7 @@ class ArvadosPlatform(Platform):
             return [fl for fl in file_list if os.path.basename(fl.stream_name()) == subdirectory_path]
         return list(file_list)
 
-    def connect(self):
+    def connect(self, **kwargs):
         ''' Connect to Arvados '''
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
         self.keep_client = arvados.KeepClient(self.api)
