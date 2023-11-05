@@ -289,6 +289,10 @@ class ArvadosPlatform(Platform):
             return None
         return f"keep:{collection['uuid']}/{folder_path}"
 
+    def get_platform_name():
+        ''' Return the name of the platform '''
+        return "Arvados"
+
     def get_task_input(self, task, input_name):
         ''' Retrieve the input field of the task '''
         if input_name in task.container_request['properties']['cwl_input']:

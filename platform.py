@@ -57,6 +57,10 @@ class Platform(ABC):
     def get_folder_id(self, project, folder_path):
         ''' Get a folder id by its full path name '''
 
+    @classmethod
+    def get_platform_name(cls):
+        ''' Return the name of the platform '''
+
     @abstractmethod
     def get_task_input(self, task, input_name):
         ''' Retrieve the input field of the task '''
