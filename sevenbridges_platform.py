@@ -335,11 +335,6 @@ class SevenBridgesPlatform(Platform):
                     break
         return parent
 
-    @classmethod
-    def get_platform_name(cls):
-        ''' Return the name of the platform '''
-        return 'SevenBridges'
-
     def get_task_input(self, task: sevenbridges.Task, input_name):
         ''' Retrieve the input field of the task '''
         if isinstance(task.inputs[input_name], sevenbridges.File):
