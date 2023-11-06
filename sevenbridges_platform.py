@@ -364,6 +364,10 @@ class SevenBridgesPlatform(Platform):
         :param task: The task object to retrieve the output from
         :param output_name: The name of the output to retrieve
         '''
+        # Refresh the task.  If we don't the outputs fields may be empty.
+        task = self.api.tasks.get(id=task.id)
+        self.logger.debug("Getting output %s from task %s", output_name, task.name)
+        self.logger.debug("Task has outputs: %s", task.outputs)
         if isinstance(task.outputs[output_name], sevenbridges.File):
             return task.outputs[output_name].id
         return task.outputs[output_name]
