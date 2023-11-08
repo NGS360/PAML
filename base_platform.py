@@ -102,19 +102,19 @@ class Platform(ABC):
         self.logger = logger
 
     @abstractmethod
-     def stage_task_output(self, task, project, output_to_export, output_directory_name):
-         '''
-         Prepare/Copy output files of a task for export.
+    def stage_task_output(self, task, project, output_to_export, output_directory_name):
+        '''
+        Prepare/Copy output files of a task for export.
 
-         For Arvados, copy selected files to output collection/folder.
-         For SBG, add OUTPUT tag for output files.
+        For Arvados, copy selected files to output collection/folder.
+        For SBG, add OUTPUT tag for output files.
 
-         :param task: Task object to export output files
-         :param project: The project to export task outputs
-         :param output_to_export: A list of CWL output IDs that needs to be exported (for example: ['raw_vcf','annotated_vcf'])
-         :param output_directory_name: Name of output folder that output files are copied into
-         :return: None
-         '''
+        :param task: Task object to export output files
+        :param project: The project to export task outputs
+        :param output_to_export: A list of CWL output IDs that needs to be exported (for example: ['raw_vcf','annotated_vcf'])
+        :param output_directory_name: Name of output folder that output files are copied into
+        :return: None
+        '''
 
     @abstractmethod
     def submit_task(self, name, project, workflow, parameters):
