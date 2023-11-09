@@ -34,9 +34,17 @@ class OmicsPlatform(Platform):
         '''Do nothing. This function seems not used in launcher?'''
         pass
 
+    def delete_task(self, task):
+        ''' Delete a task/workflow/process '''
+        self.logger.info('TBD: Deleting task %s', task)
+
     @classmethod
     def detect(cls):
         return False
+
+    def get_current_task(self):
+        ''' Get the current task '''
+        return None
 
     def get_file_id(self, project, file_path):
         '''Return file s3 path for Omics job input'''
@@ -48,6 +56,11 @@ class OmicsPlatform(Platform):
         The one caveat is that Omics wants trailing slashes on folder paths, so add one.
         '''
         return folder_path + "/"
+
+    def get_task_input(self, task, input_name):
+        ''' Retrieve the input field of the task '''
+        self.logger.info("TBD: Getting input for task %s", task)
+        return None
 
     def get_task_state(self, task, refresh=False):
         ''' 
@@ -86,6 +99,11 @@ class OmicsPlatform(Platform):
         if filename == None:
             raise ValueError(f"Cannot find output file for: {output_name}")
         return taskinfo['outputUri'] + filename
+
+    def get_task_output_filename(self, task, output_name):
+        ''' Retrieve the output field of the task and return filename'''
+        self.logger.info("TBD: Getting output filename for task %s", task)
+        return None
 
     def get_tasks_by_name(self, project, task_name):
         '''
@@ -149,3 +167,7 @@ class OmicsPlatform(Platform):
         except botocore.exceptions.ClientError as err:
             logger.error('Could not start run for %s: %s', name, err)
             return None
+
+    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+        self.logger.info("TBD: Uploading file %s to project %s", filename, project)
+        return None
