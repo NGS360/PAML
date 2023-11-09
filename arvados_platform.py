@@ -432,17 +432,16 @@ class ArvadosPlatform(Platform):
 
          for output_id in output_to_export:
              output_file = cwl_output[output_id]
-             targetpath='./'+output_file['location']
+             targetpath = output_file['location']
              outputs_collection.copy(targetpath, target_path=targetpath,
                      source_collection=source_collection, overwrite=True)
 
              if 'secondaryFiles' in output_file:
                  for secondary_file in output_file['secondaryFiles']:
-                     targetpath='./'+secondary_file['location']
+                     targetpath = secondary_file['location']
                      outputs_collection.copy(targetpath, target_path=targetpath,
                              source_collection=source_collection, overwrite=True)
          outputs_collection.save()
-         return None
 
     def submit_task(self, name, project, workflow, parameters):
         ''' Submit a workflow on the platform '''
