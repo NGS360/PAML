@@ -6,11 +6,14 @@ import logging
 import boto3
 import botocore
 
+from .base_platform import Platform
+
 logger = logging.getLogger(__name__)
 
-class OmicsPlatform():
+class OmicsPlatform(Platform):
     ''' AWS HealthOmics Platform class '''
-    def __init__(self):
+    def __init__(self, name):
+        super().__init__(name)
         self.api = None
 
     def connect(self):
