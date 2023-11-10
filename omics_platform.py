@@ -109,28 +109,28 @@ class OmicsPlatform(Platform):
         ''' Get a tasks by its name '''
         tasks = []
         runs = self.api.list_runs(name=task_name)
-        for item in runs.items:
+        for item in runs['items']:
             run = self.api.get_run(id=item['id'])
-            if run['tags']['ProjectId'] == project['ProjectId']:
-                tasks.append(run)
+            if 'ProjectId' in project:
+                if run['tags']['ProjectId'] == project['ProjectId']:
+                    tasks.append(run)
+            elif 'ProjectName' in project:
+                if run['tags']['ProjectName'] == project['ProjectName']:
+                    tasks.append(run)
         return tasks
 
     def get_project(self):
         '''
         Since there is no concept of project in Omics, raise an error.
         '''
-        raise ValueError("Please provide a project_id.")
+        raise ValueError("Omics does not support project. Use get_project_by_id or get_project_by_name instead.")
 
     def get_project_by_name(self, project_name):
         ''' Return a dictionary of project to provide project_name tag info for omics jobs '''
-        # NOTE: This function was meant to look up a project by its name and return the UUID of the project
-        # on the platform.
-        # Since there isn't a concept of a project on Omics, we can't do anything here.
-        # If we just return the project name, then if someone runs the same project using the project id,
-        # the workflows run will be different as one will be associated with a project name and other will be associated
-        # if with a project id.
-        # We could look up the Projct ID in NGS3360, but risk the chance that a project name is duplicated.
-        raise ValueError("Please provide a project_id instead.")
+        project = {
+            'ProjectName': project_name
+        }
+        return project
 
     def get_project_by_id(self, project_id):
         ''' Return a dictionary of project to provide project_id tag info for omics jobs'''
