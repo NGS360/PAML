@@ -106,12 +106,14 @@ class OmicsPlatform(Platform):
         return None
 
     def get_tasks_by_name(self, project, task_name):
-        '''
-        Omics do not allow get run by name. A Run ID is required for searching runs.
-        # TODO: aws omics list-runs does not support filter by name. Need to get all runs and filter by name.
-        Return None to force submitting job without reuse.
-        '''
-        return None
+        ''' Get a tasks by its name '''
+        tasks = []
+        runs = self.api.list_runs(name=task_name)
+        for item in runs.items:
+            run = self.api.get_run(id=item['id'])
+            if run['tags']['ProjectId'] == project['ProjectId']:
+                tasks.append(run)
+        return tasks
 
     def get_project(self):
         '''
@@ -122,11 +124,13 @@ class OmicsPlatform(Platform):
     def get_project_by_name(self, project_name):
         ''' Return a dictionary of project to provide project_name tag info for omics jobs '''
         # NOTE: This function was meant to look up a project by its name and return the UUID of the project
-        # on the platform.  Since there isn't a concept of a project on Omics, we just return the project name.
-        project = {
-            'ProjectName': project_name
-        }
-        return project
+        # on the platform.
+        # Since there isn't a concept of a project on Omics, we can't do anything here.
+        # If we just return the project name, then if someone runs the same project using the project id,
+        # the workflows run will be different as one will be associated with a project name and other will be associated
+        # if with a project id.
+        # We could look up the Projct ID in NGS3360, but risk the chance that a project name is duplicated.
+        raise ValueError("Please provide a project_id instead.")
 
     def get_project_by_id(self, project_id):
         ''' Return a dictionary of project to provide project_id tag info for omics jobs'''
