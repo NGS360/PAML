@@ -147,9 +147,9 @@ class OmicsPlatform(Platform):
         '''
         # A subfolder is created with the Run ID assigned by Omics such that task output is seperate.
         if 'ProjectName' in project:
-            base_output_path = 's3://bmsrd-ngs-omics/omics_output/'+project['ProjectName']
+            base_output_path = 's3://bmsrd-ngs-omics/runs'
         else:
-            base_output_path = 's3://bmsrd-ngs-omics/omics_output/'+project['ProjectId']
+            base_output_path = 's3://bmsrd-ngs-omics/runs'
 
         try:
             logger.debug("Starting run for %s", name)
