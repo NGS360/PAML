@@ -139,6 +139,10 @@ class OmicsPlatform(Platform):
         }
         return project
 
+    def stage_task_output(self, task, project, output_to_export, output_directory_name):
+        ''' TODO '''
+        return
+
     def submit_task(self, name, project, workflow, parameters):
         '''
         Submit workflow for one sample.
