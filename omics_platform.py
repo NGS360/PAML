@@ -139,7 +139,7 @@ class OmicsPlatform(Platform):
         }
         return project
 
-    def stage_task_output(self, task, project, output_to_export, output_directory_name):
+    def stage_task_output(self, task, project, output_to_export, output_directory_name, download=False):
         ''' TODO '''
         return
 

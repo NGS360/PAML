@@ -397,7 +397,7 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
-    def stage_task_output(self, task, project, output_to_export, output_directory_name):
+    def stage_task_output(self, task, project, output_to_export, output_directory_name, download=False):
         '''
         Prepare/Copy output files of a task for export.
 
@@ -410,19 +410,6 @@ class ArvadosPlatform(Platform):
         :param output_directory_name: Name of output folder that output files are copied into
         :return: None
         '''
-        # Get the output collection with name of output_directory_name
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", project["uuid"]],
-            ["name", "=", output_directory_name]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            outputs_collection = search_result['items'][0]
-        else:
-            outputs_collection = self.api.collections().create(body={
-                "owner_uuid": project["uuid"],
-                "name": output_directory_name}).execute()
-        outputs_collection = arvados.collection.Collection(outputs_collection['uuid'])
-
         # Get task output collection
         source_collection = arvados.collection.Collection(task.container_request["output_uuid"])
 
@@ -433,15 +420,38 @@ class ArvadosPlatform(Platform):
         for output_id in output_to_export:
             output_file = cwl_output[output_id]
             targetpath = output_file['location']
-            outputs_collection.copy(targetpath, target_path=targetpath,
-                    source_collection=source_collection, overwrite=True)
+            if download:
+                destination = os.path.join(output_directory_name, targetpath)
+                self.logger.info("Downloading %s -> %s", targetpath, destination)
+                with source_collection.open(targetpath, "rb") as reader:
+                    with open(destination, "wb") as writer:
+                        content = reader.read(128*1024)
+                        while content:
+                            writer.write(content)
+                            content = reader.read(128*1024)
+            else:
+                # Get the output collection with name of output_directory_name
+                search_result = self.api.collections().list(filters=[
+                    ["owner_uuid", "=", project["uuid"]],
+                    ["name", "=", output_directory_name]
+                    ]).execute()
+                if len(search_result['items']) > 0:
+                    outputs_collection = search_result['items'][0]
+                else:
+                    outputs_collection = self.api.collections().create(body={
+                        "owner_uuid": project["uuid"],
+                        "name": output_directory_name}).execute()
+                outputs_collection = arvados.collection.Collection(outputs_collection['uuid'])
 
-            if 'secondaryFiles' in output_file:
-                for secondary_file in output_file['secondaryFiles']:
-                    targetpath = secondary_file['location']
-                    outputs_collection.copy(targetpath, target_path=targetpath,
-                            source_collection=source_collection, overwrite=True)
-        outputs_collection.save()
+                outputs_collection.copy(targetpath, target_path=targetpath,
+                        source_collection=source_collection, overwrite=True)
+
+                if 'secondaryFiles' in output_file:
+                    for secondary_file in output_file['secondaryFiles']:
+                        targetpath = secondary_file['location']
+                        outputs_collection.copy(targetpath, target_path=targetpath,
+                                source_collection=source_collection, overwrite=True)
+                outputs_collection.save()
 
     def submit_task(self, name, project, workflow, parameters):
         ''' Submit a workflow on the platform '''

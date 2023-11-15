@@ -102,7 +102,7 @@ class Platform(ABC):
         self.logger = logger
 
     @abstractmethod
-    def stage_task_output(self, task, project, output_to_export, output_directory_name):
+    def stage_task_output(self, task, project, output_to_export, output_directory_name, download=False):
         '''
         Prepare/Copy output files of a task for export.
 
@@ -113,6 +113,7 @@ class Platform(ABC):
         :param project: The project to export task outputs
         :param output_to_export: A list of CWL output IDs that needs to be exported (for example: ['raw_vcf','annotated_vcf'])
         :param output_directory_name: Name of output folder that output files are copied into
+        :param download: Download output files to local directory
         :return: None
         '''
 
