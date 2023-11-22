@@ -31,6 +31,30 @@ class SevenBridgesPlatform(Platform):
             else:
                 raise ValueError('No SevenBridges credentials found')
 
+    def _add_tag_to_file(self, target_file, newtag):
+        ''' Add a tag to a file '''
+        if newtag not in target_file.tags:
+            target_file.tags += [newtag]
+            target_file.save()
+        if hasattr(target_file,'secondary_files') and target_file.secondary_files is not None:
+            secondary_files = target_file.secondary_files
+            for secfile in secondary_files:
+                if isinstance(secfile,sevenbridges.models.file.File) and secfile.tags and newtag not in secfile.tags:
+                    secfile.tags += [newtag]
+                    secfile.save()
+
+    def _add_tag_to_folder(self,target_folder, newtag):
+        ''' Add a tag to all files in a folder '''
+        folder = self.api.files.get(id=target_folder.id)
+        allfiles = folder.list_files()
+        for file in allfiles:
+            if not isinstance(file,sevenbridges.models.file.File):
+                continue
+            if file.type == "file":
+                self._add_tag_to_file(file, newtag)
+            elif file.type == "folder":
+                self._add_tag_to_folder(file, newtag)
+
     def _find_or_create_path(self, project, path):
         """
         Go down virtual folder path, creating missing folders.
@@ -433,6 +457,39 @@ class SevenBridgesPlatform(Platform):
                                      execution_settings=execution_settings)
         task.run()
         return task
+
+    def stage_task_output(self, task, project, output_to_export, output_directory_name):
+        '''
+        Prepare/Copy output files of a task for export.
+
+        For Arvados, copy selected files to output collection/folder.
+        For SBG, add OUTPUT tag for output files.
+
+        :param task: Task object to export output files
+        :param project: The project to export task outputs
+        :param output_to_export: A list of CWL output IDs that needs to be exported
+            (for example: ['raw_vcf','annotated_vcf'])
+        :param output_directory_name: Name of output folder that output files are copied into
+        :return: None
+        '''
+        task = self.api.tasks.get(id=task.id)
+        alloutputs = task.outputs
+        for output_id in alloutputs:
+            if output_id not in output_to_export:
+                continue
+            outfile=alloutputs[output_id]
+            if isinstance(outfile,sevenbridges.models.file.File):
+                if outfile.type == "file":
+                    self._add_tag_to_file(outfile, "OUTPUT")
+                elif outfile.type == "folder":
+                    self._add_tag_to_folder(outfile, "OUTPUT")
+            if isinstance(outfile,list):
+                for file in outfile:
+                    if isinstance(file,sevenbridges.models.file.File):
+                        if file.type == "file":
+                            self._add_tag_to_file(file, "OUTPUT")
+                        elif file.type == "folder":
+                            self._add_tag_to_folder(file, "OUTPUT")
 
     def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         '''
