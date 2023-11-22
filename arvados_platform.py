@@ -398,50 +398,51 @@ class ArvadosPlatform(Platform):
         return None
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
-         '''
-         Prepare/Copy output files of a task for export.
+        '''
+        Prepare/Copy output files of a task for export.
 
-         For Arvados, copy selected files to output collection/folder.
-         For SBG, add OUTPUT tag for output files.
+        For Arvados, copy selected files to output collection/folder.
+        For SBG, add OUTPUT tag for output files.
 
-         :param task: Task object to export output files
-         :param project: The project to export task outputs
-         :param output_to_export: A list of CWL output IDs that needs to be exported (for example: ['raw_vcf','annotated_vcf'])
-         :param output_directory_name: Name of output folder that output files are copied into
-         :return: None
-         '''
-         # Get the output collection with name of output_directory_name
-         search_result = self.api.collections().list(filters=[
-             ["owner_uuid", "=", project["uuid"]],
-             ["name", "=", output_directory_name]
-             ]).execute()
-         if len(search_result['items']) > 0:
-             outputs_collection = search_result['items'][0]
-         else:
-             outputs_collection = self.api.collections().create(body={
-                 "owner_uuid": project["uuid"],
-                 "name": output_directory_name}).execute()
-         outputs_collection = arvados.collection.Collection(outputs_collection['uuid'])
+        :param task: Task object to export output files
+        :param project: The project to export task outputs
+        :param output_to_export: A list of CWL output IDs that needs to be exported 
+            (for example: ['raw_vcf','annotated_vcf'])
+        :param output_directory_name: Name of output folder that output files are copied into
+        :return: None
+        '''
+        # Get the output collection with name of output_directory_name
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", output_directory_name]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            outputs_collection = search_result['items'][0]
+        else:
+            outputs_collection = self.api.collections().create(body={
+                "owner_uuid": project["uuid"],
+                "name": output_directory_name}).execute()
+        outputs_collection = arvados.collection.Collection(outputs_collection['uuid'])
 
-         # Get task output collection
-         source_collection = arvados.collection.Collection(task.container_request["output_uuid"])
+        # Get task output collection
+        source_collection = arvados.collection.Collection(task.container_request["output_uuid"])
 
-         # Copy the files from task output collection into /{output_directory_name}
-         with source_collection.open('cwl.output.json') as cwl_output_file:
-             cwl_output = json.load(cwl_output_file)
+        # Copy the files from task output collection into /{output_directory_name}
+        with source_collection.open('cwl.output.json') as cwl_output_file:
+            cwl_output = json.load(cwl_output_file)
 
-         for output_id in output_to_export:
-             output_file = cwl_output[output_id]
-             targetpath = output_file['location']
-             outputs_collection.copy(targetpath, target_path=targetpath,
-                     source_collection=source_collection, overwrite=True)
+        for output_id in output_to_export:
+            output_file = cwl_output[output_id]
+            targetpath = output_file['location']
+            outputs_collection.copy(targetpath, target_path=targetpath,
+                    source_collection=source_collection, overwrite=True)
 
-             if 'secondaryFiles' in output_file:
-                 for secondary_file in output_file['secondaryFiles']:
-                     targetpath = secondary_file['location']
-                     outputs_collection.copy(targetpath, target_path=targetpath,
-                             source_collection=source_collection, overwrite=True)
-         outputs_collection.save()
+            if 'secondaryFiles' in output_file:
+                for secondary_file in output_file['secondaryFiles']:
+                    targetpath = secondary_file['location']
+                    outputs_collection.copy(targetpath, target_path=targetpath,
+                            source_collection=source_collection, overwrite=True)
+        outputs_collection.save()
 
     def submit_task(self, name, project, workflow, parameters):
         ''' Submit a workflow on the platform '''

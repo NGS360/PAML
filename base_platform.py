@@ -111,7 +111,8 @@ class Platform(ABC):
 
         :param task: Task object to export output files
         :param project: The project to export task outputs
-        :param output_to_export: A list of CWL output IDs that needs to be exported (for example: ['raw_vcf','annotated_vcf'])
+        :param output_to_export: A list of CWL output IDs that needs to be exported
+            (for example: ['raw_vcf','annotated_vcf'])
         :param output_directory_name: Name of output folder that output files are copied into
         :return: None
         '''
