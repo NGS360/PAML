@@ -434,6 +434,7 @@ class ArvadosPlatform(Platform):
         for output_id in output_to_export:
             output_file = cwl_output[output_id]
             targetpath = output_file['location']
+            # TODO: Before copying files, we should check if the file exists and is the same.  Can we check for md5 hash?
             outputs_collection.copy(targetpath, target_path=targetpath,
                     source_collection=source_collection, overwrite=True)
 
