@@ -70,6 +70,18 @@ class ArvadosPlatform(Platform):
             return [fl for fl in file_list if os.path.basename(fl.stream_name()) == subdirectory_path]
         return list(file_list)
 
+    def _load_cwl_output(self, task: ArvadosTask):
+        '''
+        Load CWL output from task
+        '''
+        cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
+                                                              api_client=self.api,
+                                                              keep_client=self.keep_client)
+        cwl_output = None
+        with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
+            cwl_output = json.load(cwl_output_file)
+        return cwl_output
+
     def connect(self, **kwargs):
         ''' Connect to Arvados '''
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
@@ -326,19 +338,14 @@ class ArvadosPlatform(Platform):
 
     def get_task_output(self, task: ArvadosTask, output_name):
         ''' Retrieve the output field of the task '''
-        cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
-                                                              api_client=self.api,
-                                                              keep_client=self.keep_client)
-        with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
-            cwl_output = json.load(cwl_output_file)
-        output_field = cwl_output[output_name]
-        if 'location' in output_field:
-            output_file = cwl_output[output_name]['location']
-            output_file_location = f"keep:{task.container_request['output_uuid']}/{output_file}"
-        else:
-            self.logger.warning("Could not find output %s in task %s", output_name, task.container_request['uuid'])
-            output_file_location = None
-        return output_file_location
+        cwl_output = self._load_cwl_output(task)
+
+        if cwl_output.get(output_name, 'None'):
+            output_field = cwl_output[output_name]
+            if 'location' in output_field:
+                output_file = cwl_output[output_name]['location']
+                return f"keep:{task.container_request['output_uuid']}/{output_file}"
+        return None
 
     def get_task_output_filename(self, task: ArvadosTask, output_name):
         ''' Retrieve the output field of the task and return filename'''
