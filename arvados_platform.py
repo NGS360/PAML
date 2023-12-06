@@ -331,8 +331,13 @@ class ArvadosPlatform(Platform):
                                                               keep_client=self.keep_client)
         with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
             cwl_output = json.load(cwl_output_file)
-        output_file = cwl_output[output_name]['location']
-        output_file_location = f"keep:{task.container_request['output_uuid']}/{output_file}"
+        output_field = cwl_output[output_name]
+        if 'location' in output_field:
+            output_file = cwl_output[output_name]['location']
+            output_file_location = f"keep:{task.container_request['output_uuid']}/{output_file}"
+        else:
+            self.logger.warning("Could not find output %s in task %s", output_name, task.container_request['uuid'])
+            output_file_location = None
         return output_file_location
 
     def get_task_output_filename(self, task: ArvadosTask, output_name):
