@@ -102,6 +102,16 @@ class Platform(ABC):
         self.logger = logger
 
     @abstractmethod
+    def stage_output_files(self, project, output_files):
+        '''
+        Stage output files to a project
+
+        :param project: The project to stage files to
+        :param output_files: A list of output files to stage
+        :return: None
+        '''
+
+    @abstractmethod
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
         Prepare/Copy output files of a task for export.
