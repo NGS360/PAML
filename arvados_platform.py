@@ -409,6 +409,49 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
+    def stage_output_files(self, project, output_files):
+        '''
+        Stage output files to a project
+
+        :param project: The project to stage files to
+        :param output_files: A list of output files to stage
+        :return: None
+        '''
+        # Get the output collection with name of output_directory_name
+        output_collection_name = 'results'
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", output_collection_name]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            outputs_collection = search_result['items'][0]
+        else:
+            outputs_collection = self.api.collections().create(body={
+                "owner_uuid": project["uuid"],
+                "name": output_collection_name}).execute()
+        outputs_collection = arvados.collection.Collection(outputs_collection['uuid'], api_client=self.api)
+
+        with outputs_collection.open("sources.txt", "a+") as sources:
+            copied_outputs = [n.strip() for n in sources.readlines()]
+
+            for output_file in output_files:
+                self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
+                if output_file['source'] in copied_outputs:
+                    continue
+
+                # Get the source collection
+                #keep:asdf-asdf-asdf/some/file.txt
+                source_collection_uuid = output_file['source'].split(':')[1].split('/')[0]
+                source_file = '/'.join(output_file['source'].split(':')[1].split('/')[1:])
+                source_collection = arvados.collection.Collection(source_collection_uuid, api_client=self.api)
+
+                # Copy the file
+                outputs_collection.copy(source_file, target_path=output_file['destination'],
+                            source_collection=source_collection, overwrite=True)
+                sources.write(output_file['source'] + "\n")
+
+        outputs_collection.save()
+
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
         Prepare/Copy output files of a task for export.
@@ -446,7 +489,9 @@ class ArvadosPlatform(Platform):
         for output_id in output_to_export:
             output_file = cwl_output[output_id]
             targetpath = output_file['location']
-            # TODO: Before copying files, we should check if the file exists and is the same.  Can we check for md5 hash?
+            # TODO: Before copying files, we should check if the file exists and is the same.
+            # Can we check for md5 hash?
+            # This method is replaced by stage_output_files
             outputs_collection.copy(targetpath, target_path=targetpath,
                     source_collection=source_collection, overwrite=True)
 
