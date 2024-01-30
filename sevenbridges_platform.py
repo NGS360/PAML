@@ -309,7 +309,7 @@ class SevenBridgesPlatform(Platform):
         :return: The file id
         '''
         if file_path.startswith('http'):
-            raise ValueError('File path cannot be a URL')
+            raise ValueError('File (%s) path cannot be a URL', file_path)
 
         if file_path.startswith('s3://'):
             file_path = file_path.split('/')[-1]
@@ -333,7 +333,7 @@ class SevenBridgesPlatform(Platform):
         if file_list:
             return file_list[0].id
 
-        raise ValueError("File not found in specified folder")
+        raise ValueError("File not found in specified folder: %s", file_path)
 
     def get_folder_id(self, project, folder_path):
         '''
