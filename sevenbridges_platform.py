@@ -309,7 +309,7 @@ class SevenBridgesPlatform(Platform):
         :return: The file id
         '''
         if file_path.startswith('http'):
-            raise ValueError('File path cannot be a URL')
+            raise ValueError('File (%s) path cannot be a URL', file_path)
 
         if file_path.startswith('s3://'):
             file_path = file_path.split('/')[-1]
@@ -333,7 +333,7 @@ class SevenBridgesPlatform(Platform):
         if file_list:
             return file_list[0].id
 
-        raise ValueError("File not found in specified folder")
+        raise ValueError("File not found in specified folder: %s", file_path)
 
     def get_folder_id(self, project, folder_path):
         '''
@@ -440,17 +440,28 @@ class SevenBridgesPlatform(Platform):
             if isinstance(parameters[i], list):
                 for j in parameters[i]:
                     if 'metadata' in j and j['class'] == 'File':
-                        sbgfile = self.api.files.get(id=j['path'])
-                        if sbgfile.metadata != j['metadata']:
-                            sbgfile.metadata = j['metadata']
-                            sbgfile.save()
+                        sbgfile = None
+                        if 'path' in j:
+                            sbgfile = self.api.files.get(id=j['path'])
+                        elif 'location' in j:
+                            sbgfile = self.api.files.get(id=j['location'])
+                        if sbgfile:
+                            if sbgfile.metadata != j['metadata']:
+                                sbgfile.metadata = j['metadata']
+                                sbgfile.save()
 
             ## if the parameter type is a regular file
             if isinstance(parameters[i], dict):
                 if 'metadata' in parameters[i]:
-                    sbgfile = self.api.files.get(id=parameters[i]['path'])
-                    sbgfile.metadata = parameters[i]['metadata']
-                    sbgfile.save()
+                    sbgfile = None
+                    if 'path' in j:
+                        sbgfile = self.api.files.get(id=j['path'])
+                    elif 'location' in j:
+                        sbgfile = self.api.files.get(id=j['location'])
+                    if sbgfile:
+                        sbgfile = self.api.files.get(id=parameters[i]['path'])
+                        sbgfile.metadata = parameters[i]['metadata']
+                        sbgfile.save()
 
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
                                      execution_settings=execution_settings)
