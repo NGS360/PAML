@@ -354,9 +354,17 @@ class ArvadosPlatform(Platform):
 
         if cwl_output.get(output_name, 'None'):
             output_field = cwl_output[output_name]
-            if 'location' in output_field:
+            if isinstance(output_field, list):
+                output_files = []
+                for output in output_field:
+                    if 'location' in output:
+                        output_files.append(output['location'])
+                return output_files
+
+            elif 'location' in output_field:
                 output_file = cwl_output[output_name]['location']
                 return f"keep:{task.container_request['output_uuid']}/{output_file}"
+
         return None
 
     def get_task_output_filename(self, task: ArvadosTask, output_name):
