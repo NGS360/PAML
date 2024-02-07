@@ -309,7 +309,7 @@ class SevenBridgesPlatform(Platform):
         :return: The file id
         '''
         if file_path.startswith('http'):
-            raise ValueError('File (%s) path cannot be a URL', file_path)
+            raise ValueError(f'File ({file_path}) path cannot be a URL')
 
         if file_path.startswith('s3://'):
             file_path = file_path.split('/')[-1]
@@ -333,7 +333,7 @@ class SevenBridgesPlatform(Platform):
         if file_list:
             return file_list[0].id
 
-        raise ValueError("File not found in specified folder: %s", file_path)
+        raise ValueError(f"File not found in specified folder: {file_path}")
 
     def get_folder_id(self, project, folder_path):
         '''
@@ -436,7 +436,7 @@ class SevenBridgesPlatform(Platform):
 
         # This metadata code will come out as part of the metadata removal effort.
         for i in parameters:
-            ##if the parameter type is an array
+            # if the parameter type is an array/list
             if isinstance(parameters[i], list):
                 for j in parameters[i]:
                     if 'metadata' in j and j['class'] == 'File':
@@ -453,6 +453,7 @@ class SevenBridgesPlatform(Platform):
             ## if the parameter type is a regular file
             if isinstance(parameters[i], dict):
                 if 'metadata' in parameters[i]:
+                    j = parameters[i]['metadata']
                     sbgfile = None
                     if 'path' in j:
                         sbgfile = self.api.files.get(id=j['path'])
