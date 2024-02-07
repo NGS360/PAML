@@ -460,8 +460,8 @@ class SevenBridgesPlatform(Platform):
                     elif 'location' in j:
                         sbgfile = self.api.files.get(id=j['location'])
                     if sbgfile:
-                        sbgfile = self.api.files.get(id=parameters[i]['path'])
-                        sbgfile.metadata = parameters[i]['metadata']
+                        sbgfile = self.api.files.get(id=j['path'])
+                        sbgfile.metadata = j
                         sbgfile.save()
 
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
