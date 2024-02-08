@@ -8,8 +8,20 @@ import re
 import subprocess
 import tempfile
 
+import chardet
+
 import arvados
 from .base_platform import Platform
+
+def open_file_with_inferred_encoding(filename, mode='r'):
+    ''' Try to auto-detecting file encoding and open file with that encoding '''
+    with open(filename, 'rb') as f:
+        rawdata = f.read()
+    result = chardet.detect(rawdata)
+    encoding = result['encoding']
+    if encoding is None:
+        raise ValueError("Failed to detect file encoding.")
+    return open(filename, mode, encoding=encoding)
 
 class ArvadosTask():
     '''
@@ -342,9 +354,21 @@ class ArvadosPlatform(Platform):
 
         if cwl_output.get(output_name, 'None'):
             output_field = cwl_output[output_name]
-            if 'location' in output_field:
+
+            if isinstance(output_field, list):
+                # If the output is a list, return a list of file locations
+                output_files = []
+                for output in output_field:
+                    if 'location' in output:
+                        output_file = output['location']
+                        output_files.append(f"keep:{task.container_request['output_uuid']}/{output_file}")
+                return output_files
+
+            elif 'location' in output_field:
+                # If the output is a single file, return the file location
                 output_file = cwl_output[output_name]['location']
                 return f"keep:{task.container_request['output_uuid']}/{output_file}"
+
         return None
 
     def get_task_output_filename(self, task: ArvadosTask, output_name):
@@ -580,7 +604,7 @@ class ArvadosPlatform(Platform):
             target_filepath = destination_filename
 
         if overwrite or target_collection.find(target_filepath) is None:
-            with open(filename, 'r', encoding='utf-8') as local_file:
+            with open_file_with_inferred_encoding(filename) as local_file:
                 local_content = local_file.read()
             with target_collection.open(target_filepath, 'w') as arv_file:
                 arv_file.write(local_content) # pylint: disable=no-member
