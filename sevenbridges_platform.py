@@ -391,6 +391,8 @@ class SevenBridgesPlatform(Platform):
         task = self.api.tasks.get(id=task.id)
         self.logger.debug("Getting output %s from task %s", output_name, task.name)
         self.logger.debug("Task has outputs: %s", task.outputs)
+        if isinstance(task.outputs[output_name], list):
+            return [output.id for output in task.outputs[output_name]]
         if isinstance(task.outputs[output_name], sevenbridges.File):
             return task.outputs[output_name].id
         return task.outputs[output_name]
