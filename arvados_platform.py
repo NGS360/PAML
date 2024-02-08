@@ -8,8 +8,20 @@ import re
 import subprocess
 import tempfile
 
+import chardet
+
 import arvados
 from .base_platform import Platform
+
+def open_file_with_inferred_encoding(filename, mode='r'):
+    ''' Try to auto-detecting file encoding and open file with that encoding '''
+    with open(filename, 'rb') as f:
+        rawdata = f.read()
+    result = chardet.detect(rawdata)
+    encoding = result['encoding']
+    if encoding is None:
+        raise ValueError("Failed to detect file encoding.")
+    return open(filename, mode, encoding=encoding)
 
 class ArvadosTask():
     '''
@@ -580,7 +592,7 @@ class ArvadosPlatform(Platform):
             target_filepath = destination_filename
 
         if overwrite or target_collection.find(target_filepath) is None:
-            with open(filename, 'r', encoding='utf-8') as local_file:
+            with open_file_with_inferred_encoding(filename) as local_file:
                 local_content = local_file.read()
             with target_collection.open(target_filepath, 'w') as arv_file:
                 arv_file.write(local_content) # pylint: disable=no-member
