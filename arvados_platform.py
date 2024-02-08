@@ -15,8 +15,8 @@ from .base_platform import Platform
 
 def open_file_with_inferred_encoding(filename, mode='r'):
     ''' Try to auto-detecting file encoding and open file with that encoding '''
-    with open(filename, 'rb') as f:
-        rawdata = f.read()
+    with open(filename, 'rb') as file:
+        rawdata = file.read()
     result = chardet.detect(rawdata)
     encoding = result['encoding']
     if encoding is None:
@@ -364,7 +364,7 @@ class ArvadosPlatform(Platform):
                         output_files.append(f"keep:{task.container_request['output_uuid']}/{output_file}")
                 return output_files
 
-            elif 'location' in output_field:
+            if 'location' in output_field:
                 # If the output is a single file, return the file location
                 output_file = cwl_output[output_name]['location']
                 return f"keep:{task.container_request['output_uuid']}/{output_file}"
