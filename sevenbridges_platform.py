@@ -432,6 +432,12 @@ class SevenBridgesPlatform(Platform):
 
     def submit_task(self, name, project, workflow, parameters):
         ''' Submit a workflow on the platform '''
+        def set_file_metadata(file, metadata):
+            ''' Set metadata on a file '''
+            if file.metadata != metadata:
+                file.metadata = metadata
+                file.save()
+
         execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
 
         # This metadata code will come out as part of the metadata removal effort.
@@ -446,9 +452,7 @@ class SevenBridgesPlatform(Platform):
                         elif 'location' in j:
                             sbgfile = self.api.files.get(id=j['location'])
                         if sbgfile:
-                            if sbgfile.metadata != j['metadata']:
-                                sbgfile.metadata = j['metadata']
-                                sbgfile.save()
+                            set_file_metadata(sbgfile, j['metadata'])
 
             ## if the parameter type is a regular file
             if isinstance(parameters[i], dict):
@@ -460,9 +464,7 @@ class SevenBridgesPlatform(Platform):
                     elif 'location' in j:
                         sbgfile = self.api.files.get(id=j['location'])
                     if sbgfile:
-                        if sbgfile.metadata != j:
-                            sbgfile.metadata = j
-                            sbgfile.save()
+                        set_file_metadata(sbgfile, j)
 
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
                                      execution_settings=execution_settings)
