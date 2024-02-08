@@ -434,7 +434,7 @@ class SevenBridgesPlatform(Platform):
         ''' Submit a workflow on the platform '''
         def set_file_metadata(file, metadata):
             ''' Set metadata on a file '''
-            if file.metadata != metadata:
+            if file and file.metadata != metadata:
                 file.metadata = metadata
                 file.save()
 
@@ -451,8 +451,7 @@ class SevenBridgesPlatform(Platform):
                             sbgfile = self.api.files.get(id=j['path'])
                         elif 'location' in j:
                             sbgfile = self.api.files.get(id=j['location'])
-                        if sbgfile:
-                            set_file_metadata(sbgfile, j['metadata'])
+                        set_file_metadata(sbgfile, j['metadata'])
 
             ## if the parameter type is a regular file
             if isinstance(parameters[i], dict):
@@ -463,8 +462,7 @@ class SevenBridgesPlatform(Platform):
                         sbgfile = self.api.files.get(id=j['path'])
                     elif 'location' in j:
                         sbgfile = self.api.files.get(id=j['location'])
-                    if sbgfile:
-                        set_file_metadata(sbgfile, j)
+                    set_file_metadata(sbgfile, j['metadata'])
 
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
                                      execution_settings=execution_settings)
