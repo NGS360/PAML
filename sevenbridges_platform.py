@@ -456,8 +456,8 @@ class SevenBridgesPlatform(Platform):
 
             ## if the parameter type is a regular file
             if isinstance(parameters[i], dict):
-                if 'metadata' in parameters[i]:
-                    j = parameters[i]['metadata']
+                j = parameters[i]
+                if 'metadata' in j and j['class'] == 'File':
                     sbgfile = None
                     if 'path' in j:
                         sbgfile = self.api.files.get(id=j['path'])
