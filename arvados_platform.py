@@ -490,6 +490,8 @@ class ArvadosPlatform(Platform):
         :param output_directory_name: Name of output folder that output files are copied into
         :return: None
         '''
+        self.logger.warning("stage_task_output to be DEPRECATED, use stage_output_files instead.")
+
         # Get the output collection with name of output_directory_name
         search_result = self.api.collections().list(filters=[
             ["owner_uuid", "=", project["uuid"]],
