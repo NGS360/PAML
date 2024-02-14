@@ -7,6 +7,7 @@ class Platform(ABC):
     def __init__(self, name):
         self.logger = logging.getLogger(__name__)
         self.name = name
+        self.connected = False
 
     @abstractmethod
     def connect(self, **kwargs):

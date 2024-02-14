@@ -211,6 +211,7 @@ class SevenBridgesPlatform(Platform):
                                                         maintenance_sleeper,
                                                         general_error_sleeper],
                                         advance_access=True)
+        self.connected = True
 
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
