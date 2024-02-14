@@ -481,7 +481,7 @@ class SevenBridgesPlatform(Platform):
         '''
         for output_file in output_files:
             self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
-            outfile = output_file['source']
+            outfile = self.api.files.get(id=output_file['source'])
             if isinstance(outfile, sevenbridges.models.file.File):
                 if outfile.type == "file":
                     self._add_tag_to_file(outfile, "OUTPUT")
