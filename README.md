@@ -1,6 +1,6 @@
 # cwl_platform
 
-This repo is intended to be a git submodule for other launchers.
+This repo is intended to installed as a module within other launchers.
 
 To ADD in your own launcher
 

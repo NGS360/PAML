@@ -2,7 +2,8 @@
 Test Module for SevenBridges Platform
 '''
 import unittest
-from src.sevenbridges_platform import SevenBridgesPlatform
+
+from cwl_platform.sevenbridges_platform import SevenBridgesPlatform
 
 class TestSevenBridgesPlaform(unittest.TestCase):
     '''

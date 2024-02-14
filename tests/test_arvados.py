@@ -2,7 +2,7 @@
 Test Module for Arvados Platform
 '''
 import unittest
-from src.arvados_platform import ArvadosPlatform
+from cwl_platform.arvados_platform import ArvadosPlatform
 
 class TestArvadosPlaform(unittest.TestCase):
     '''
