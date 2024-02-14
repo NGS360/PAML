@@ -5,12 +5,23 @@ on: [push]
 jobs:
   build:
     runs-on: ngs
+
     steps:
     - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.x"
+
     - name: Install dependencies
       run: |
-        python3 -m pip install --upgrade pip
-        pip install pylint sevenbridges-python arvados-python-client
+        pip install -r requirements.txt
+
+    - name: Test
+      run: |
+        pytest
+
     - name: Analysing the code with pylint
       run: |
         pylint --max-line-length=120 --ignore-imports=y $(git ls-files '*.py')

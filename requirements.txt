@@ -1,0 +1,3 @@
+chardet
+arvados-python-client
+sevenbridges-python
