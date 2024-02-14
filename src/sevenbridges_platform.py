@@ -309,7 +309,7 @@ class SevenBridgesPlatform(Platform):
         :return: The file id
         '''
         if file_path.startswith('http'):
-            raise ValueError('File path cannot be a URL')
+            raise ValueError(f'File ({file_path}) path cannot be a URL')
 
         if file_path.startswith('s3://'):
             file_path = file_path.split('/')[-1]
@@ -333,7 +333,7 @@ class SevenBridgesPlatform(Platform):
         if file_list:
             return file_list[0].id
 
-        raise ValueError("File not found in specified folder")
+        raise ValueError(f"File not found in specified folder: {file_path}")
 
     def get_folder_id(self, project, folder_path):
         '''
@@ -391,6 +391,8 @@ class SevenBridgesPlatform(Platform):
         task = self.api.tasks.get(id=task.id)
         self.logger.debug("Getting output %s from task %s", output_name, task.name)
         self.logger.debug("Task has outputs: %s", task.outputs)
+        if isinstance(task.outputs[output_name], list):
+            return [output.id for output in task.outputs[output_name]]
         if isinstance(task.outputs[output_name], sevenbridges.File):
             return task.outputs[output_name].id
         return task.outputs[output_name]
@@ -432,25 +434,37 @@ class SevenBridgesPlatform(Platform):
 
     def submit_task(self, name, project, workflow, parameters):
         ''' Submit a workflow on the platform '''
+        def set_file_metadata(file, metadata):
+            ''' Set metadata on a file '''
+            if file and file.metadata != metadata:
+                file.metadata = metadata
+                file.save()
+
         execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
 
         # This metadata code will come out as part of the metadata removal effort.
         for i in parameters:
-            ##if the parameter type is an array
+            # if the parameter type is an array/list
             if isinstance(parameters[i], list):
                 for j in parameters[i]:
                     if 'metadata' in j and j['class'] == 'File':
-                        sbgfile = self.api.files.get(id=j['path'])
-                        if sbgfile.metadata != j['metadata']:
-                            sbgfile.metadata = j['metadata']
-                            sbgfile.save()
+                        sbgfile = None
+                        if 'path' in j:
+                            sbgfile = self.api.files.get(id=j['path'])
+                        elif 'location' in j:
+                            sbgfile = self.api.files.get(id=j['location'])
+                        set_file_metadata(sbgfile, j['metadata'])
 
             ## if the parameter type is a regular file
             if isinstance(parameters[i], dict):
-                if 'metadata' in parameters[i]:
-                    sbgfile = self.api.files.get(id=parameters[i]['path'])
-                    sbgfile.metadata = parameters[i]['metadata']
-                    sbgfile.save()
+                j = parameters[i]
+                if 'metadata' in j and j['class'] == 'File':
+                    sbgfile = None
+                    if 'path' in j:
+                        sbgfile = self.api.files.get(id=j['path'])
+                    elif 'location' in j:
+                        sbgfile = self.api.files.get(id=j['location'])
+                    set_file_metadata(sbgfile, j['metadata'])
 
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
                                      execution_settings=execution_settings)
@@ -467,7 +481,7 @@ class SevenBridgesPlatform(Platform):
         '''
         for output_file in output_files:
             self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
-            outfile = output_file['source']
+            outfile = self.api.files.get(id=output_file['source'])
             if isinstance(outfile, sevenbridges.models.file.File):
                 if outfile.type == "file":
                     self._add_tag_to_file(outfile, "OUTPUT")
