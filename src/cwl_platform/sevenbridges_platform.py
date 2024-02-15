@@ -510,6 +510,7 @@ class SevenBridgesPlatform(Platform):
         :param output_directory_name: Name of output folder that output files are copied into
         :return: None
         '''
+        self.logger.warning("stage_task_output to be DEPRECATED, use stage_output_files instead.")
         task = self.api.tasks.get(id=task.id)
         alloutputs = task.outputs
         for output_id in alloutputs:
