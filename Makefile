@@ -1,4 +1,4 @@
-all: test
+all: test lint
 
 virtual_env:
 	python3 -m venv env
