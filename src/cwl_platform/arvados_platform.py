@@ -473,7 +473,7 @@ class ArvadosPlatform(Platform):
                 # Copy the file
                 outputs_collection.copy(source_file, target_path=output_file['destination'],
                             source_collection=source_collection, overwrite=True)
-                sources.write(output_file['source'] + "\n")
+                sources.write(output_file['source'] + "\n") # pylint: disable=E1101
 
         outputs_collection.save()
 
