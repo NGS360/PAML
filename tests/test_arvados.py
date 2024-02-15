@@ -2,6 +2,8 @@
 Test Module for Arvados Platform
 '''
 import unittest
+import mock
+
 from cwl_platform.arvados_platform import ArvadosPlatform
 
 class TestArvadosPlaform(unittest.TestCase):
@@ -12,7 +14,8 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform = ArvadosPlatform('Arvados')
         return super().setUp()
 
-    def test_connect(self):
+    @mock.patch('arvados.api')
+    def test_connect(self, mock_arvados_api):
         ''' Test connect method '''
         self.platform.connect()
         self.assertTrue(self.platform.connected)
