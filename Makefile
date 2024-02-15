@@ -11,6 +11,6 @@ install: build
     python3 -m pip install --upgrade dist/*.whl
 
 test: install
-    python3 -m pip install --upgrade pytest
+    python3 -m pip install --upgrade pytest mock
     python3 -m pip install -r requirements.txt
     pytest
