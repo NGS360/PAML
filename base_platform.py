@@ -1,7 +1,6 @@
 ''' Base Platform class '''
 from abc import ABC, abstractmethod
 import logging
-from warnings import deprecated
 
 class Platform(ABC):
     ''' abstract Platform class '''
@@ -113,9 +112,10 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    @deprecated("Use stage_output_files instead.")
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
+        DEPRECATED: Use stage_output_files instead
+
         Prepare/Copy output files of a task for export.
 
         For Arvados, copy selected files to output collection/folder.
