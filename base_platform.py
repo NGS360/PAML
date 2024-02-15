@@ -1,6 +1,7 @@
 ''' Base Platform class '''
 from abc import ABC, abstractmethod
 import logging
+from warnings import deprecated
 
 class Platform(ABC):
     ''' abstract Platform class '''
