@@ -1,9 +1,9 @@
 '''
 Test Module for SevenBridges Platform
 '''
+import unittest
 import mock
 import os
-import unittest
 
 from cwl_platform.sevenbridges_platform import SevenBridgesPlatform
 
