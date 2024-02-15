@@ -112,6 +112,7 @@ class Platform(ABC):
         '''
 
     @abstractmethod
+    @deprecated("Use stage_output_files instead.")
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
         Prepare/Copy output files of a task for export.
