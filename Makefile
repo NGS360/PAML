@@ -16,3 +16,7 @@ test: install
 	python3 -m pip install --upgrade pytest mock
 	python3 -m pip install -r requirements.txt
 	pytest
+
+lint:
+	python3 -m pip install --upgrade pylint
+	pylint --max-line-length=120 --ignore-imports=y $$(git ls-files '*.py')
