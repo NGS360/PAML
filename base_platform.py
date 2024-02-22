@@ -130,7 +130,7 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def submit_task(self, name, project, workflow, parameters):
+    def submit_task(self, name, project, workflow, parameters, use_spot_instance=True):
         ''' Submit a workflow on the platform '''
 
     @abstractmethod

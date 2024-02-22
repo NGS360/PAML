@@ -528,17 +528,23 @@ class ArvadosPlatform(Platform):
                             source_collection=source_collection, overwrite=True)
         outputs_collection.save()
 
-    def submit_task(self, name, project, workflow, parameters):
+    def submit_task(self, name, project, workflow, parameters, use_spot_instance=True):
         ''' Submit a workflow on the platform '''
         with tempfile.NamedTemporaryFile() as parameter_file:
             with open(parameter_file.name, mode='w', encoding="utf-8") as fout:
                 json.dump(parameters, fout)
+
+            if use_spot_instance:
+                cmd_spot_instance = "--enable-preemptible"
+            else:
+                cmd_spot_instance = "--disable-preemptible"
 
             cmd_str = ['arvados-cwl-runner', '--no-wait',
                     '--defer-download',
                     '--varying-url-params=AWSAccessKeyId,Signature,Expires',
                     '--prefer-cached-downloads',
                     '--debug',
+                    cmd_spot_instance,
                     '--project-uuid', project['uuid'],
                     '--name', name,
                     workflow['uuid'],
