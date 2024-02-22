@@ -432,7 +432,7 @@ class SevenBridgesPlatform(Platform):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
 
-    def submit_task(self, name, project, workflow, parameters):
+    def submit_task(self, name, project, workflow, parameters, use_spot_instance=True):
         ''' Submit a workflow on the platform '''
         def set_file_metadata(file, metadata):
             ''' Set metadata on a file '''
@@ -467,6 +467,7 @@ class SevenBridgesPlatform(Platform):
                     set_file_metadata(sbgfile, j['metadata'])
 
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
+                                     interruptible=use_spot_instance,
                                      execution_settings=execution_settings)
         task.run()
         return task
