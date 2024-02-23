@@ -528,12 +528,13 @@ class ArvadosPlatform(Platform):
                             source_collection=source_collection, overwrite=True)
         outputs_collection.save()
 
-    def submit_task(self, name, project, workflow, parameters, use_spot_instance=True):
+    def submit_task(self, name, project, workflow, parameters, executing_settings=None):
         ''' Submit a workflow on the platform '''
         with tempfile.NamedTemporaryFile() as parameter_file:
             with open(parameter_file.name, mode='w', encoding="utf-8") as fout:
                 json.dump(parameters, fout)
 
+            use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
             if use_spot_instance:
                 cmd_spot_instance = "--enable-preemptible"
             else:
