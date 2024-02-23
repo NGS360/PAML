@@ -130,8 +130,15 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def submit_task(self, name, project, workflow, parameters):
-        ''' Submit a workflow on the platform '''
+    def submit_task(self, name, project, workflow, parameters, executing_settings=None):
+        '''
+        Submit a workflow on the platform
+        :param name: Name of the task to submit
+        :param project: Project to submit the task to
+        :param workflow: Workflow to submit
+        :param parameters: Parameters for the workflow
+        :param executing_settings: {use_spot_instance: True/False}
+        '''
 
     @abstractmethod
     def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
