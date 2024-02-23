@@ -432,45 +432,6 @@ class SevenBridgesPlatform(Platform):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
 
-    def submit_task(self, name, project, workflow, parameters):
-        ''' Submit a workflow on the platform '''
-        def set_file_metadata(file, metadata):
-            ''' Set metadata on a file '''
-            if file and file.metadata != metadata:
-                file.metadata = metadata
-                file.save()
-
-        execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
-
-        # This metadata code will come out as part of the metadata removal effort.
-        for i in parameters:
-            # if the parameter type is an array/list
-            if isinstance(parameters[i], list):
-                for j in parameters[i]:
-                    if 'metadata' in j and j['class'] == 'File':
-                        sbgfile = None
-                        if 'path' in j:
-                            sbgfile = self.api.files.get(id=j['path'])
-                        elif 'location' in j:
-                            sbgfile = self.api.files.get(id=j['location'])
-                        set_file_metadata(sbgfile, j['metadata'])
-
-            ## if the parameter type is a regular file
-            if isinstance(parameters[i], dict):
-                j = parameters[i]
-                if 'metadata' in j and j['class'] == 'File':
-                    sbgfile = None
-                    if 'path' in j:
-                        sbgfile = self.api.files.get(id=j['path'])
-                    elif 'location' in j:
-                        sbgfile = self.api.files.get(id=j['location'])
-                    set_file_metadata(sbgfile, j['metadata'])
-
-        task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
-                                     execution_settings=execution_settings)
-        task.run()
-        return task
-
     def stage_output_files(self, project, output_files):
         '''
         Stage output files to a project
@@ -528,6 +489,47 @@ class SevenBridgesPlatform(Platform):
                             self._add_tag_to_file(file, "OUTPUT")
                         elif file.type == "folder":
                             self._add_tag_to_folder(file, "OUTPUT")
+
+    def submit_task(self, name, project, workflow, parameters, executing_settings=None):
+        ''' Submit a workflow on the platform '''
+        def set_file_metadata(file, metadata):
+            ''' Set metadata on a file '''
+            if file and file.metadata != metadata:
+                file.metadata = metadata
+                file.save()
+
+        use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
+        sbg_execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
+
+        # This metadata code will come out as part of the metadata removal effort.
+        for i in parameters:
+            # if the parameter type is an array/list
+            if isinstance(parameters[i], list):
+                for j in parameters[i]:
+                    if 'metadata' in j and j['class'] == 'File':
+                        sbgfile = None
+                        if 'path' in j:
+                            sbgfile = self.api.files.get(id=j['path'])
+                        elif 'location' in j:
+                            sbgfile = self.api.files.get(id=j['location'])
+                        set_file_metadata(sbgfile, j['metadata'])
+
+            ## if the parameter type is a regular file
+            if isinstance(parameters[i], dict):
+                j = parameters[i]
+                if 'metadata' in j and j['class'] == 'File':
+                    sbgfile = None
+                    if 'path' in j:
+                        sbgfile = self.api.files.get(id=j['path'])
+                    elif 'location' in j:
+                        sbgfile = self.api.files.get(id=j['location'])
+                    set_file_metadata(sbgfile, j['metadata'])
+
+        task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
+                                     interruptible=use_spot_instance,
+                                     execution_settings=sbg_execution_settings)
+        task.run()
+        return task
 
     def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         '''
