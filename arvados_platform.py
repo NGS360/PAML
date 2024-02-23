@@ -10,6 +10,8 @@ import tempfile
 
 import chardet
 
+import googleapiclient
+
 import arvados
 from .base_platform import Platform
 
@@ -474,7 +476,10 @@ class ArvadosPlatform(Platform):
                             source_collection=source_collection, overwrite=True)
                 sources.write(output_file['source'] + "\n") # pylint: disable=E1101
 
-        outputs_collection.save()
+        try:
+            outputs_collection.save()
+        except googleapiclient.errors.HttpError as exc:
+            self.logger.error("Failed to save output files: %s", exc)
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
