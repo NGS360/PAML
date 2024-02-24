@@ -1,4 +1,4 @@
-name: Pylint
+name: Unit Test and Lint
 
 on: [push]
 
