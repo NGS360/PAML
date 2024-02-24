@@ -10,6 +10,6 @@ To ADD in your own launcher
 python -m pip install .
 
 # To install from biogit:
-python -m pip install git+https://biogit.pri.bms.com/NGS/cwl_platform.git@<branch>#egg=cwl_platform
+python -m pip install git+https://biogit.pri.bms.com/NGS/cwl_platform.git@<version>#egg=cwl_platform
 
 ```
