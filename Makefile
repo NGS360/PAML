@@ -13,9 +13,10 @@ install: build
 	python3 -m pip install --upgrade dist/*.whl
 
 test: install
-	python3 -m pip install --upgrade pytest mock
+	python3 -m pip install --upgrade pytest mock coverage
 	python3 -m pip install -r requirements.txt
-	pytest
+	coverage run --source=src -m pytest
+	coverage html
 
 lint:
 	python3 -m pip install --upgrade pylint
