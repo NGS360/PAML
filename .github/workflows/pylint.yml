@@ -24,10 +24,6 @@ jobs:
         pip install coverage
         coverage run -m pytest
       
-    - name: Upload Coverage to Codecov
-      uses: biogit.pri.bms.com/golharr/codecov-action@v2
-      
-      
     - name: Analysing the code with pylint
       run: |
         make lint
