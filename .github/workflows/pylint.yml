@@ -25,7 +25,7 @@ jobs:
         coverage run -m pytest
       
     - name: Upload Coverage to Codecov
-      uses: golharr/codecov-action@v2
+      uses: biogit.pri.bms.com/golharr/codecov-action@v2
       
       
     - name: Analysing the code with pylint
