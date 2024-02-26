@@ -21,8 +21,13 @@ jobs:
 
     - name: Test
       run: |
-        make test
-
+        pip install coverage
+        coverage run -m pytest
+      
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v2
+      
+      
     - name: Analysing the code with pylint
       run: |
         make lint
