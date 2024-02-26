@@ -19,4 +19,4 @@ test: install
 
 lint:
 	python3 -m pip install --upgrade pylint
-	pylint --max-line-length=120 --ignore-imports=y --exit-code=0 $$(git ls-files '*.py')
+	pylint --max-line-length=120 --ignore-imports=y --exit-zero $$(git ls-files '*.py')
