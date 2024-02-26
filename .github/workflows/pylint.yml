@@ -22,8 +22,9 @@ jobs:
     - name: Test
       run: |
         pip install coverage
-        coverage run -m pytest
-      
+        coverage run --source=src -m pytest
+        coverage report
+
     - name: Analysing the code with pylint
       run: |
         make lint
