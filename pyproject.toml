@@ -1,0 +1,29 @@
+[project]
+name = "cwl_platform"
+version = "0.0.1"
+authors = [
+  { name="Ryan Golhar", email="ryan.golhar@bms.com" },
+  { name="Maggie Chen", email="yu.chen2@bms.com" }
+]
+description = "Multi-Platform Launcher Template"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+Homepage = "https://biogit.pri.bms.com/NGS/cwl_platform"
+Issues = "https://biogit.pri.bms.com/NGS/cwl_platform/issues"
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+

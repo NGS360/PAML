@@ -100,6 +100,7 @@ class ArvadosPlatform(Platform):
         ''' Connect to Arvados '''
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
         self.keep_client = arvados.KeepClient(self.api)
+        self.connected = True
 
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
