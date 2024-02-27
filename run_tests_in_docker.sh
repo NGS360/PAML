@@ -4,7 +4,7 @@
 
 python3 -m venv ~/env
 source ~/env/bin/activate
-pip install --upgrade pip
 
+make install_dependencies
 make test
 make lint
