@@ -5,7 +5,7 @@ import unittest
 import mock
 from mock import MagicMock
 
-from cwl_platform.arvados_platform import ArvadosPlatform
+from cwl_platform.arvados_platform import ArvadosPlatform, ArvadosTask
 
 class TestArvadosPlaform(unittest.TestCase):
     '''
@@ -27,6 +27,18 @@ class TestArvadosPlaform(unittest.TestCase):
         }
         self.platform.connect()
         self.assertTrue(self.platform.connected)
+
+    @mock.patch("arvados.api_from_config")
+    def test_delete_task(self, mock_arvados_api):
+        ''' Test delete_task method '''
+        # Set up mocks
+        mock_arvados_api.return_value = MagicMock()
+        task = ArvadosTask(container_request={"uuid": "12345"}, container={"uuid": "67890"})
+        # Test
+        self.platform.connect()
+        self.platform.delete_task(task)
+        # Assert
+        mock_arvados_api.return_value.container_requests().delete.assert_called_once_with(uuid="12345")
 
 if __name__ == '__main__':
     unittest.main()
