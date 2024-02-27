@@ -16,15 +16,15 @@ jobs:
 
     - name: Install dependencies
       run: |
+        pip install --upgrade pip
         pip install -r requirements.txt
-        pip install mock
+        pip install -r requirements-dev.txt
 
     - name: Test
       run: |
-        pip install coverage
         coverage run --source=src -m pytest
         coverage report
 
     - name: Analysing the code with pylint
       run: |
-        make lint
+        pylint --max-line-length=120 --ignore-imports=y --exit-zero $$(git ls-files '*.py')
