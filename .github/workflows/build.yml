@@ -17,19 +17,23 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: "3.x"
+
     - name: Install pypa/build
       run: >-
         python3 -m
         pip install
         build
         --user
+
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
+
     - name: Store the distribution packages
       uses: actions/upload-artifact@v3
       with:
         name: python-package-distributions
         path: dist/
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -44,3 +48,14 @@ jobs:
           - Second Change
         draft: true
         prerelease: true
+
+    - name: Upload distribution packages to GitHub
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        # Upload to GitHub Release using the `gh` CLI.
+        # `dist/` contains the built packages, and the
+        # sigstore-produced signatures and certificates.
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'
