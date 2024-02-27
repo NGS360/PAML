@@ -22,7 +22,7 @@ jobs:
 
     - name: Test
       run: |
-        coverage run --source=src -m pytest
+        PYTHONPATH=src coverage run --source=src -m pytest
         coverage report
 
     - name: Analysing the code with pylint
