@@ -25,5 +25,15 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
+    def test_delete_task(self):
+        ''' Test delete_task method '''
+        # Set up mocks
+        task = MagicMock()
+        task.id = '12345'
+        # Test
+        self.platform.delete_task(task)
+        # Assert
+        task.delete.assert_called_once_with()
+
 if __name__ == '__main__':
     unittest.main()
