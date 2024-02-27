@@ -1,0 +1,7 @@
+build
+
+pytest
+mock
+coverage
+
+pylint
