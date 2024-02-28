@@ -1,0 +1,52 @@
+name: Publish Release
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  release:
+    name: Build & Publish Release 📦
+    runs-on: ngs
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.x"
+
+    - name: Install pypa/build
+      run: >-
+        python3 -m
+        pip install
+        build
+        --user
+
+    - name: Build a binary wheel and a source tarball
+      run: python3 -m build
+
+    - name: Prepare environment with release version information
+      run: |
+        echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+        echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+    - name: Generate release notes
+      run: |
+        python scripts/release_notes.py > ${{ github.workspace }}-RELEASE_NOTES.md
+
+    - name: Create Release
+      env:
+        GH_HOST: "biogit.pri.bms.com"
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: >-
+        gh release create
+        --title "${{ github.ref_name }}"
+        --notes-file ${{ github.workspace }}-RELEASE_NOTES.md
+        --draft
+        --prerelease
+        --repo ${{ github.repository }}
+        ${{ github.ref }}
+        dist/**
