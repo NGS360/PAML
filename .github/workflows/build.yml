@@ -40,8 +40,8 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: >-
         gh release create
-        --title "Release ${{ github.ref_name }}"
-        --notes "Changes in this Release\n- First Change\n- Second Change"
+        --title "${{ github.ref_name }}"
+        --generate-notes
         --draft
         --prerelease
         --repo ${{ github.repository }}
