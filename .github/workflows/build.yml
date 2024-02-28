@@ -40,35 +40,9 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: >-
         gh release create
-        --title "${{ github.ref_name }}"
         --generate-notes
         --draft
         --prerelease
         --repo ${{ github.repository }}
         ${{ github.ref }}
         dist/**
-  
-    #- name: Create Release
-    #  id: create_release
-    #  uses: actions/create-release@v1
-    #  env:
-    #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-    #  with:
-    #    tag_name: ${{ github.ref }}
-    #    release_name: Release ${{ github.ref }}
-    #    body: |
-    #      Changes in this Release
-    #      - First Change
-    #      - Second Change
-    #    draft: true
-    #    prerelease: true
-
-    #- name: Upload distribution packages to GitHub
-    #  env:
-    #    GH_HOST: "biogit.pri.bms.com"
-    #    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Upload to GitHub Release using the `gh` CLI.
-        # `dist/` contains the built packages, and the
-        # sigstore-produced signatures and certificates.
-    #  run: >-
-    #    gh release upload '${{ github.ref_name }}' dist/** --repo '${{ github.repository }}'
