@@ -2,7 +2,7 @@
 
 TAG=$(grep version pyproject.toml | cut -d '=' -f2 | sed 's/"//g' | tr -d '[:space:]')
 
-read -p "Creating new release for $TAG. Do you want to continue? [Y/n] " prompt
+read -p "Creating new release for v$TAG. Do you want to continue? [Y/n] " prompt
 
 if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]]; then
     python scripts/prepare_changelog.py $TAG
