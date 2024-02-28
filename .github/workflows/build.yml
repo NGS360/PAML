@@ -59,12 +59,9 @@ jobs:
 
     - name: Upload distribution packages to GitHub
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Upload to GitHub Release using the `gh` CLI.
         # `dist/` contains the built packages, and the
         # sigstore-produced signatures and certificates.
       run: >-
-        gh auth login
-        gh release upload
-        '${{ github.ref_name }}' dist/**
-        --repo '${{ github.repository }}'
+        gh release upload '${{ github.ref_name }}' dist/** --repo '${{ github.repository }}'
