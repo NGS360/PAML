@@ -9,7 +9,7 @@ on:
 jobs:
   release:
     name: Build distribution 📦
-    runs-on: ubuntu-latest
+    runs-on: ngs
 
     steps:
     - uses: actions/checkout@v3
@@ -56,3 +56,14 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: dist/**
         asset_content_type: application/zip
+
+    - name: Upload distribution packages to GitHub
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        # Upload to GitHub Release using the `gh` CLI.
+        # `dist/` contains the built packages, and the
+        # sigstore-produced signatures and certificates.
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'
