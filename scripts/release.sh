@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-TAG=`grep version pyproject.toml  | cut -d '=' -f2 | sed 's/"//g'`
+TAG=$(grep version pyproject.toml | cut -d '=' -f2 | sed 's/"//g' | tr -d '[:space:]')
 
 read -p "Creating new release for $TAG. Do you want to continue? [Y/n] " prompt
 
