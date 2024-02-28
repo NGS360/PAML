@@ -8,7 +8,7 @@ on:
 
 jobs:
   release:
-    name: Build distribution 📦
+    name: Build & Publish Release 📦
     runs-on: ngs
 
     steps:
@@ -27,6 +27,11 @@ jobs:
 
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
+
+    - name: Prepare environment with release version information
+      run: |
+        echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+        echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
     - name: Generate release notes
       run: |
