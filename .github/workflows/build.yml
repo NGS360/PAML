@@ -49,12 +49,12 @@ jobs:
         draft: true
         prerelease: true
 
-    #- name: Upload distribution packages to GitHub
-    #  env:
-    #    GH_HOST: "biogit.pri.bms.com"
-    #    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload distribution packages to GitHub
+      env:
+        GH_HOST: "biogit.pri.bms.com"
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Upload to GitHub Release using the `gh` CLI.
         # `dist/` contains the built packages, and the
         # sigstore-produced signatures and certificates.
-    #  run: >-
-    #    gh release upload '${{ github.ref_name }}' dist/** --repo '${{ github.repository }}'
+      run: >-
+        gh release upload '${{ github.ref_name }}' dist/** --repo '${{ github.repository }}'
