@@ -8,3 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ## [v0.0.1](https://biogit.pri.bms.com/NGS/cwl_platform/releases/tag/v0.0.1) - 2024-02-28
+
+### Added
+
+- Converted to installable python package
