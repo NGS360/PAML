@@ -28,11 +28,9 @@ jobs:
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
 
-    #- name: Store the distribution packages
-    #  uses: actions/upload-artifact@v3
-    #  with:
-    #    name: python-package-distributions
-    #    path: dist/
+    - name: Generate release notes
+      run: |
+        python scripts/release_notes.py > ${{ github.workspace }}-RELEASE_NOTES.md
 
     - name: Create Release
       env:
@@ -40,7 +38,8 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: >-
         gh release create
-        --generate-notes
+        --title "${{ github.ref_name }}"
+        --notes-file ${{ github.workspace }}-RELEASE_NOTES.md
         --draft
         --prerelease
         --repo ${{ github.repository }}
