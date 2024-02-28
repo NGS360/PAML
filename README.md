@@ -24,28 +24,28 @@ Multiple Supports Platforms
 
 1. Create a virtual environment that your launcher will use
 
-```{bash}
-python3 -m venv env
-source env/bin/activate
-```
+    ```{bash}
+    python3 -m venv env
+    source env/bin/activate
+    ```
 
 2. Install this package in your virtual environment
 
-```{bash}
-pip install git+https://biogit.pri.bms.com/NGS/cwl_platform.git@<version>#egg=cwl_platform
-```
+    ```{bash}
+    pip install git+https://biogit.pri.bms.com/NGS/cwl_platform.git@<version>#egg=cwl_platform
+    ```
 
-where `<version>` is the version you want to install
+    where `<version>` is the version you want to install
 
-Alternatively, if you've cloned this repo and want to install from source,
+    Alternatively, if you've cloned this repo and want to install from source,
 
-```{bash}
-pip install .
-```
+    ```{bash}
+    pip install .
+    ```
 
 3. Develop Launcher
 
-Follow [ExampleCICDPipelineDeployment](https://biogit.pri.bms.com/NGS/ExampleCICDPipelineDeployment), or any of the other launchers listed below, as an example
+    Follow [ExampleCICDPipelineDeployment](https://biogit.pri.bms.com/NGS/ExampleCICDPipelineDeployment), or any of the other launchers listed below, as an example
 
 ## Projects using this template
 
