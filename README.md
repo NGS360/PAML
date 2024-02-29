@@ -46,6 +46,14 @@ Multiple Supports Platforms
 3. Develop Launcher
 
     Follow [ExampleCICDPipelineDeployment](https://biogit.pri.bms.com/NGS/ExampleCICDPipelineDeployment), or any of the other launchers listed below, as an example
+    
+    If you have an existing launcher, perform the following steps:
+    
+    Delete the relevant line from the . gitmodules file.
+    Delete the relevant section from . git/config .
+    Run git rm --cached path_to_submodule (no trailing slash).
+    Commit and delete the now untracked submodule files.
+    Install this package in your python virtual environment in the Dockerfile.
 
 ## Projects using this template
 
