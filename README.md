@@ -48,11 +48,11 @@ Multiple Supports Platforms
     Follow [ExampleCICDPipelineDeployment](https://biogit.pri.bms.com/NGS/ExampleCICDPipelineDeployment), or any of the other launchers listed below, as an example
     
     If you have an existing launcher, perform the following steps:
+
+    ```
+    git rm launcher/src/cwl_platform
+    ```
     
-    - Delete the relevant line from the . gitmodules file.
-    - Delete the relevant section from . git/config .
-    - Run git rm --cached path_to_submodule (no trailing slash).
-    - Commit and delete the now untracked submodule files.
     - Install this package to your requirements.txt that is used by your launcher's Dockerfile.
 
 ## Projects using this template
