@@ -53,7 +53,7 @@ Multiple Supports Platforms
     Delete the relevant section from . git/config .
     Run git rm --cached path_to_submodule (no trailing slash).
     Commit and delete the now untracked submodule files.
-    Install this package in your python virtual environment in the Dockerfile.
+    Install this package to your requirements.txt that is used by your launcher's Dockerfile.
 
 ## Projects using this template
 
