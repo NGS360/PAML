@@ -1,6 +1,6 @@
-# cwl_platform
+# Platform API Middle-Layer (PAML)
 
-cwl_platform is a installable Python package to enable you to (easily) write cross-platform launchers.
+PAML(Platform API Middle-Layer) is an installable Python package to enable anyone to (easily) write cross-platform launchers.  It is used to abstract the specifics of a platform from workflow orchestration.  This abstraction of the platform layer enables the orchestration component to be platform independent to support interoperability.
 
 ## Contents
 
