@@ -499,6 +499,16 @@ class SevenBridgesPlatform(Platform):
                 file.metadata = metadata
                 file.save()
 
+        def check_metadata(entry):
+            if isinstance(entry, dict):
+                if 'metadata' in entry and entry['class'] == 'File':
+                    sbgfile = None
+                    if 'path' in entry:
+                        sbgfile = self.api.files.get(id=entry['path'])
+                    elif 'location' in entry:
+                        sbgfile = self.api.files.get(id=entry['location'])
+                    set_file_metadata(sbgfile, entry['metadata'])
+
         use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
         sbg_execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
 
@@ -507,25 +517,10 @@ class SevenBridgesPlatform(Platform):
             # if the parameter type is an array/list
             if isinstance(parameters[i], list):
                 for j in parameters[i]:
-                    if isinstance(j, dict):
-                        if 'metadata' in j and j['class'] == 'File':
-                            sbgfile = None
-                            if 'path' in j:
-                                sbgfile = self.api.files.get(id=j['path'])
-                            elif 'location' in j:
-                                sbgfile = self.api.files.get(id=j['location'])
-                            set_file_metadata(sbgfile, j['metadata'])
+                    check_metadata(j)
 
             ## if the parameter type is a regular file
-            if isinstance(parameters[i], dict):
-                j = parameters[i]
-                if 'metadata' in j and j['class'] == 'File':
-                    sbgfile = None
-                    if 'path' in j:
-                        sbgfile = self.api.files.get(id=j['path'])
-                    elif 'location' in j:
-                        sbgfile = self.api.files.get(id=j['location'])
-                    set_file_metadata(sbgfile, j['metadata'])
+            check_metadata(parameters[i])
 
         self.logger.debug("Submitting task (%s) with parameters: %s", name, parameters)
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
