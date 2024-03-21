@@ -7,7 +7,6 @@ PAML(Platform API Middle-Layer) is an installable Python package to enable anyon
 - [Features](#features)
 - [Usage](#usage)
   - [Initial setup](#initial-setup)
-- [Projects using this template](#projects-using-this-template)
 - [FAQ](#faq)
 - [Contributing](#contributing)
 
@@ -45,7 +44,7 @@ Multiple Supports Platforms
 
 3. Develop Launcher
 
-    Follow [ExampleLancher](https://github.com/NGS360/ExampleLauncher) as an example
+    Follow [ExampleLauncher](https://github.com/NGS360/ExampleLauncher) as an example
 
 ## FAQ
 
