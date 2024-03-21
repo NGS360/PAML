@@ -55,4 +55,5 @@ This repo hasn't been around long enough to earn a FAQ!
 Contributions are always welcome!
 
 If you find a bug :bug:, please open a [bug report](https://github.com/NGS360/PAML/issues/new/choose).
+
 If you have an idea for an improvement or new feature :rocket:, please open a [feature request](https://github.com/NGS360/PAML/issues/new/choose).
