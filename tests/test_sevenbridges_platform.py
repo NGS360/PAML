@@ -53,7 +53,6 @@ class TestSevenBridgesPlaform(unittest.TestCase):
                 'path': '65eb61ac7aaf1d5a95e3d581',
                 'secondaryFiles': [
                     {'class': 'File', 'path': '65eb61ac7aaf1d5a95e3d581.bai'},
-                    {'class': 'File', 'path': '65eb61ac7aaf1d5a95e3d581'}
                 ]
             }
         } 
