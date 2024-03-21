@@ -1,6 +1,6 @@
 [project]
 name = "cwl_platform"
-version = "0.0.1"
+version = "0.1"
 authors = [
   { name="Ryan Golhar", email="ryan.golhar@bms.com" },
   { name="Maggie Chen", email="yu.chen2@bms.com" }
@@ -20,8 +20,8 @@ dynamic = ["dependencies"]
 dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
-Homepage = "https://biogit.pri.bms.com/NGS/cwl_platform"
-Issues = "https://biogit.pri.bms.com/NGS/cwl_platform/issues"
+Homepage = "https://github.com/NGS360/PAML"
+Issues = "https://github.com/NGS360/PAML/issues"
 
 [build-system]
 requires = ["setuptools >= 61.0"]
