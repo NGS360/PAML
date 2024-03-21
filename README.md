@@ -32,7 +32,7 @@ Multiple Supports Platforms
 2. Install this package in your virtual environment
 
     ```{bash}
-    pip install git+https://biogit.pri.bms.com/NGS/cwl_platform.git@<version>#egg=cwl_platform
+    pip install git+https://github.com/NGS360/PAML.git@<version>#egg=cwl_platform
     ```
 
     where `<version>` is the version you want to install
@@ -45,24 +45,7 @@ Multiple Supports Platforms
 
 3. Develop Launcher
 
-    Follow [ExampleCICDPipelineDeployment](https://biogit.pri.bms.com/NGS/ExampleCICDPipelineDeployment), or any of the other launchers listed below, as an example
-    
-    If you have an existing launcher, perform the following steps:
-
-    ```
-    git rm launcher/src/cwl_platform
-    ```
-    
-    - Install this package to your requirements.txt that is used by your launcher's Dockerfile.
-
-## Projects using this template
-
-These are the launchers I know of
-
-- [ExampleCICDPipelineDeployment](https://biogit.pri.bms.com/NGS/ExampleCICDPipelineDeployment)
-- [bulk RNA-Seq](https://github.com/bmsgh/RNA-Seq-Launcher)
-- [Whole Exome](https://github.com/bmsgh/WES-Launcher-New)
-- [CNV](https://github.com/bmsgh/CNV-and-LOH)
+    Follow [ExampleLancher](https://github.com/NGS360/ExampleLauncher) as an example
 
 ## FAQ
 
@@ -72,5 +55,5 @@ This repo hasn't been around long enough to earn a FAQ!
 
 Contributions are always welcome!
 
-If you find a bug :bug:, please open a [bug report](https://biogit.pri.bms.com/NGS/cwl_platform/issues/new/choose).
-If you have an idea for an improvement or new feature :rocket:, please open a [feature request](https://biogit.pri.bms.com/NGS/cwl_platform/issues/new/choose).
+If you find a bug :bug:, please open a [bug report](https://github.com/NGS360/PAML/issues/new/choose).
+If you have an idea for an improvement or new feature :rocket:, please open a [feature request](https://github.com/NGS360/PAML/issues/new/choose).
