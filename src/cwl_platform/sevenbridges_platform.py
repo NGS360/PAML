@@ -526,7 +526,7 @@ class SevenBridgesPlatform(Platform):
                         sbgfile = self.api.files.get(id=j['location'])
                     set_file_metadata(sbgfile, j['metadata'])
 
-        self.logger.debug("Submitting task: %s with: parameters=%s, ", name, parameters)
+        self.logger.debug("Submitting task (%s) with parameters: %s", name, parameters)
         task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
                                      interruptible=use_spot_instance,
                                      execution_settings=sbg_execution_settings)
