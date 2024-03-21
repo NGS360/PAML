@@ -47,10 +47,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
                 'class': 'File',
                 'path': '65fc33432348e03d3a73d727'
             },
-            'sex': 'XY',
-            'noisy_data': True,
             'ploidy': [2],
-            'bin_length': 1000,
             'tumor_bam': {
                 'class': 'File',
                 'path': '65eb61ac7aaf1d5a95e3d581',
