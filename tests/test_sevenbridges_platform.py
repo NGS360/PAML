@@ -36,9 +36,10 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         task.delete.assert_called_once_with()
 
     def test_submit_task(self):
-        ''' Test submit_task method '''
+        ''' Test submit_task method is able to properly parse and a list of integers '''
         # Set up test parameters
         # Set up mocks
+        self.platform.api = MagicMock()
         name = "test_task"
         project = "test_project"
         workflow = "test_workflow"
@@ -65,6 +66,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         )
         # Assert
         task.run.assert_called_once_with()
+
 
 if __name__ == '__main__':
     unittest.main()

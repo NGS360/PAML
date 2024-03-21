@@ -507,13 +507,14 @@ class SevenBridgesPlatform(Platform):
             # if the parameter type is an array/list
             if isinstance(parameters[i], list):
                 for j in parameters[i]:
-                    if 'metadata' in j and j['class'] == 'File':
-                        sbgfile = None
-                        if 'path' in j:
-                            sbgfile = self.api.files.get(id=j['path'])
-                        elif 'location' in j:
-                            sbgfile = self.api.files.get(id=j['location'])
-                        set_file_metadata(sbgfile, j['metadata'])
+                    if isinstance(j, dict):
+                        if 'metadata' in j and j['class'] == 'File':
+                            sbgfile = None
+                            if 'path' in j:
+                                sbgfile = self.api.files.get(id=j['path'])
+                            elif 'location' in j:
+                                sbgfile = self.api.files.get(id=j['location'])
+                            set_file_metadata(sbgfile, j['metadata'])
 
             ## if the parameter type is a regular file
             if isinstance(parameters[i], dict):
