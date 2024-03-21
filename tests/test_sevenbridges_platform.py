@@ -35,5 +35,38 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Assert
         task.delete.assert_called_once_with()
 
+    def test_submit_task(self):
+        ''' Test submit_task method is able to properly parse and a list of integers '''
+        # Set up test parameters
+        # Set up mocks
+        self.platform.api = MagicMock()
+        name = "test_task"
+        project = "test_project"
+        workflow = "test_workflow"
+        parameters = {
+            'capture_regions': {
+                'class': 'File',
+                'path': '65fc33432348e03d3a73d727'
+            },
+            'ploidy': [2],
+            'tumor_bam': {
+                'class': 'File',
+                'path': '65eb61ac7aaf1d5a95e3d581',
+                'secondaryFiles': [
+                    {'class': 'File', 'path': '65eb61ac7aaf1d5a95e3d581.bai'},
+                ]
+            }
+        } 
+        # Test
+        task = self.platform.submit_task(
+            name,
+            project,
+            workflow,
+            parameters
+        )
+        # Assert
+        task.run.assert_called_once_with()
+
+
 if __name__ == '__main__':
     unittest.main()
