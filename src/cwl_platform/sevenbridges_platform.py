@@ -82,7 +82,7 @@ class SevenBridgesPlatform(Platform):
         else:
             parent = parent[0]
             for folder in folders[1:]:
-                nested = [x for x in parent.list_files() if x.name == folder]
+                nested = [x for x in parent.list_files().all() if x.name == folder]
                 if not nested:
                     parent = self.api.files.create_folder(
                         name=folder,
