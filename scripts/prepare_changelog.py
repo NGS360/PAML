@@ -28,7 +28,7 @@ def main():
     lines.insert(insert_index, "\n")
     lines.insert(
         insert_index + 1,
-        f"## [v{VERSION}](https://biogit.pri.bms.com/NGS/cwl_platform/releases/tag/v{VERSION}) - "
+        f"## [v{VERSION}](https://github.com/NGS360/PAML/releases/tag/v{VERSION}) - "
         f"{datetime.now().strftime('%Y-%m-%d')}\n",
     )
 

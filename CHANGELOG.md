@@ -7,10 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## [v0.1](https://biogit.pri.bms.com/NGS/cwl_platform/releases/tag/v0.1) - 2024-03-21
+## [v0.1.1](https://github.com/NGS360/PAML/releases/tag/v0.1.1) - 2024-04-09
 
-## [v0.0.1](https://biogit.pri.bms.com/NGS/cwl_platform/releases/tag/v0.0.1) - 2024-02-28
+### Fixed
 
-### Added
-
-- Converted to installable python package
+- Fixed how we iterate files in a SevenBridges project
