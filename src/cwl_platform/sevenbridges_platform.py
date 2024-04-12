@@ -433,6 +433,32 @@ class SevenBridgesPlatform(Platform):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
 
+    def move_files(self, project, files, destination):
+        '''
+        take list of file paths
+        copy to destination
+        if the destination is already the prefix to any filepaths, it will not 
+
+        :param project: The project to stage files to
+        :param files: list of filepaths that need to be moved
+        :param destination: destination folder.
+        '''
+        for i in files:
+            logger.info('moving this file ' + i)
+            fileid = self.get_file_id(project, i)
+            f = self.api.files.get(fileid)
+
+            # check if destination already matches
+            if i.startswith(destination):
+                dest = self._find_or_create_path(project, '/' + '/'.join(i.split('/')[0:-1]))
+            else:
+                if len(i.split('/')) > 1:
+                    dest = self._find_or_create_path(project, destination + '/' + '/'.join(i.split('/')[0:-1]))
+                else:
+                    dest = self._find_or_create_path(project, destination)
+            f.move_to_folder(parent = dest, name = i.split('/')[-1])
+        return destination
+    
     def stage_output_files(self, project, output_files):
         '''
         Stage output files to a project
