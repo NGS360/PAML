@@ -440,7 +440,13 @@ class ArvadosPlatform(Platform):
         '''
         take list of file paths
         copy to destination
+        if the destination is already the prefix to any filepaths, it will not nest the destination path
+
+        :param project: The project to stage files to
+        :param files: list of filepaths that need to be moved
+        :param destination: destination folder.
         '''
+        
         # set up destination collection name and path
         if destination.startswith('/'):
             dest_name = destination.split('/')[1]

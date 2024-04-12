@@ -437,7 +437,7 @@ class SevenBridgesPlatform(Platform):
         '''
         take list of file paths
         copy to destination
-        if the destination is already the prefix to any filepaths, it will not 
+        if the destination is already the prefix to any filepaths, it will not nest the destination path
 
         :param project: The project to stage files to
         :param files: list of filepaths that need to be moved
