@@ -436,6 +436,83 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
+    def move_files(self, project, files, destination):
+        '''
+        take list of file paths
+        copy to destination
+        if the destination is already the prefix to any filepaths, it will not nest the destination path
+
+        :param project: The project to stage files to
+        :param files: list of filepaths that need to be moved
+        :param destination: destination folder.
+        '''
+        
+        # set up destination collection name and path
+        if destination.startswith('/'):
+            dest_name = destination.split('/')[1]
+            dest_path = '/'.join(destination.split('/')[2:]) + '/'
+        else:
+            dest_name = destination.split('/')[0]
+            dest_path = '/'.join(destination.split('/')[1:]) + '/'
+            
+        # Get the destination project collection
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", dest_name]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            dest_coll = search_result['items'][0]
+            dest_coll_filesgen = arvados.collection.CollectionReader(dest_coll['current_version_uuid']).all_files()
+            dest_coll_files = [j.stream_name()[2:] + '/' + j.name() for j in dest_coll_filesgen]
+        else:
+            dest_coll = self.api.collections().create(body={
+                "owner_uuid": project["uuid"],
+                "name": dest_name,
+                "preserve_version":True}).execute()
+            dest_coll_files = []
+
+        # Get target
+        target = arvados.collection.Collection(dest_coll['uuid'], api_client=self.api, keep_client=self.keep_client)
+
+        # loop through file paths
+        for i in files:
+            if i.startswith('/'):
+                orig_name = i.split('/')[1]
+                orig_path = '/'.join(i.split('/')[2:])
+            else:
+                orig_name = i.split('/')[0]
+                orig_path = '/'.join(i.split('/')[1:])
+            try:
+                # check if file exists and prepend new version number if so
+                count = 0
+                dup = True
+                if dest_path.startswith('/'):
+                    clean_dest = dest_path[1:]
+                else:
+                    clean_dest = dest_path
+                new_path = clean_dest + orig_path
+                
+                while dup:
+                    if new_path in dest_coll_files:
+                        count += 1
+                        new_path = clean_dest[:-1] + '/'.join(orig_path.split('/')[:-1]) + '/v' + str(count) + '_' + orig_path.split('/')[-1]
+                    else:
+                        dup = False
+                    
+                search_result = self.api.collections().list(filters=[
+                    ["owner_uuid", "=", project["uuid"]],
+                    ["name", "=", orig_name]
+                    ]).execute()
+                orig_coll = search_result['items'][0]
+                source = arvados.collection.CollectionReader(orig_coll['uuid']) 
+                target.copy(orig_path,
+                            target_path = new_path,
+                            source_collection = source,
+                            overwrite = False)
+            except IOError:
+                continue
+        target.save()
+    
     def stage_output_files(self, project, output_files):
         '''
         Stage output files to a project

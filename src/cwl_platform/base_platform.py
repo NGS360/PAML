@@ -103,6 +103,18 @@ class Platform(ABC):
         self.logger = logger
 
     @abstractmethod
+    def move_files(self, project, files, destination):
+        '''
+        take list of file paths
+        copy to destination
+        if the destination is already the prefix to any filepaths, it will not nest the destination path
+
+        :param project: The project to stage files to
+        :param files: list of filepaths that need to be moved
+        :param destination: destination folder.
+        '''
+        
+    @abstractmethod
     def stage_output_files(self, project, output_files):
         '''
         Stage output files to a project
