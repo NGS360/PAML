@@ -565,3 +565,77 @@ class SevenBridgesPlatform(Platform):
 
         # return file id if file already exists
         return existing_file[0].id
+
+    def monitor_task(self, task):
+        '''
+        Monitor a task on the platform, resubmit on a larger instance
+        if failed due to reasons in SevenBridgesInstance.errors
+        '''
+        count = 0
+        while task.status not in sevenbridges.TaskStatus.terminal_states:
+            logger.info(f"Waiting for task: {task.name} to finish")
+            task.wait(period=60)
+            exe_msg = task.execution_status.message
+            if task.status == sevenbridges.TaskStatus.FAILED:
+                if any(err in exe_msg for err in SevenBridgesInstance.errors) \
+                        and count < 3:
+                        logger.info(f"Task {task.name} failed with message "
+                                    f"'{exe_msg}'. Retrying on a bigger "
+                                    f"instance")
+                        new_name = task.name.rpartition(" - ")[0] if \
+                            "Retry" in task.name else task.name
+                        task = self.api.tasks.create(
+                            name=f"{new_name} - Retry {count}",
+                            project=task.project,
+                            app=task.app,
+                            inputs=task.inputs,
+                            interruptible=task.use_interruptible_instances,
+                            execution_settings=SevenBridgesInstance.settings[count],
+                            run=True
+                        )
+                        count += 1
+        return task
+
+class SevenBridgesInstance:
+    errors = [
+            'Docker container failed to start',
+            'One of the instances of the task stopped responding',
+            'detected an issue with the instance running our task. '
+            'If you rerun this execution it is likely to complete successfully',
+            'issue with the instance it was running on. '
+            'If you restart this task it is likely to complete successfully. '
+            'If the issue persists',
+            'currently unable to launch a valid instance for the task. '
+            'Please retry or contact our support',
+            'Failed to execute status command',
+            'Something went wrong with this task at our end. '
+            'Please try rerunning, and if the error persists contact support',
+            'failed because the instance it was running on stopped responding. '
+            'Please contact our support team to investigate it further',
+            'Insufficient disk space may have been the cause.',
+            'Executor faced a runtime exception.',
+            'No space left on device',
+            'ran out of disk space',
+            'Please contact our support team for additional information',
+            'Failed to stage inputs'
+        ]
+    settings = {
+        0: {
+            "instance_type": "m5.8xlarge;ebs-gp2;4096",
+            "max_parallel_instances": 1,
+            "use_elastic_disk": True,
+            "use_memoization": True
+        },
+        1: {
+            "instance_type": "m5.16xlarge;ebs-gp2;4096",
+            "max_parallel_instances": 1,
+            "use_elastic_disk": True,
+            "use_memoization": True
+        },
+        2: {
+            "instance_type": "m5.24xlarge;ebs-gp2;4096",
+            "max_parallel_instances": 1,
+            "use_elastic_disk": True,
+            "use_memoization": True
+        }
+    }

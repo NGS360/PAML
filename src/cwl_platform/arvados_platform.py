@@ -625,3 +625,17 @@ class ArvadosPlatform(Platform):
                 arv_file.write(local_content) # pylint: disable=no-member
             target_collection.save()
         return f"keep:{destination_collection['uuid']}/{target_filepath}"
+
+    def monitor_task(self, task):
+        '''
+        Takes a task
+        Waits until it is done
+        Placeholder for now, but room to implement automatic retries in the future
+        '''
+        state = self.get_task_state(task, refresh=True)
+        while state not in ('Completed', 'Cancelled', 'Failed', 'NA'):
+            logger.debug(" - Sleeping for 60 seconds")
+            time.sleep(60)
+            state = self.get_task_state(task, refresh=True)
+
+        return(task) 
