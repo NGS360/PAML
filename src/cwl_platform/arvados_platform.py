@@ -628,9 +628,8 @@ class ArvadosPlatform(Platform):
 
     def monitor_task(self, task):
         '''
-        Takes a task
-        Waits until it is done
-        Placeholder for now, but room to implement automatic retries in the future
+        Checks the state of a task until it is no longer running
+        Returns the completed or failed task
         :param task: task to monitor 
         '''
         state = self.get_task_state(task, refresh=True)
