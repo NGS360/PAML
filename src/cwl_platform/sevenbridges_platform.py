@@ -570,6 +570,7 @@ class SevenBridgesPlatform(Platform):
         '''
         Monitor a task on the platform, resubmit on a larger instance
         if failed due to reasons in SevenBridgesInstance.errors
+        :param task: task to monitor 
         '''
         count = 0
         while task.status not in sevenbridges.TaskStatus.terminal_states:

@@ -152,3 +152,11 @@ class Platform(ABC):
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
         '''
+        
+    @abstractmethod
+    def monitor_task(self, task):
+        '''
+        Monitor a task on the platform, resubmit on a larger instance
+        if failed due to reasons in SevenBridgesInstance.errors
+        :param task: task to monitor
+        '''

@@ -631,6 +631,7 @@ class ArvadosPlatform(Platform):
         Takes a task
         Waits until it is done
         Placeholder for now, but room to implement automatic retries in the future
+        :param task: task to monitor 
         '''
         state = self.get_task_state(task, refresh=True)
         while state not in ('Completed', 'Cancelled', 'Failed', 'NA'):
