@@ -4,6 +4,7 @@ SevenBridges Platform class
 import os
 import logging
 import sevenbridges
+import re
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
 from .base_platform import Platform
@@ -192,6 +193,20 @@ class SevenBridgesPlatform(Platform):
         else:
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
+
+    def _rename_file_versions(self, project, file):
+        if not re.match('^_[0-9][0-9]*_',file.name):
+            return True
+        targetname = '_'.join(file.name.split('_')[2:])
+        oldname = file.name
+        oldfile = self.api.files.query(project=project, names=[targetname])[0]
+
+        file.name = 'temporary_name'
+        file.save()
+        oldfile.name = oldname
+        oldfile.save()
+        file.name = targetname
+        file.save()
 
     def connect(self, **kwargs):
         ''' Connect to Sevenbridges '''
@@ -432,6 +447,25 @@ class SevenBridgesPlatform(Platform):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
+
+    def rename_output_files(self, project, task):
+        ''' Rename output files to avoid conflicts '''
+        task = self.api.tasks.get(id=task.id)
+        alloutputs = task.outputs
+        for output_id in alloutputs:
+            outfile=alloutputs[output_id]
+            if isinstance(outfile,sevenbridges.models.file.File) and outfile.type == "file":
+                try:
+                    self._rename_file_versions(project, outfile)
+                except:
+                    self.logger.warning("Rename output failed for %s",outfile.name)
+            if isinstance(outfile,list):
+                for file in outfile:
+                    if isinstance(file,sevenbridges.models.file.File) and file.type == "file":
+                        try:
+                            self._rename_file_versions(project, file)
+                        except:
+                            self.logger.warning("Rename output failed for %s",file.name)
 
     def stage_output_files(self, project, output_files):
         '''

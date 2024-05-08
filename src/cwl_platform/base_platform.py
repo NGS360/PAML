@@ -98,6 +98,10 @@ class Platform(ABC):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
 
+    @abstractmethod
+    def rename_output_files(self, task):
+        ''' Rename output files to avoid conflicts '''
+
     def set_logger(self, logger):
         ''' Set the logger '''
         self.logger = logger

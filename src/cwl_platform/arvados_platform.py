@@ -436,6 +436,10 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
+    def rename_output_files(self, task):
+        ''' Rename output files to avoid conflicts '''
+        return None
+
     def stage_output_files(self, project, output_files):
         '''
         Stage output files to a project
