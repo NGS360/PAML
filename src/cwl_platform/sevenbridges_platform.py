@@ -483,7 +483,7 @@ class SevenBridgesPlatform(Platform):
             if isinstance(outfile,list):
                 for file in outfile:
                     if isinstance(file,sevenbridges.models.file.File) and file.type == "file":
-                       try:
+                        try:
                             self._update_latest_filename(project, file)
                         except:
                             self.logger.warning("Rename output failed for %s",file.name)
