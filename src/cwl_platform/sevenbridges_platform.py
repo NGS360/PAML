@@ -194,19 +194,34 @@ class SevenBridgesPlatform(Platform):
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
-    def _rename_file_versions(self, project, file):
+    def _rename_file(self, file, new_filename):
+        '''
+        Rename a file to new_filename.
+
+        :param file: SBG file object to rename
+        :param new_filename: str of new filename
+        '''
+        file.name = new_filename
+        file.save()
+
+    def _update_latest_filename(self, project, file):
+        '''
+        Remove _[0-9]_ prefix of file if present and add _[0-9]_ prefix
+        to file from older version to avoid confict.
+
+        :param project: project where file is located in
+        :param file: SBG file object to update
+        '''
+        # Do nothing if file doesn't have _[0-9]_ prefix
         if not re.match('^_[0-9][0-9]*_',file.name):
             return True
-        targetname = '_'.join(file.name.split('_')[2:])
-        oldname = file.name
-        oldfile = self.api.files.query(project=project, names=[targetname])[0]
-
-        file.name = 'temporary_name'
-        file.save()
-        oldfile.name = oldname
-        oldfile.save()
-        file.name = targetname
-        file.save()
+        # Switch filename bewteen latest and old version
+        target_name = '_'.join(file.name.split('_')[2:])
+        original_name = file.name
+        oldfile = self.api.files.query(project=project, names=[target_name])[0]
+        self._rename_file(file, 'temporary_name')
+        self._rename_file(oldfile, original_name)
+        self._rename_file(file, target_name)
 
     def connect(self, **kwargs):
         ''' Connect to Sevenbridges '''
@@ -449,21 +464,27 @@ class SevenBridgesPlatform(Platform):
         return self.api.projects.get(project_id)
 
     def rename_output_files(self, project, task):
-        ''' Rename output files to avoid conflicts '''
+        '''
+        Remove _[0-9]_ prefix of all output files from a task if it is rerun
+        and add _[0-9]_ prefix to files from older versions to avoid confict.
+
+        :param project: project where file is located in
+        :param task: task object to rename outputs
+        '''
         task = self.api.tasks.get(id=task.id)
         alloutputs = task.outputs
         for output_id in alloutputs:
             outfile=alloutputs[output_id]
             if isinstance(outfile,sevenbridges.models.file.File) and outfile.type == "file":
                 try:
-                    self._rename_file_versions(project, outfile)
+                    self._update_latest_filename(project, outfile)
                 except:
                     self.logger.warning("Rename output failed for %s",outfile.name)
             if isinstance(outfile,list):
                 for file in outfile:
                     if isinstance(file,sevenbridges.models.file.File) and file.type == "file":
-                        try:
-                            self._rename_file_versions(project, file)
+                       try:
+                            self._update_latest_filename(project, file)
                         except:
                             self.logger.warning("Rename output failed for %s",file.name)
 

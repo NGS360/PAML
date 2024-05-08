@@ -436,8 +436,14 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
-    def rename_output_files(self, task):
-        ''' Rename output files to avoid conflicts '''
+    def rename_output_files(self, project, task):
+        ''' 
+        Remove _[0-9]_ prefix of all output files from a task if it is rerun
+        and add _[0-9]_ prefix to files from older versions to avoid confict.
+
+        :param project: project where file is located in
+        :param task: task object to rename outputs
+        '''
         return None
 
     def stage_output_files(self, project, output_files):
