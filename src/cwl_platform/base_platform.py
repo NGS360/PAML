@@ -99,13 +99,12 @@ class Platform(ABC):
         ''' Get a project by its id '''
 
     @abstractmethod
-    def rename_output_files(self, project, task):
-        ''' 
-        Remove _[0-9]_ prefix of all output files from a task if it is rerun
-        and add _[0-9]_ prefix to files from older versions to avoid confict.
+    def rename_file(self, fileid, new_filename):
+        '''
+        Rename a file to new_filename.
 
-        :param project: project where file is located in
-        :param task: task object to rename outputs
+        :param file: File ID to rename
+        :param new_filename: str of new filename
         '''
 
     def set_logger(self, logger):
