@@ -436,15 +436,23 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
-    def rename_output_files(self, project, task):
-        ''' 
-        Remove _[0-9]_ prefix of all output files from a task if it is rerun
-        and add _[0-9]_ prefix to files from older versions to avoid confict.
-
-        :param project: project where file is located in
-        :param task: task object to rename outputs
+    def rename_file(self, fileid, new_filename):
         '''
-        return None
+        Rename a file to new_filename.
+
+        :param file: File ID to rename
+        :param new_filename: str of new filename
+        '''
+        collection_uuid = fileid.split('keep:')[1].split('/')[0]
+        filepath = fileid.split(collection_uuid+'/')[1]
+        if len(filepath.split('/'))>1:
+            newpath = '/'.join(filepath.split('/')[:-1]+[new_filename])
+        else:
+            newpath = new_filename
+        collection = arvados.collection.Collection(collection_uuid, api_client=self.api)
+        collection.copy(filepath, newpath)
+        collection.remove(filepath, recursive=True)
+        collection.save()
 
     def stage_output_files(self, project, output_files):
         '''
