@@ -162,7 +162,7 @@ class OmicsPlatform(Platform):
             # Put this in the pipeline_config.py.
             job = self.api.start_run(workflowId=workflow,
                                      workflowType='PRIVATE',
-                                     roleArn='arn:aws:iam::483421617021:role/ngs360-servicerole',
+                                     roleArn=self.role_arn,
                                      parameters=parameters,
                                      name=name,
                                      tags=project,
