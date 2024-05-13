@@ -21,7 +21,7 @@ class OmicsPlatform(Platform):
     def connect(self, **kwargs):
         ''' Connect to AWS Omics platform'''
         self.api = boto3.client('omics')
-        self.outout_bucket = kwargs.get('output_bucket')
+        self.output_bucket = kwargs.get('output_bucket')
         self.role_arn = kwargs.get('role_arn')
 
     def copy_folder(self, reference_project, reference_folder, destination_project):
