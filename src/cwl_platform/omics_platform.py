@@ -15,13 +15,15 @@ class OmicsPlatform(Platform):
     def __init__(self, name):
         super().__init__(name)
         self.api = None
+        self.output_bucket = None
         self.role_arn = None
 
     def connect(self, **kwargs):
         ''' Connect to AWS Omics platform'''
         self.api = boto3.client('omics')
+        self.outout_bucket = kwargs.get('output_bucket')
         self.role_arn = kwargs.get('role_arn')
-        
+
     def copy_folder(self, reference_project, reference_folder, destination_project):
         '''
         Do nothing and return reference folder, which should be an S3 path.
@@ -158,13 +160,17 @@ class OmicsPlatform(Platform):
         '''
         Submit workflow for one sample.
         name: sample ID.
-        project: dictionary of {'ProjectName':'string'} or {'ProjectId':'string'}, used for add run tag.
+        project: dictionary of {'ProjectName': 'string'} or {'ProjectId': 'string'}
         workflow: workflow ID in omics.
         parameters: dictionary of input parameters.
 
         return omics response for start_run.
         '''
-        base_output_path = parameters.pop('OutputUri')
+        base_output_path = f"s3://{self.output_bucket}/"
+        if 'ProjectName' in project:
+            base_output_path += f"{project['ProjectName']}/{workflow}/{name}/"
+        else:
+            base_output_path += f"{project['ProjectId']}/{workflow}/{name}/"
 
         try:
             logger.debug("Starting run for %s", name)
