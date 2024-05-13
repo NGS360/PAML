@@ -123,9 +123,9 @@ class OmicsPlatform(Platform):
 
     def get_project(self):
         '''
-        Since there is no concept of project in Omics, return None
+        Since there is no concept of project in Omics, raise an error.
         '''
-        return None
+        raise ValueError("Omics does not support get_project. Use get_project_by_id or get_project_by_name instead.")
 
     def get_project_by_name(self, project_name):
         ''' Return a dictionary of project to provide project_name tag info for omics jobs '''
