@@ -15,6 +15,7 @@ class OmicsPlatform(Platform):
     def __init__(self, name):
         super().__init__(name)
         self.api = None
+        self.role_arn = None
 
     def connect(self):
         ''' Connect to AWS Omics platform'''
@@ -153,8 +154,7 @@ class OmicsPlatform(Platform):
 
         return omics response for start_run.
         '''
-        # A subfolder is created with the Run ID assigned by Omics such that task output is seperate.
-        base_output_path = 's3://bmsrd-ngs-omics/runs'
+        base_output_path = parameters.pop('OutputUri')
 
         try:
             logger.debug("Starting run for %s", name)
