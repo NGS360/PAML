@@ -60,6 +60,8 @@ class OmicsPlatform(Platform):
         There is not unique ID for a folder in s3, so just return the folder_path
         The one caveat is that Omics wants trailing slashes on folder paths, so add one.
         '''
+        if folder_path.endswith("/"):
+            return folder_path
         return folder_path + "/"
 
     def get_task_input(self, task, input_name):
