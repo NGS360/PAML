@@ -25,6 +25,9 @@ class OmicsPlatform(Platform):
     def copy_folder(self, reference_project, reference_folder, destination_project):
         '''
         Do nothing and return reference folder, which should be an S3 path.
+        NOTE: Launchers copy the reference folder to the destination project so that everything is co-located.
+              However this can cause lots of data duplication in S3.  For now we will just use the reference folder
+              until another use-case is identified that we need to copy the data.
         '''
         return reference_folder
 
