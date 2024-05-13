@@ -7,6 +7,8 @@ import sevenbridges
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
 from .base_platform import Platform
+from .platform_config import sb_credentials, sb_execution_settings
+
 
 class SevenBridgesPlatform(Platform):
     ''' SevenBridges Platform class '''
@@ -22,14 +24,10 @@ class SevenBridgesPlatform(Platform):
         self._session_id = os.environ.get('SESSION_ID')
         self.logger = logging.getLogger(__name__)
 
-        self.api_endpoint = 'https://bms-api.sbgenomics.com/v2'
-        self.token = 'dummy'
-
-        if not self._session_id:
-            if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
-                self.api_config = sevenbridges.Config(profile='default')
-            else:
-                raise ValueError('No SevenBridges credentials found')
+        self.api_endpoint = None
+        self.token = None
+        self.use_elastic = None
+        self.use_memoization = None
 
     def _add_tag_to_file(self, target_file, newtag):
         ''' Add a tag to a file '''
@@ -281,16 +279,6 @@ class SevenBridgesPlatform(Platform):
         ''' Delete a task/workflow/process '''
         task.delete()
 
-    @classmethod
-    def detect(cls):
-        '''
-        Determine if we are running on this platform
-        '''
-        session_id = os.environ.get('SESSION_ID')
-        if session_id:
-            return True
-        return False
-
     def get_current_task(self) -> sevenbridges.Task:
         ''' Get the current task '''
 
@@ -510,7 +498,7 @@ class SevenBridgesPlatform(Platform):
                     set_file_metadata(sbgfile, entry['metadata'])
 
         use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
-        sbg_execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
+        sbg_execution_settings = {'use_elastic_disk': self.use_elastic, 'use_memoization': self.use_memoization}
 
         # This metadata code will come out as part of the metadata removal effort.
         for i in parameters:
@@ -565,3 +553,87 @@ class SevenBridgesPlatform(Platform):
 
         # return file id if file already exists
         return existing_file[0].id
+
+
+class SevenBridgesPlatform_US(SevenBridgesPlatform):
+    def __init__(self, name):
+        '''
+        Initialize SevenBridges Platform US
+        '''
+        super().__init__(name)
+        self.api_endpoint = sb_credentials['US']['api_endpoint']
+        self.token = sb_credentials['US']['token']
+        self.use_elastic = sb_execution_settings['US']['use_elastic_disk']
+        self.use_memoization = sb_execution_settings['US']['use_memoization']
+
+        if not self._session_id:
+            if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
+                self.api_config = sevenbridges.Config(
+                    profile=sb_credentials['US']['profile']
+                )
+            else:
+                raise ValueError('No SevenBridges credentials found')
+    
+    @classmethod
+    def detect(cls):
+        '''
+        We changed this method comparing to the SevenBridgesPlatform class
+        to test if we are running specifically on the US instance of the
+        Seven Bridges platform.
+        In order to do that we need to actually try to connect to US platform,
+        because there is no other way to know if we are on US or CN platform.
+        '''
+        session_id = os.environ.get('SESSION_ID')
+        if session_id:
+            try:
+                api = sevenbridges.Api(url=sb_credentials['US']['api_endpoint'],
+                                       token=sb_credentials['US']['token'],
+                                       advance_access=True)
+                api._session_id = session_id
+                myself = api.users.me()
+                return True
+            except:
+                return False
+        return False    
+  
+
+class SevenBridgesPlatform_CN(SevenBridgesPlatform):
+    def __init__(self, name):
+        '''
+        Initialize SevenBridges Platform CN
+        '''
+        super().__init__(name)
+        self.api_endpoint = sb_credentials['CN']['api_endpoint']
+        self.token = sb_credentials['CN']['token']
+        self.use_elastic = sb_execution_settings['CN']['use_elastic_disk']
+        self.use_memoization = sb_execution_settings['CN']['use_memoization']
+
+        if not self._session_id:
+            if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
+                self.api_config = sevenbridges.Config(
+                    profile=sb_credentials['CN']['profile']
+                )
+            else:
+                raise ValueError('No SevenBridges credentials found')
+
+    @classmethod
+    def detect(cls):
+        '''
+        We changed this method comparing to the SevenBridgesPlatform class
+        to test if we are running specifically on the CN instance of the
+        Seven Bridges platform.
+        In order to do that we need to actually try to connect to CN platform,
+        because there is no other way to know if we are on CN or US platform.
+        '''
+        session_id = os.environ.get('SESSION_ID')
+        if session_id:
+            try:
+                api = sevenbridges.Api(url=sb_credentials['CN']['api_endpoint'],
+                                       token=sb_credentials['CN']['token'],
+                                       advance_access=True)
+                api._session_id = session_id
+                myself = api.users.me()
+                return True
+            except:
+                return False
+        return False        

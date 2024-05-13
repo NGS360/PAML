@@ -5,15 +5,18 @@ import logging
 import os
 
 from .arvados_platform import ArvadosPlatform
-from .sevenbridges_platform import SevenBridgesPlatform
+from .sevenbridges_platform import SevenBridgesPlatform_US, \
+    SevenBridgesPlatform_CN
 #from .omics_platform import OmicsPlatform
 
 # Move this for a config file
 SUPPORTED_PLATFORMS = {
     'Arvados': ArvadosPlatform,
 #    'Omics': OmicsPlatform,
-    'SevenBridges': SevenBridgesPlatform
+    'SevenBridges_US': SevenBridgesPlatform_US,
+    'SevenBridges_CN': SevenBridgesPlatform_CN
 }
+
 
 class PlatformFactory():
     ''' PlatformFactory '''
