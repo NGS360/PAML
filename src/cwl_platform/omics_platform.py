@@ -6,7 +6,7 @@ import logging
 import boto3
 import botocore
 
-from tenacity import retry
+from tenacity import retry, wait_fixed
 
 from .base_platform import Platform
 
@@ -158,7 +158,7 @@ class OmicsPlatform(Platform):
         ''' TODO '''
         return
 
-    @retry(wait=wait_fixed(2))
+    @retry(wait=wait_fixed(1))
     def submit_task(self, name, project, workflow, parameters):
         '''
         Submit workflow for one sample.
