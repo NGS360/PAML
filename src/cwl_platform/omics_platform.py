@@ -17,10 +17,11 @@ class OmicsPlatform(Platform):
         self.api = None
         self.role_arn = None
 
-    def connect(self):
+    def connect(self, **kwargs):
         ''' Connect to AWS Omics platform'''
         self.api = boto3.client('omics')
-
+        self.role_arn = kwargs.get('role_arn')
+        
     def copy_folder(self, reference_project, reference_folder, destination_project):
         '''
         Do nothing and return reference folder, which should be an S3 path.
