@@ -6,6 +6,8 @@ import logging
 import boto3
 import botocore
 
+from tenacity import retry
+
 from .base_platform import Platform
 
 logger = logging.getLogger(__name__)
@@ -156,6 +158,7 @@ class OmicsPlatform(Platform):
         ''' TODO '''
         return
 
+    @retry(wait=wait_fixed(2))
     def submit_task(self, name, project, workflow, parameters):
         '''
         Submit workflow for one sample.
