@@ -25,6 +25,13 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
+    def test_get_project(self):
+        ''' Test that get_project returns None when we do not have a TASK_ID '''
+        self.platform.api = MagicMock()
+
+        actual_value = self.platform.get_project()
+        self.assertIsNone(actual_value)
+
     def test_delete_task(self):
         ''' Test delete_task method '''
         # Set up mocks
