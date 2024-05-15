@@ -2,8 +2,7 @@
 name = "cwl_platform"
 version = "0.1.1"
 authors = [
-  { name="Ryan Golhar", email="ryan.golhar@bms.com" },
-  { name="Maggie Chen", email="yu.chen2@bms.com" }
+  { name="Ryan Golhar", email="ryan.golhar@bms.com" }
 ]
 description = "Multi-Platform Launcher Template"
 readme = "README.md"
