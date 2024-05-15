@@ -61,4 +61,4 @@ If you have an idea for an improvement or new feature :rocket:, please open a [f
 ## Acknowledgements
 
 * Maggie Chen
-
+* Steve Vasquez-Grinnell
