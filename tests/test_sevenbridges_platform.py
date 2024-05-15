@@ -63,7 +63,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
                     {'class': 'File', 'path': '65eb61ac7aaf1d5a95e3d581.bai'},
                 ]
             }
-        } 
+        }
         # Test
         task = self.platform.submit_task(
             name,
