@@ -419,10 +419,14 @@ class SevenBridgesPlatform(Platform):
     def get_project(self):
         ''' Determine what project we are running in '''
         task_id = os.environ.get('TASK_ID')
-        if task_id:
+        if not task_id:
+            return None
+
+        try:
             task = self.api.tasks.get(id=task_id)
             return self.api.projects.get(id=task.project)
-        return None
+        except sevenbridges.errors.SbgError:
+            return None
 
     def get_project_by_name(self, project_name):
         ''' Get a project by its name '''
