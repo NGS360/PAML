@@ -13,15 +13,11 @@ class Config:
     execution_settings = {
         'US': {
             'use_elastic_disk': True,
-            'use_memoization': True,
-            # 'use_spot_instance': True,
-            # "max_parallel_instances": 1
+            'use_memoization': True
         },
         'CN': {
             'use_elastic_disk': False,
-            'use_memoization': True,
-            # 'use_spot_instance': True,
-            # "max_parallel_instances": 1
+            'use_memoization': True
         }
     }
 
