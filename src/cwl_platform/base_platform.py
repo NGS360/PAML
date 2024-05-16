@@ -44,7 +44,7 @@ class Platform(ABC):
         ''' Delete a task/workflow/process '''
 
     @classmethod
-    def detect(cls):
+    def detect(cls, **kwargs):
         ''' Detect platform we are running on '''
 
     @abstractmethod

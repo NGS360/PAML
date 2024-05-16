@@ -5,16 +5,16 @@ import logging
 import os
 
 from .arvados_platform import ArvadosPlatform
-from .sevenbridges_platform import SevenBridgesPlatform_US, \
-    SevenBridgesPlatform_CN
+from .sevenbridges_platform import SevenBridgesPlatformUS, \
+    SevenBridgesPlatformCN
 #from .omics_platform import OmicsPlatform
 
 # Move this for a config file
 SUPPORTED_PLATFORMS = {
     'Arvados': ArvadosPlatform,
 #    'Omics': OmicsPlatform,
-    'SevenBridges_US': SevenBridgesPlatform_US,
-    'SevenBridges_CN': SevenBridgesPlatform_CN
+    'SevenBridges_US': SevenBridgesPlatformUS,
+    'SevenBridges_CN': SevenBridgesPlatformCN
 }
 
 
@@ -26,12 +26,12 @@ class PlatformFactory():
         for platform, creator in SUPPORTED_PLATFORMS.items():
             self._creators[platform] = creator
 
-    def detect_platform(self):
+    def detect_platform(self, credentials):
         '''
         Detect what platform we are running on
         '''
         for platform, creator in SUPPORTED_PLATFORMS.items():
-            if creator.detect():
+            if creator.detect(credentials):
                 return platform
 
         # If we can't detect the platform, print out environment variables and raise an error
