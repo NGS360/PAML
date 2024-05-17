@@ -607,6 +607,7 @@ class SevenBridgesPlatformUS(SevenBridgesPlatform):
         self.use_elastic = Config.execution_settings['US']['use_elastic_disk']
         self.use_memoization = Config.execution_settings['US']['use_memoization']
 
+    @classmethod
     def detect(cls, credentials):
         '''
         This method is changed comparing to the SevenBridgesPlatform class
