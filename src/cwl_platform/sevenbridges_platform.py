@@ -606,9 +606,8 @@ class SevenBridgesPlatformUS(SevenBridgesPlatform):
         self.sb_platform_type = 'CN'
         self.use_elastic = Config.execution_settings['US']['use_elastic_disk']
         self.use_memoization = Config.execution_settings['US']['use_memoization']
-    
-    @classmethod
-    def detect(cls, credentials=None):
+
+    def detect(cls, credentials):
         '''
         This method is changed comparing to the SevenBridgesPlatform class
         to test if specifically US instance of the SB platform is used.

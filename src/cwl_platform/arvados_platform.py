@@ -237,7 +237,7 @@ class ArvadosPlatform(Platform):
         self.api.container_requests().delete(uuid=task.container_request["uuid"]).execute()
 
     @classmethod
-    def detect(cls):
+    def detect(cls, *args):
         '''
         Detect if we are running in a Arvados environment
         '''
