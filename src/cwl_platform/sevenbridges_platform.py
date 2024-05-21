@@ -603,7 +603,7 @@ class SevenBridgesPlatformUS(SevenBridgesPlatform):
         Initialize SevenBridges Platform US
         '''
         super().__init__(name)
-        self.sb_platform_type = 'CN'
+        self.sb_platform_type = 'US'
         self.use_elastic = Config.execution_settings['US']['use_elastic_disk']
         self.use_memoization = Config.execution_settings['US']['use_memoization']
 
@@ -612,7 +612,7 @@ class SevenBridgesPlatformUS(SevenBridgesPlatform):
         '''
         This method is changed comparing to the SevenBridgesPlatform class
         to test if specifically US instance of the SB platform is used.
-        In order to do that we need to actually try to connect to CN platform,
+        In order to do that we need to actually try to connect to US platform,
         because there is no other way to know if we are on US or CN platform.
 
         :param credentials: dict with following structure:
