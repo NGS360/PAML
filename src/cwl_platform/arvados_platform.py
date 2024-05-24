@@ -436,6 +436,24 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
+    def rename_file(self, fileid, new_filename):
+        '''
+        Rename a file to new_filename.
+
+        :param file: File ID to rename
+        :param new_filename: str of new filename
+        '''
+        collection_uuid = fileid.split('keep:')[1].split('/')[0]
+        filepath = fileid.split(collection_uuid+'/')[1]
+        if len(filepath.split('/'))>1:
+            newpath = '/'.join(filepath.split('/')[:-1]+[new_filename])
+        else:
+            newpath = new_filename
+        collection = arvados.collection.Collection(collection_uuid, api_client=self.api)
+        collection.copy(filepath, newpath)
+        collection.remove(filepath, recursive=True)
+        collection.save()
+
     def stage_output_files(self, project, output_files):
         '''
         Stage output files to a project

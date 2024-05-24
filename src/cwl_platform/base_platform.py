@@ -98,6 +98,15 @@ class Platform(ABC):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
 
+    @abstractmethod
+    def rename_file(self, fileid, new_filename):
+        '''
+        Rename a file to new_filename.
+
+        :param file: File ID to rename
+        :param new_filename: str of new filename
+        '''
+
     def set_logger(self, logger):
         ''' Set the logger '''
         self.logger = logger
