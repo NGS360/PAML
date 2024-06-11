@@ -374,6 +374,11 @@ class ArvadosPlatform(Platform):
 
         return None
 
+    def get_task_outputs(self, task):
+        ''' Return a list of output fields of the task '''
+        cwl_output = self._load_cwl_output(task)
+        return list(cwl_output.keys())
+
     def get_task_output_filename(self, task: ArvadosTask, output_name):
         ''' Retrieve the output field of the task and return filename'''
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],

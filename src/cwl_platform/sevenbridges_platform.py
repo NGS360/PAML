@@ -399,6 +399,10 @@ class SevenBridgesPlatform(Platform):
             return task.outputs[output_name].id
         return task.outputs[output_name]
 
+    def get_task_outputs(self, task: sevenbridges.Task):
+        ''' Return a list of output fields of the task '''
+        return list(task.outputs.keys())
+
     def get_task_output_filename(self, task: sevenbridges.Task, output_name):
         ''' Retrieve the output field of the task and return filename'''
         task = self.api.tasks.get(id=task.id)
