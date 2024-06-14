@@ -9,6 +9,20 @@ from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sle
 
 from .base_platform import Platform
 
+
+class Config:
+    execution_settings = {
+        'US': {
+            'use_elastic_disk': True,
+            'use_memoization': True
+        },
+        'CN': {
+            'use_elastic_disk': False,
+            'use_memoization': True
+        }
+    }
+
+
 class SevenBridgesPlatform(Platform):
     ''' SevenBridges Platform class '''
     def __init__(self, name):
@@ -23,14 +37,12 @@ class SevenBridgesPlatform(Platform):
         self._session_id = os.environ.get('SESSION_ID')
         self.logger = logging.getLogger(__name__)
 
-        self.api_endpoint = 'https://bms-api.sbgenomics.com/v2'
-        self.token = 'dummy'
-
-        if not self._session_id:
-            if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
-                self.api_config = sevenbridges.Config(profile='default')
-            else:
-                raise ValueError('No SevenBridges credentials found')
+        self.sb_platform_type = None
+        self.api_endpoint = None
+        self.token = None
+        self.profile = None
+        self.use_elastic = None
+        self.use_memoization = None
 
     def _add_tag_to_file(self, target_file, newtag):
         ''' Add a tag to a file '''
@@ -194,10 +206,26 @@ class SevenBridgesPlatform(Platform):
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
-    def connect(self, **kwargs):
-        ''' Connect to Sevenbridges '''
-        self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
-        self.token = kwargs.get('token', self.token)
+    def connect(self, credentials):
+        '''
+        Connect to Sevenbridges
+        :param credentials: dict with following structure:
+        credentials = {
+            'US': {
+                'api_endpoint': '',
+                'token': '',
+                'profile': ''
+            },
+            'CN': {
+                'api_endpoint': '',
+                'token': '',
+                'profile': ''
+            }
+        }
+        '''
+        self.api_endpoint = credentials[self.sb_platform_type]['api_endpoint']
+        self.token = credentials[self.sb_platform_type]['token']
+        self.profile = credentials[self.sb_platform_type]['profile']
 
         if self._session_id:
             self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
@@ -207,11 +235,17 @@ class SevenBridgesPlatform(Platform):
                                         advance_access=True)
             self.api._session_id = self._session_id  # pylint: disable=protected-access
         else:
-            self.api = sevenbridges.Api(config=self.api_config,
-                                        error_handlers=[rate_limit_sleeper,
-                                                        maintenance_sleeper,
-                                                        general_error_sleeper],
-                                        advance_access=True)
+            if os.path.exists(os.path.expanduser(
+                    "~") + '/.sevenbridges/credentials') is True:
+                self.api_config = sevenbridges.Config(profile=self.profile)
+                self.api = sevenbridges.Api(config=self.api_config,
+                                            error_handlers=[rate_limit_sleeper,
+                                                            maintenance_sleeper,
+                                                            general_error_sleeper],
+                                            advance_access=True)
+            else:
+                raise ValueError('No SevenBridges credentials found')
+
         self.connected = True
 
     def copy_folder(self, source_project, source_folder, destination_project):
@@ -281,16 +315,6 @@ class SevenBridgesPlatform(Platform):
     def delete_task(self, task: sevenbridges.Task):
         ''' Delete a task/workflow/process '''
         task.delete()
-
-    @classmethod
-    def detect(cls):
-        '''
-        Determine if we are running on this platform
-        '''
-        session_id = os.environ.get('SESSION_ID')
-        if session_id:
-            return True
-        return False
 
     def get_current_task(self) -> sevenbridges.Task:
         ''' Get the current task '''
@@ -532,7 +556,7 @@ class SevenBridgesPlatform(Platform):
                     set_file_metadata(sbgfile, entry['metadata'])
 
         use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
-        sbg_execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
+        sbg_execution_settings = {'use_elastic_disk': self.use_elastic, 'use_memoization': self.use_memoization}
 
         # This metadata code will come out as part of the metadata removal effort.
         for i in parameters:
@@ -587,3 +611,95 @@ class SevenBridgesPlatform(Platform):
 
         # return file id if file already exists
         return existing_file[0].id
+
+
+class SevenBridgesPlatformUS(SevenBridgesPlatform):
+    def __init__(self, name):
+        '''
+        Initialize SevenBridges Platform US
+        '''
+        super().__init__(name)
+        self.sb_platform_type = 'US'
+        self.use_elastic = Config.execution_settings['US']['use_elastic_disk']
+        self.use_memoization = Config.execution_settings['US']['use_memoization']
+
+    @classmethod
+    def detect(cls, credentials):
+        '''
+        This method is changed comparing to the SevenBridgesPlatform class
+        to test if specifically US instance of the SB platform is used.
+        In order to do that we need to actually try to connect to US platform,
+        because there is no other way to know if we are on US or CN platform.
+
+        :param credentials: dict with following structure:
+        credentials = {
+            'US': {
+                'api_endpoint': '',
+                'token': '',
+                'profile': ''
+            },
+            'CN': {
+                'api_endpoint': '',
+                'token': '',
+                'profile': ''
+            }
+        }
+        '''
+        session_id = os.environ.get('SESSION_ID')
+        if session_id:
+            try:
+                api = sevenbridges.Api(url=credentials['US']['api_endpoint'],
+                                       token=credentials['US']['token'],
+                                       advance_access=True)
+                api._session_id = session_id
+                myself = api.users.me()
+                return True
+            except:
+                return False
+        return False    
+  
+
+class SevenBridgesPlatformCN(SevenBridgesPlatform):
+    def __init__(self, name):
+        '''
+        Initialize SevenBridges Platform CN
+        '''
+        super().__init__(name)
+        self.sb_platform_type = 'CN'
+        self.use_elastic = Config.execution_settings['CN']['use_elastic_disk']
+        self.use_memoization = Config.execution_settings['CN']['use_memoization']
+
+    @classmethod
+    def detect(cls, credentials):
+        '''
+        This method is changed comparing to the SevenBridgesPlatform class
+        to test if specifically CN instance of the SB platform is used.
+        In order to do that we need to actually try to connect to CN platform,
+        because there is no other way to know if we are on CN or US platform.
+
+        :param credentials: dict with following structure:
+        credentials = {
+            'US': {
+                'api_endpoint': '',
+                'token': '',
+                'profile': ''
+            },
+            'CN': {
+                'api_endpoint': '',
+                'token': '',
+                'profile': ''
+            }
+        }
+        '''
+        session_id = os.environ.get('SESSION_ID')
+        if session_id:
+            try:
+                api = sevenbridges.Api(url=credentials['CN']['api_endpoint'],
+                                       token=credentials['CN']['token'],
+                                       advance_access=True)
+                api._session_id = session_id
+                myself = api.users.me()
+                return True
+            except:
+                return False
+        return False        
