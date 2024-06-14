@@ -79,6 +79,10 @@ class Platform(ABC):
         ''' Retrieve the output field of the task '''
 
     @abstractmethod
+    def get_task_outputs(self, task):
+        ''' Return a list of output fields of the task '''
+
+    @abstractmethod
     def get_task_output_filename(self, task, output_name):
         ''' Retrieve the output field of the task and return filename'''
 
