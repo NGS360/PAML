@@ -96,6 +96,15 @@ class ArvadosPlatform(Platform):
             cwl_output = json.load(cwl_output_file)
         return cwl_output
 
+    def clean_old_output_file(self, project, file_name):
+        ''' 
+        Find and rename output file from previous runs.
+
+        :param project: The project to clean old output file
+        :param file_name: The filename that needs to be renamed
+        '''
+        pass
+
     def connect(self, **kwargs):
         ''' Connect to Arvados '''
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)

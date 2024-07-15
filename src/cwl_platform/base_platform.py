@@ -10,6 +10,15 @@ class Platform(ABC):
         self.connected = False
 
     @abstractmethod
+    def clean_old_output_file(self, project, file_name):
+        '''
+        Find and rename output file from previous runs.
+
+        :param project: The project to clean old output file
+        :param file_name: The filename that needs to be renamed
+        '''
+
+    @abstractmethod
     def connect(self, **kwargs):
         ''' Connect to the platform '''
 
