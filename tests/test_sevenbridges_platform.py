@@ -56,7 +56,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.api = MagicMock()
         self.platform.api.files.query.side_effect = [
             mock_file,
-            MagicMock(return_value=project_files)
+            project_files
         ]
         # Test
         self.platform.roll_file('test_project', 'output.txt')
