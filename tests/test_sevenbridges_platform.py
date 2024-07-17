@@ -65,9 +65,10 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.api.files.query.return_value.__getitem__.return_value = mock_file
 
         # Test
-        self.platform.roll_file('test_project', 'output.txt')
-        # Test that output.txt -> _1_output.txt and no other files in project are affected.
-        self.platform.rename_file.assert_called_once_with(mock_file.id, '_1_output.txt')
+        with patch('sevenbridges.models.file.File.rename') as mock_rename:
+            self.platform.roll_file('test_project', 'output.txt')
+            # Test that output.txt -> _1_output.txt and no other files in project are affected.
+            mock_rename.assert_called_once_with(mock_file.id, '_1_output.txt')
 
 
     def test_submit_task(self):
