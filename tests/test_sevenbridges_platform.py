@@ -54,7 +54,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         ]
         # Set up mocks
         self.platform.api = MagicMock()
-        self.platform.api.files.query.return_value = mock_file
+        self.platform.api.files.query.return_value = [mock_file]
         self.platform.api.files.query.all.return_value = project_files
 
         # Test
