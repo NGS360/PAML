@@ -111,6 +111,15 @@ class Platform(ABC):
         :param new_filename: str of new filename
         '''
 
+    @abstractmethod
+    def roll_file(self, project, file_name):
+        '''
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
+        '''
+
     def set_logger(self, logger):
         ''' Set the logger '''
         self.logger = logger

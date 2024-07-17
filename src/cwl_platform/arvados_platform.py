@@ -459,6 +459,16 @@ class ArvadosPlatform(Platform):
         collection.remove(filepath, recursive=True)
         collection.save()
 
+    def roll_file(self, project, file_name):
+        '''
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
+        '''
+        # Each run of a workflow will have a unique output collection, hence there will be no
+        # name conflicts.
+
     def stage_output_files(self, project, output_files):
         '''
         Stage output files to a project
