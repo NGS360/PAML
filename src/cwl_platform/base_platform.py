@@ -10,15 +10,6 @@ class Platform(ABC):
         self.connected = False
 
     @abstractmethod
-    def clean_old_output_file(self, project, file_name):
-        '''
-        Find and rename output file from previous runs.
-
-        :param project: The project to clean old output file
-        :param file_name: The filename that needs to be renamed
-        '''
-
-    @abstractmethod
     def connect(self, **kwargs):
         ''' Connect to the platform '''
 
@@ -118,6 +109,15 @@ class Platform(ABC):
 
         :param file: File ID to rename
         :param new_filename: str of new filename
+        '''
+
+    @abstractmethod
+    def roll_file(self, project, file_name):
+        '''
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
         '''
 
     def set_logger(self, logger):

@@ -96,15 +96,6 @@ class ArvadosPlatform(Platform):
             cwl_output = json.load(cwl_output_file)
         return cwl_output
 
-    def clean_old_output_file(self, project, file_name):
-        ''' 
-        Find and rename output file from previous runs.
-
-        :param project: The project to clean old output file
-        :param file_name: The filename that needs to be renamed
-        '''
-        pass
-
     def connect(self, **kwargs):
         ''' Connect to Arvados '''
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
@@ -467,6 +458,17 @@ class ArvadosPlatform(Platform):
         collection.copy(filepath, newpath)
         collection.remove(filepath, recursive=True)
         collection.save()
+
+    def roll_file(self, project, file_name):
+        '''
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
+        '''
+        # Each run of a workflow will have a unique output collection, hence there will be no
+        # name conflicts.
+        pass
 
     def stage_output_files(self, project, output_files):
         '''
