@@ -25,13 +25,6 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
-    def test_get_project(self):
-        ''' Test that get_project returns None when we do not have a TASK_ID '''
-        self.platform.api = MagicMock()
-
-        actual_value = self.platform.get_project()
-        self.assertIsNone(actual_value)
-
     def test_delete_task(self):
         ''' Test delete_task method '''
         # Set up mocks
@@ -41,6 +34,30 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.delete_task(task)
         # Assert
         task.delete.assert_called_once_with()
+
+    def test_get_project(self):
+        ''' Test that get_project returns None when we do not have a TASK_ID '''
+        self.platform.api = MagicMock()
+
+        actual_value = self.platform.get_project()
+        self.assertIsNone(actual_value)
+
+    def test_roll_file(self):
+        ''' Test that we roll a specific file '''
+        # Set up test parameters
+        project_files = [
+            MagicMock(name="output.txt"),
+            MagicMock(name="sampleA_workflow1_output.txt"),
+            MagicMock(name="sampleB_workflow2_output.txt")
+        ]
+        # Set up mocks
+        self.platform.api = MagicMock()
+        self.platform.api.files.query = MagicMock(return_value=project_files)
+        # Test
+        self.platform.roll_file('test_project', 'output.txt')
+        # Test that output.txt -> _1_output.txt and no other files in project are affected.
+        self.platform.rename_file.assert_called_once_with('test_project', 'output.txt', 'output_1.txt')
+
 
     def test_submit_task(self):
         ''' Test submit_task method is able to properly parse and a list of integers '''

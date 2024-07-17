@@ -470,14 +470,14 @@ class SevenBridgesPlatform(Platform):
 
         # 2. Determine what new filename to be used
         file_list = self.api.files.query(project=project).all()
-        existing_filenames=[]
+        existing_filenames = []
         for x in file_list:
             if file_name in x.name:
                 existing_filenames += [x.name]
-        i=1
+        i = 1
         new_filename = "_" + str(i) + "_" + file_name
         while new_filename in existing_filenames:
-            i+=1
+            i += 1
             new_filename = "_" + str(i) + "_" + file_name
 
         # 3. Rename the file
