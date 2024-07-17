@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - get_task_outputs method
 - rename_output_files
+- roll_file method
 
 ### Fixed
 
