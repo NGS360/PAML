@@ -45,14 +45,19 @@ class TestSevenBridgesPlaform(unittest.TestCase):
     def test_roll_file(self):
         ''' Test that we roll a specific file '''
         # Set up test parameters
+        mock_file =  MagicMock(name="output.txt"),
+
         project_files = [
-            MagicMock(name="output.txt"),
+            mock_file,
             MagicMock(name="sampleA_workflow1_output.txt"),
             MagicMock(name="sampleB_workflow2_output.txt")
         ]
         # Set up mocks
         self.platform.api = MagicMock()
-        self.platform.api.files.query = MagicMock(return_value=project_files)
+        self.platform.api.files.query.side_effect = [
+            mock_file,
+            MagicMock(return_value=project_files)
+        ]
         # Test
         self.platform.roll_file('test_project', 'output.txt')
         # Test that output.txt -> _1_output.txt and no other files in project are affected.
