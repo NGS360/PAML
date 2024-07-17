@@ -45,11 +45,12 @@ class TestSevenBridgesPlaform(unittest.TestCase):
     def test_roll_file(self):
         ''' Test that we roll a specific file '''
         # Set up test parameters
-        mock_file = MagicMock(name="output.txt")
+        mock_file = MagicMock()
+        mock_file.name = "output.txt"
         mock_file_2 = MagicMock()
-        mock_file_2.name="sampleA_workflow1_output.txt"
+        mock_file_2.name = "sampleA_workflow1_output.txt"
         mock_file_3 = MagicMock()
-        mock_file_3.name="sampleB_workflow2_output.txt"
+        mock_file_3.name = "sampleB_workflow2_output.txt"
 
         project_files = [
             mock_file,
@@ -65,7 +66,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Test
         self.platform.roll_file('test_project', 'output.txt')
         # Test that output.txt -> _1_output.txt and no other files in project are affected.
-        self.platform.rename_file.assert_called_once_with('test_project', 'output.txt', 'output_1.txt')
+        self.platform.rename_file.assert_called_once_with('test_project', 'output.txt', '_1_output.txt')
 
 
     def test_submit_task(self):
