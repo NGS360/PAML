@@ -469,12 +469,15 @@ class SevenBridgesPlatform(Platform):
         sbg_file = sbg_file[0]
 
         # 2. Determine what new filename to be used
+        ## Get a list of all files with file_name in the files name...
         file_list = self.api.files.query(project=project).all()
         existing_filenames = []
         for x in file_list:
             if file_name in x.name:
                 existing_filenames += [x.name]
         i = 1
+        ## "Roll" the filename by adding a number to the filename
+        ## and make sure it doesn't already exist in existing_filenames
         new_filename = "_" + str(i) + "_" + file_name
         while new_filename in existing_filenames:
             i += 1

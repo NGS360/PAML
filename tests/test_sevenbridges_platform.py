@@ -47,6 +47,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Set up test parameters
         mock_file = MagicMock()
         mock_file.name = "output.txt"
+        mock_file.id = 1
         mock_file_2 = MagicMock()
         mock_file_2.name = "sampleA_workflow1_output.txt"
         mock_file_3 = MagicMock()
@@ -66,7 +67,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Test
         self.platform.roll_file('test_project', 'output.txt')
         # Test that output.txt -> _1_output.txt and no other files in project are affected.
-        self.platform.rename_file.assert_called_once_with('test_project', 'output.txt', '_1_output.txt')
+        self.platform.rename_file.assert_called_once_with(mock_file.id, '_1_output.txt')
 
 
     def test_submit_task(self):
