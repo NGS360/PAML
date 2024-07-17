@@ -46,11 +46,15 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         ''' Test that we roll a specific file '''
         # Set up test parameters
         mock_file = MagicMock(name="output.txt")
+        mock_file_2 = MagicMock()
+        mock_file_2.name="sampleA_workflow1_output.txt"
+        mock_file_3 = MagicMock()
+        mock_file_3.name="sampleB_workflow2_output.txt"
 
         project_files = [
             mock_file,
-            MagicMock(name="sampleA_workflow1_output.txt"),
-            MagicMock(name="sampleB_workflow2_output.txt")
+            mock_file_2,
+            mock_file_3
         ]
         # Set up mocks
         self.platform.api = MagicMock()
