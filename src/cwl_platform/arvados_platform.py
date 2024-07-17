@@ -468,7 +468,6 @@ class ArvadosPlatform(Platform):
         '''
         # Each run of a workflow will have a unique output collection, hence there will be no
         # name conflicts.
-        pass
 
     def stage_output_files(self, project, output_files):
         '''

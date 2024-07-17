@@ -4,7 +4,6 @@ SevenBridges Platform class
 import os
 import logging
 import sevenbridges
-import re
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
 from .base_platform import Platform
@@ -464,7 +463,7 @@ class SevenBridgesPlatform(Platform):
         '''
         # 1. Get the file reference of the file to be renamed
         sbg_file = self.api.files.query(project=project, names=[file_name])
-        if not len(sbg_file): # Do nothing if file not exists
+        if not sbg_file: # Do nothing if file not exists
             return
         sbg_file = sbg_file[0]
 
