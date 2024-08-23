@@ -45,7 +45,7 @@ jobs:
         --title "${{ github.ref_name }}"
         --notes-file ${{ github.workspace }}-RELEASE_NOTES.md
         --draft
-        --prerelease
+        --latest
         --repo ${{ github.repository }}
         ${{ github.ref }}
         dist/**

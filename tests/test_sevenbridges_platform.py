@@ -4,7 +4,7 @@ Test Module for SevenBridges Platform
 import unittest
 import os
 import mock
-from mock import MagicMock
+from mock import MagicMock, patch
 
 from cwl_platform.sevenbridges_platform import SevenBridgesPlatform
 
@@ -25,13 +25,6 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
-    def test_get_project(self):
-        ''' Test that get_project returns None when we do not have a TASK_ID '''
-        self.platform.api = MagicMock()
-
-        actual_value = self.platform.get_project()
-        self.assertIsNone(actual_value)
-
     def test_delete_task(self):
         ''' Test delete_task method '''
         # Set up mocks
@@ -41,6 +34,42 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.delete_task(task)
         # Assert
         task.delete.assert_called_once_with()
+
+    def test_get_project(self):
+        ''' Test that get_project returns None when we do not have a TASK_ID '''
+        self.platform.api = MagicMock()
+
+        actual_value = self.platform.get_project()
+        self.assertIsNone(actual_value)
+
+    def test_roll_file(self):
+        ''' Test that we roll a specific file '''
+        # Set up test parameters
+        mock_file = MagicMock()
+        mock_file.name = "output.txt"
+        mock_file.id = 1
+        mock_file_2 = MagicMock()
+        mock_file_2.name = "sampleA_workflow1_output.txt"
+        mock_file_3 = MagicMock()
+        mock_file_3.name = "sampleB_workflow2_output.txt"
+
+        project_files = [
+            mock_file,
+            mock_file_2,
+            mock_file_3
+        ]
+        # Set up mocks
+        self.platform.api = MagicMock()
+        self.platform.api.files.query.return_value.all.return_value = project_files
+        self.platform.api.files.query.return_value.__len__.return_value = 1
+        self.platform.api.files.query.return_value.__getitem__.return_value = mock_file
+
+        # Test
+        with patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform.rename_file') as mock_rename:
+            self.platform.roll_file('test_project', 'output.txt')
+            # Test that output.txt -> _1_output.txt and no other files in project are affected.
+            mock_rename.assert_called_once_with(mock_file.id, '_1_output.txt')
+
 
     def test_submit_task(self):
         ''' Test submit_task method is able to properly parse and a list of integers '''

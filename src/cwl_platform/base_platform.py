@@ -79,6 +79,10 @@ class Platform(ABC):
         ''' Retrieve the output field of the task '''
 
     @abstractmethod
+    def get_task_outputs(self, task):
+        ''' Return a list of output fields of the task '''
+
+    @abstractmethod
     def get_task_output_filename(self, task, output_name):
         ''' Retrieve the output field of the task and return filename'''
 
@@ -97,6 +101,24 @@ class Platform(ABC):
     @abstractmethod
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
+
+    @abstractmethod
+    def rename_file(self, fileid, new_filename):
+        '''
+        Rename a file to new_filename.
+
+        :param file: File ID to rename
+        :param new_filename: str of new filename
+        '''
+
+    @abstractmethod
+    def roll_file(self, project, file_name):
+        '''
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
+        '''
 
     def set_logger(self, logger):
         ''' Set the logger '''

@@ -398,6 +398,10 @@ class SevenBridgesPlatform(Platform):
             return task.outputs[output_name].id
         return task.outputs[output_name]
 
+    def get_task_outputs(self, task: sevenbridges.Task):
+        ''' Return a list of output fields of the task '''
+        return list(task.outputs.keys())
+
     def get_task_output_filename(self, task: sevenbridges.Task, output_name):
         ''' Retrieve the output field of the task and return filename'''
         task = self.api.tasks.get(id=task.id)
@@ -438,6 +442,48 @@ class SevenBridgesPlatform(Platform):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
+
+    def rename_file(self, fileid, new_filename):
+        '''
+        Rename a file to new_filename.
+
+        :param file: File ID to rename
+        :param new_filename: str of new filename
+        '''
+        file = self.api.files.get(id=fileid)
+        file.name = new_filename
+        file.save()
+
+    def roll_file(self, project, file_name):
+        ''' 
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
+        '''
+        # 1. Get the file reference of the file to be renamed
+        sbg_file = self.api.files.query(project=project, names=[file_name])
+        if not sbg_file: # Do nothing if file not exists
+            return
+        sbg_file = sbg_file[0]
+
+        # 2. Determine what new filename to be used
+        ## Get a list of all files with file_name in the files name...
+        file_list = self.api.files.query(project=project).all()
+        existing_filenames = []
+        for x in file_list:
+            if file_name in x.name:
+                existing_filenames += [x.name]
+        i = 1
+        ## "Roll" the filename by adding a number to the filename
+        ## and make sure it doesn't already exist in existing_filenames
+        new_filename = "_" + str(i) + "_" + file_name
+        while new_filename in existing_filenames:
+            i += 1
+            new_filename = "_" + str(i) + "_" + file_name
+
+        # 3. Rename the file
+        self.rename_file(sbg_file.id, new_filename)
 
     def stage_output_files(self, project, output_files):
         '''
