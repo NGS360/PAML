@@ -73,6 +73,9 @@ class OmicsPlatform(Platform):
         self.logger.info("TBD: Getting input for task %s", task)
         return None
 
+    def get_task_outputs(self, task):
+        raise ValueError("Not yet implemented")
+
     def get_task_state(self, task, refresh=False):
         ''' 
         Get status of run by task_id.
@@ -149,6 +152,12 @@ class OmicsPlatform(Platform):
             'ProjectId': project_id
         }
         return project
+
+    def rename_file(self, fileid, new_filename):
+        raise ValueError("Not yet implemented")
+
+    def roll_file(self, project, file_name):
+        raise ValueError("Not yet implemented")
 
     def stage_output_files(self, project, output_files):
         ''' TODO '''
