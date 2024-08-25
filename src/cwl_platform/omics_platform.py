@@ -21,7 +21,11 @@ class OmicsPlatform(Platform):
         self.role_arn = None
 
     def connect(self, **kwargs):
-        ''' Connect to AWS Omics platform'''
+        ''' 
+        Connect to AWS Omics platform
+
+        If ~/.aws/credentials or ~/.aws/config does not provide a region, region should be specified in the AWS_DEFAULT_REGION environment variable.
+        '''
         self.api = boto3.client('omics')
         self.output_bucket = kwargs.get('output_bucket')
         self.role_arn = kwargs.get('role_arn')
