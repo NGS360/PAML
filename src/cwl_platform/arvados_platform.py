@@ -33,6 +33,10 @@ class ArvadosTask():
         self.container_request = container_request
         self.container = container
 
+    def default(self):
+        ''' Convert to JSON '''
+        return json.dumps(self.to_dict())
+
     def to_dict(self):
         ''' Convert to dictionary '''
         return {
