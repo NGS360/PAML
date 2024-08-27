@@ -30,19 +30,22 @@ class ArvadosTask():
     Arvados Task class to encapsulate task functionality to mimick SevenBrides task class
     '''
     def __init__(self, container_request, container):
-        self.container_request = container_request
-        self.container = container
+        self.__dict__ = dict(
+            container_request = container_request,
+            container = container
+        )
 
-    def toJSON(self):
-        ''' Convert to JSON '''
-        return json.dumps(self.to_dict())
+    def __getstate__(self):
+        ''' Serialize object to a dictionary '''
+        return self.to_dict()
+
+    def __setstate__(self, state):
+        ''' Deserialize object from a dictionary '''
+        self.__dict__.update(state)
 
     def to_dict(self):
         ''' Convert to dictionary '''
-        return {
-            'container_request': self.container_request,
-            'container': self.container
-        }
+        return self.__dict__
 
     @classmethod
     def from_dict(cls, task_dict):
