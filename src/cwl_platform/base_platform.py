@@ -161,6 +161,7 @@ class Platform(ABC):
         :param workflow: Workflow to submit
         :param parameters: Parameters for the workflow
         :param executing_settings: {use_spot_instance: True/False}
+        :return: Task object or None
         '''
 
     @abstractmethod

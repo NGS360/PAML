@@ -568,7 +568,15 @@ class ArvadosPlatform(Platform):
         outputs_collection.save()
 
     def submit_task(self, name, project, workflow, parameters, executing_settings=None):
-        ''' Submit a workflow on the platform '''
+        '''
+        Submit a workflow on the platform
+        :param name: Name of the task to submit
+        :param project: Project to submit the task to
+        :param workflow: Workflow to submit
+        :param parameters: Parameters for the workflow
+        :param executing_settings: {use_spot_instance: True/False}
+        :return: Task object or None
+        '''
         with tempfile.NamedTemporaryFile() as parameter_file:
             with open(parameter_file.name, mode='w', encoding="utf-8") as fout:
                 json.dump(parameters, fout)
