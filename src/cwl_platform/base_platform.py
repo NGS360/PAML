@@ -48,6 +48,16 @@ class Platform(ABC):
         ''' Detect platform we are running on '''
 
     @abstractmethod
+    def download_file(self, file, dest_folder):
+        '''
+        Download a file to a local directory
+
+        :param fileid: File to download
+        :param dest_folder: Destination folder to download file to
+        :return: None
+        '''
+
+    @abstractmethod
     def get_current_task(self):
         ''' Get the current task '''
 

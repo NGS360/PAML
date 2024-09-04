@@ -277,6 +277,16 @@ class SevenBridgesPlatform(Platform):
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
 
+    def download_file(self, file, dest_folder):
+        '''
+        Download a file to a local directory
+
+        :param file: SevenBridges file object to download
+        :param dest_folder: Destination folder to download file to
+        :return: None
+        '''
+        file.download(f'{dest_folder}/{file.name}')
+
     def delete_task(self, task: sevenbridges.Task):
         ''' Delete a task/workflow/process '''
         task.delete()
@@ -475,9 +485,6 @@ class SevenBridgesPlatform(Platform):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
-
-    def list_files(self, project, path):
-        return super().list_files(project, path)
 
     def rename_file(self, fileid, new_filename):
         '''

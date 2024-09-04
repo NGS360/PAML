@@ -245,6 +245,16 @@ class ArvadosPlatform(Platform):
             return True
         return False
 
+    def download_file(self, file, dest_folder):
+        '''
+        Download a file to a local directory
+
+        :param file: File to download e.g. keep:asdf-asdf-asdf/some/file.txt
+        :param dest_folder: Destination folder to download file to
+        :return: None
+        '''
+        raise NotImplementedError("Method not implemented")
+
     def get_current_task(self) -> ArvadosTask:
         '''
         Get the current task
