@@ -336,6 +336,39 @@ class SevenBridgesPlatform(Platform):
 
         raise ValueError(f"File not found in specified folder: {file_path}")
 
+    def get_files(self, project, filter):
+        '''
+        Retrieve files in a project matching the filter criteria
+
+        :param project: Project to search for files
+        :param filter: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        '''
+        matching_files = []
+        
+        files = self.api.files.query(project=project, limit=100).all()
+        for file in files:
+            if filter.get('name') and file.name != filter['name']:
+                continue
+            if filter.get('prefix') and not file.name.startswith(filter['prefix']):
+                continue
+            if filter.get('suffix') and not file.name.endswith(filter['suffix']):
+                continue
+            if filter.get('folder') and not file.parent.name == filter['folder']:
+                continue
+            if filter.get('recursive') and file.type == 'folder':
+                matching_files.extend(self._list_all_files(files=[file]))
+            else:
+                matching_files.append(file)
+        return matching_files
+
     def get_folder_id(self, project, folder_path):
         '''
         Get the folder id in a project
@@ -442,6 +475,9 @@ class SevenBridgesPlatform(Platform):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
+
+    def list_files(self, project, path):
+        return super().list_files(project, path)
 
     def rename_file(self, fileid, new_filename):
         '''

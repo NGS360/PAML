@@ -295,6 +295,24 @@ class ArvadosPlatform(Platform):
         # for the file.  Lets see if this comes up before implementing it.
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
+    # @override
+    def get_files(self, project, filter):
+        '''
+        Retrieve files in a project matching the filter criteria.
+
+        :param project: Project to search for files
+        :param filter: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',  # Here, a root folder is the name of the collection.
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        '''
+        raise NotImplementedError("Method not implemented")
+
     def get_folder_id(self, project, folder_path):
         '''
         Get the folder id in a project

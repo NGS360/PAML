@@ -56,6 +56,23 @@ class Platform(ABC):
         ''' Get a file id by its full path name '''
 
     @abstractmethod
+    def get_files(self, project, filter):
+        '''
+        Retrieve files in a project matching the filter criteria
+
+        :param project: Project to search for files
+        :param filter: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        '''
+
+    @abstractmethod
     def get_folder_id(self, project, folder_path):
         ''' Get a folder id by its full path name '''
 
@@ -161,6 +178,7 @@ class Platform(ABC):
         :param workflow: Workflow to submit
         :param parameters: Parameters for the workflow
         :param executing_settings: {use_spot_instance: True/False}
+        :return: Task object or None
         '''
 
     @abstractmethod
