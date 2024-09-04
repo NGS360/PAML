@@ -251,7 +251,7 @@ class ArvadosPlatform(Platform):
 
         :param file: File to download e.g. keep:asdf-asdf-asdf/some/file.txt
         :param dest_folder: Destination folder to download file to
-        :return: None
+        :return: Name of local file downloaded or None
         '''
         raise NotImplementedError("Method not implemented")
 

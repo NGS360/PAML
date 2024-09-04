@@ -283,9 +283,11 @@ class SevenBridgesPlatform(Platform):
 
         :param file: SevenBridges file object to download
         :param dest_folder: Destination folder to download file to
-        :return: None
+        :return: Name of local file downloaded or None
         '''
-        file.download(f'{dest_folder}/{file.name}')
+        file_name = f'{dest_folder}/{file.name}'
+        file.download(file_name)
+        return file_name
 
     def delete_task(self, task: sevenbridges.Task):
         ''' Delete a task/workflow/process '''

@@ -54,7 +54,7 @@ class Platform(ABC):
 
         :param fileid: File to download
         :param dest_folder: Destination folder to download file to
-        :return: None
+        :return: Name of local file downloaded or None
         '''
 
     @abstractmethod
