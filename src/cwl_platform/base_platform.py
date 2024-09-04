@@ -72,9 +72,18 @@ class Platform(ABC):
     def get_current_task(self):
         ''' Get the current task '''
 
+    # TODO: These file objects should be abstracted to a common File object interface
     @abstractmethod
     def get_file_id(self, project, file_path):
         ''' Get a file id by its full path name '''
+
+    @abstractmethod
+    def get_file(self, file_id):
+        ''' Get a file by its id '''
+        
+    @abstractmethod
+    def get_file_name(self, file):
+        ''' Get a file name by its object or id '''
 
     @abstractmethod
     def get_files(self, project, filter):
