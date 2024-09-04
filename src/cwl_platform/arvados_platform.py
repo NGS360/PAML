@@ -255,6 +255,17 @@ class ArvadosPlatform(Platform):
         '''
         raise NotImplementedError("Method not implemented")
 
+    def export_file(self, file, bucket_name, prefix):
+        '''
+        Use platform specific functionality to copy a file from a platform to an S3 bucket.
+
+        :param file: File to export
+        :param bucket_name: S3 bucket name
+        :param prefix: Destination S3 folder to export file to, path/to/folder
+        :return: s3 file path or None
+        '''
+        raise NotImplementedError("Method not implemented")
+
     def get_current_task(self) -> ArvadosTask:
         '''
         Get the current task
