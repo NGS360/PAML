@@ -11,6 +11,7 @@ import tempfile
 import chardet
 
 import googleapiclient
+import smart_open
 
 import arvados
 from .base_platform import Platform
@@ -70,6 +71,22 @@ class ArvadosPlatform(Platform):
         self.keep_client = None
         self.logger = logging.getLogger(__name__)
 
+    def _find_collection_key(self, collection_path):
+        """
+        This is a helper function that given an collection path such that the path is of
+        the form: collection/key
+        It will return the collection and the key represented by the path, eg
+        if collection_path == keep:collection_uuid/path/to/file.txt
+        """
+        if collection_path.startswith('keep:'):
+            collection_path = collection_path[5:]
+        components = collection_path.split('/')
+        collection_uuid = components[0]
+        key = ""
+        if len(components) > 1:
+            key = '/'.join(components[1:])
+        return collection_uuid, key
+    
     def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
         '''
         Get list of files in collection, if subdirectory_path is provided, return only files in that subdirectory.
@@ -262,12 +279,21 @@ class ArvadosPlatform(Platform):
         '''
         Use platform specific functionality to copy a file from a platform to an S3 bucket.
 
-        :param file: File to export
+        :param file: File to export, keep:<collection_uuid>/<file_path>
         :param bucket_name: S3 bucket name
         :param prefix: Destination S3 folder to export file to, path/to/folder
         :return: s3 file path or None
         '''
-        raise NotImplementedError("Method not implemented")
+        collection_uuid, key = self._find_collection_key(file)
+        c = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid, api_client=self.api)
+        # If the file is in the keep collection
+        if key in c:
+            with c.open(key, "rb") as reader:
+                with smart_open.smart_open(f"s3://{bucket_name}/{prefix}/{key}", "wb") as writer:
+                    content = reader.read(128*1024)
+                    while content:
+                        writer.write(content)
+                        content = reader.read(128*1024)
 
     def get_current_task(self) -> ArvadosTask:
         '''
