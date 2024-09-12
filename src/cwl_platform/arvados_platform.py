@@ -105,6 +105,8 @@ class ArvadosPlatform(Platform):
         '''
         Load CWL output from task
         '''
+        if not task.container_request['output_uuid']:
+            return None
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
                                                               keep_client=self.keep_client)
