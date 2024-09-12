@@ -174,3 +174,11 @@ class Platform(ABC):
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
         '''
+
+    @abstractmethod
+    def wait_for_task(self, task, timeout=None):
+        '''
+        Wait for a task to complete
+        :param task: The task to wait for
+        :param timeout: The time to wait (sec) for the task to complete
+        '''
