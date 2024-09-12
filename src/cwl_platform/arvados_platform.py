@@ -339,6 +339,9 @@ class ArvadosPlatform(Platform):
         '''
         if refresh:
             # On newly submitted jobs, we'll only have a container_request, uuid.
+            # BUG: task is a parameter.  Does python treat this as pass-by-value or pass-by-reference?
+            # https://medium.com/@devyjoneslocker/understanding-pythons-pass-by-assignment-in-the-backdrop-of-pass-by-value-vs-9f5cc602f943#:~:text=Python's%20behavior%20is%20neither%20purely,and%20references%20work%20in%20Python.
+            
             task.container_request = arvados.api().container_requests().get(uuid = task.container_request['uuid']).execute() # pylint: disable=line-too-long
             task.container = arvados.api().containers().get(uuid = task.container_request['container_uuid']).execute()
 

@@ -1,6 +1,7 @@
 ''' Base Platform class '''
 from abc import ABC, abstractmethod
 import logging
+import time
 
 class Platform(ABC):
     ''' abstract Platform class '''
@@ -175,10 +176,17 @@ class Platform(ABC):
         :return: ID of uploaded file.
         '''
 
-    @abstractmethod
-    def wait_for_task(self, task, timeout=None):
+    def wait_for_task(self, task, wait_time=None, timeout=None):
         '''
         Wait for a task to complete
         :param task: The task to wait for
+        :param wait_time: The time to wait (sec) between checking the task status
         :param timeout: The time to wait (sec) for the task to complete
+        ::return: State of task, None if timeout
         '''
+        state = self.get_task_state(task)
+        while state not in ['Complete', 'Failed', 'Cancelled']:
+            if wait_time:
+                time.sleep(wait_time)
+            state = self.get_task_state(task, refresh=True)
+        return state
