@@ -412,13 +412,16 @@ class SevenBridgesPlatform(Platform):
                 return outputfile.name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def get_tasks_by_name(self, project, task_name): # -> list(sevenbridges.Task):
+    def get_tasks_by_name(self, project, task_name=None): # -> list(sevenbridges.Task):
         ''' Get a process by its name '''
         tasks = []
         for task in self.api.tasks.query(project=project).all():
-            if task.name == task_name:
+            if task_name is None or task.name == task_name:
                 tasks.append(task)
         return tasks
+
+    def get_task_cost(self, task):
+        return(task.price.amount)
 
     def get_project(self):
         ''' Determine what project we are running in '''

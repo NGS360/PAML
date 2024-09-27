@@ -91,9 +91,6 @@ class ArvadosPlatform(Platform):
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
                                                               keep_client=self.keep_client)
-        if cwl_output_collection.items() is None:
-            return None
-
         cwl_output = None
         with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
             cwl_output = json.load(cwl_output_file)
@@ -392,29 +389,55 @@ class ArvadosPlatform(Platform):
         output_file = cwl_output[output_name]['basename']
         return output_file
 
-    def get_tasks_by_name(self, project, task_name): # -> list(ArvadosTask):
+    def get_tasks_by_name(self, project, task_name=None): # -> list(ArvadosTask):
         '''
         Get all processes (jobs) in a project with a specified name
 
         :param project: The project to search
-        :param process_name: The name of the process to search for
+        :param task_name: The name of the process to search for (value None means return all)
         :return: List of container request uuids and associated containers
         '''
         # We must add priority>0 filter so we do not capture Cancelled jobs as Queued jobs.
         # According to Curii, 'Cancelled' on the UI = 'Queued' with priority=0, we are not interested in Cancelled
         # jobs here anyway, we will submit the job again
+        cont_reqs = []
+        conts = {}
         tasks = []
+        setup_filters=[
+            ['owner_uuid', '=', project['uuid']], ['priority', '>', 0]
+        ]
+        if task_name is not None:
+            setup_filters.append(["name", '=', task_name])
         for container_request in arvados.util.keyset_list_all(
             self.api.container_requests().list,
-            filters=[
-                ["name", '=', task_name],
-                ['owner_uuid', '=', project['uuid']], ['priority', '>', 0]
-            ]
+            filters=setup_filters,
+            select=["uuid", "owner_uuid", "container_uuid", "name", "cumulative_cost", "properties", "modified_by_user_uuid", "created_at"]
         ):
-            # Get the container
-            container = self.api.containers().get(uuid=container_request['container_uuid']).execute()
-            tasks.append(ArvadosTask(container_request, container))
+            cont_reqs.append(container_request)
+
+        chunk_size = 1000
+
+        for i in range(0, len(cont_reqs), chunk_size):
+            chunk = cont_reqs[i:i + chunk_size]
+            for container in arvados.util.keyset_list_all(
+                self.api.container().list,
+                filters=[
+                    ["uuid", "in", [c["container_uuid"] for c in chunk if c["container_uuid"]]],
+                ],
+                select=["uuid", "started_at", "finished_at", "cost"]
+            ):
+                conts[container["uuid"]] = container
+
+        for cr in cont_reqs:
+            cid = cr["container_uuid"]
+            if cid in conts:
+                c = conts[cid]
+                tasks.append(ArvadosTask(cr,c))
+
         return tasks
+
+    def get_task_cost(self, task):
+        return(task.container["cost"])
 
     def get_project(self):
         ''' Determine what project we are running in '''

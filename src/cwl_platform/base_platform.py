@@ -87,8 +87,12 @@ class Platform(ABC):
         ''' Retrieve the output field of the task and return filename'''
 
     @abstractmethod
-    def get_tasks_by_name(self, project, task_name):
+    def get_tasks_by_name(self, project, task_name=None):
         ''' Get a tasks by its name '''
+
+    @abstractmethod
+    def get_task_cost(self, task):
+        ''' Get a task's cost '''
 
     @abstractmethod
     def get_project(self):
