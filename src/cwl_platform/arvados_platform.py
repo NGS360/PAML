@@ -420,7 +420,7 @@ class ArvadosPlatform(Platform):
         for i in range(0, len(cont_reqs), chunk_size):
             chunk = cont_reqs[i:i + chunk_size]
             for container in arvados.util.keyset_list_all(
-                self.api.container().list,
+                self.api.containers().list,
                 filters=[
                     ["uuid", "in", [c["container_uuid"] for c in chunk if c["container_uuid"]]],
                 ],
