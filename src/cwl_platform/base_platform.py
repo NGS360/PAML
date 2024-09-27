@@ -153,7 +153,7 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def submit_task(self, name, project, workflow, parameters, executing_settings=None):
+    def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         '''
         Submit a workflow on the platform
         :param name: Name of the task to submit
