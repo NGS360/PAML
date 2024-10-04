@@ -421,7 +421,13 @@ class SevenBridgesPlatform(Platform):
         return tasks
 
     def get_task_cost(self, task):
-        return(task.price.amount)
+        task_cost = 0.0
+        try:
+            task_cost = task.price.amount
+        except Exception as e:
+            print("Error getting cost for task: " + str(task))
+        
+        return(task_cost)
 
     def get_project(self):
         ''' Determine what project we are running in '''
