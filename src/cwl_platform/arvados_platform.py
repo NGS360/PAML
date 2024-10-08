@@ -91,6 +91,9 @@ class ArvadosPlatform(Platform):
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
                                                               keep_client=self.keep_client)
+        if cwl_output_collection.items() is None:
+            return None
+
         cwl_output = None
         with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
             cwl_output = json.load(cwl_output_file)
