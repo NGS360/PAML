@@ -26,7 +26,7 @@ class PlatformFactory():
         for platform, creator in SUPPORTED_PLATFORMS.items():
             self._creators[platform] = creator
 
-    def detect_platform(self, credentials):
+    def detect_platform(self, credentials=None):
         '''
         Detect what platform we are running on
         '''
