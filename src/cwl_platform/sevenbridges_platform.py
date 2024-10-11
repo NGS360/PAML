@@ -277,6 +277,54 @@ class SevenBridgesPlatform(Platform):
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
 
+    def download_file(self, file, dest_folder):
+        '''
+        Download a file to a local directory
+
+        :param file: SevenBridges file id (or object) to download
+        :param dest_folder: Destination folder to download file to
+        :return: Name of local file downloaded or None
+        '''
+        # If file is a str, assume its a file id, else is a file object
+        if type(file) == str:
+            file = self.api.files.get(id=file)
+        file_name = f'{dest_folder}/{file.name}'
+        file.download(file_name)
+        return file_name
+
+    def export_file(self, file, bucket_name, prefix):
+        '''
+        Use platform specific functionality to copy a file from a platform to an S3 bucket.
+
+        :param file: File to export
+        :param bucket_name: S3 bucket name
+        :param prefix: Destination S3 folder to export file to, path/to/folder
+        :return: Export job of file
+
+        For SevenBridges, there are two differences from the expected base implementation:
+        1. the bucket name is translated to a volume name, replacing all dashes with underscores.
+        2. the return value is the export job object, not the S3 file path.
+        '''
+        # If file is a str, assume its a file id, else is a file object
+        if type(file) == str:
+            file = self.api.files.get(id=file)
+
+        volume = None
+        volume_name = bucket_name.replace('-', '_')
+        for v in self.api.volumes.query().all():
+            if v.name == volume_name:
+                volume = v
+                break
+        if not volume:
+            self.logger.error("Volume %s not found", volume_name)
+            return None
+
+        export = self.api.exports.submit_export(file=file,
+                                                volume=volume,
+                                                location=f'{prefix}/{file.name}',
+                                                copy_only=True)
+        return export
+
     def delete_task(self, task: sevenbridges.Task):
         ''' Delete a task/workflow/process '''
         task.delete()
@@ -335,6 +383,39 @@ class SevenBridgesPlatform(Platform):
             return file_list[0].id
 
         raise ValueError(f"File not found in specified folder: {file_path}")
+
+    def get_files(self, project, filter):
+        '''
+        Retrieve files in a project matching the filter criteria
+
+        :param project: Project to search for files
+        :param filter: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        '''
+        matching_files = []
+        
+        files = self.api.files.query(project=project, limit=100).all()
+        for file in files:
+            if filter.get('name') and file.name != filter['name']:
+                continue
+            if filter.get('prefix') and not file.name.startswith(filter['prefix']):
+                continue
+            if filter.get('suffix') and not file.name.endswith(filter['suffix']):
+                continue
+            if filter.get('folder') and not file.parent.name == filter['folder']:
+                continue
+            if filter.get('recursive') and file.type == 'folder':
+                matching_files.extend(self._list_all_files(files=[file]))
+            else:
+                matching_files.append(file)
+        return matching_files
 
     def get_folder_id(self, project, folder_path):
         '''
