@@ -12,11 +12,14 @@ from .base_platform import Platform
 class Config:
     execution_settings = {
         'US': {
+            'use_spot_instance': True,
             'use_elastic_disk': True,
             'use_memoization': True
         },
         'CN': {
-            'use_elastic_disk': False,
+            # Currently, china platform doesn't support using spot instances
+            # and elastic disk feature
+            'use_spot_instance': False,
             'use_memoization': True
         }
     }
@@ -40,8 +43,6 @@ class SevenBridgesPlatform(Platform):
         self.api_endpoint = None
         self.token = None
         self.profile = None
-        self.use_elastic = None
-        self.use_memoization = None
 
     def _add_tag_to_file(self, target_file, newtag):
         ''' Add a tag to a file '''
@@ -585,8 +586,13 @@ class SevenBridgesPlatform(Platform):
                         sbgfile = self.api.files.get(id=entry['location'])
                     set_file_metadata(sbgfile, entry['metadata'])
 
-        use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
-        sbg_execution_settings = {'use_elastic_disk': self.use_elastic, 'use_memoization': self.use_memoization}
+        exe_settings = Config.execution_settings.get(self.sb_platform_type)
+        if executing_settings:
+            exe_settings.update(executing_settings)
+
+        use_spot_instance = exe_settings['use_spot_instance']
+        sbg_execution_settings = {k: v for k, v in exe_settings.items()
+                                  if k != 'use_spot_instance'}
 
         # This metadata code will come out as part of the metadata removal effort.
         for i in parameters:
@@ -650,8 +656,6 @@ class SevenBridgesPlatformUS(SevenBridgesPlatform):
         '''
         super().__init__(name)
         self.sb_platform_type = 'US'
-        self.use_elastic = Config.execution_settings['US']['use_elastic_disk']
-        self.use_memoization = Config.execution_settings['US']['use_memoization']
 
     @classmethod
     def detect(cls, credentials):
@@ -696,8 +700,6 @@ class SevenBridgesPlatformCN(SevenBridgesPlatform):
         '''
         super().__init__(name)
         self.sb_platform_type = 'CN'
-        self.use_elastic = Config.execution_settings['CN']['use_elastic_disk']
-        self.use_memoization = Config.execution_settings['CN']['use_memoization']
 
     @classmethod
     def detect(cls, credentials):
