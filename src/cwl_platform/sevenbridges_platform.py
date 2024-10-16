@@ -543,7 +543,7 @@ class SevenBridgesPlatform(Platform):
                         elif file.type == "folder":
                             self._add_tag_to_folder(file, "OUTPUT")
 
-    def submit_task(self, name, project, workflow, parameters, executing_settings=None):
+    def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         ''' Submit a workflow on the platform '''
         def set_file_metadata(file, metadata):
             ''' Set metadata on a file '''
@@ -561,7 +561,7 @@ class SevenBridgesPlatform(Platform):
                         sbgfile = self.api.files.get(id=entry['location'])
                     set_file_metadata(sbgfile, entry['metadata'])
 
-        use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
+        use_spot_instance = execution_settings.get('use_spot_instance', True) if execution_settings else True
         sbg_execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
 
         # This metadata code will come out as part of the metadata removal effort.
