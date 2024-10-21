@@ -175,3 +175,11 @@ class Platform(ABC):
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
         '''
+
+    @abstractmethod
+    def monitor_task(self, task):
+        '''
+        Checks the state of a task until it is no longer running
+        Returns the completed or failed task
+        :param task: task to monitor
+        '''
