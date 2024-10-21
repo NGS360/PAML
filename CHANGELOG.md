@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.2.1](https://github.com/NGS360/PAML/releases/tag/v0.2.1) - 2024-10-21
+
+### Fixed
+
+- Catch SevenBridges exception when creating invalid task
+
 ## [v0.2](https://github.com/NGS360/PAML/releases/tag/v0.2) - 2024-06-14
 
 ### Added
