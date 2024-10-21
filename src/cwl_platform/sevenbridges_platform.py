@@ -544,7 +544,15 @@ class SevenBridgesPlatform(Platform):
                             self._add_tag_to_folder(file, "OUTPUT")
 
     def submit_task(self, name, project, workflow, parameters, executing_settings=None):
-        ''' Submit a workflow on the platform '''
+        '''
+        Submit a workflow on the platform
+        :param name: Name of the task to submit
+        :param project: Project to submit the task to
+        :param workflow: Workflow to submit
+        :param parameters: Parameters for the workflow
+        :param executing_settings: {use_spot_instance: True/False}
+        :return: Task object or None
+        '''
         def set_file_metadata(file, metadata):
             ''' Set metadata on a file '''
             if file and file.metadata != metadata:
@@ -575,9 +583,14 @@ class SevenBridgesPlatform(Platform):
             check_metadata(parameters[i])
 
         self.logger.debug("Submitting task (%s) with parameters: %s", name, parameters)
-        task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
-                                     interruptible=use_spot_instance,
-                                     execution_settings=sbg_execution_settings)
+        try:
+            task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
+                                        interruptible=use_spot_instance,
+                                        execution_settings=sbg_execution_settings)
+        except sevenbridges.errors.BadRequest as e:
+            self.logger.error("Error submitting task: %s", e)
+            return None
+
         task.run()
         return task
 
