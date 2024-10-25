@@ -122,7 +122,7 @@ class ArvadosPlatform(Platform):
         if filter:
             files = []
             for file in file_list:
-                if 'name' in filter and filter['name'] == file.stream_name:
+                if 'name' in filter and filter['name'] == file.stream_name():
                     files.append(file)
                 elif 'prefix' in filter and file.stream_name().startswith(filter['prefix']):
                     files.append(file)
