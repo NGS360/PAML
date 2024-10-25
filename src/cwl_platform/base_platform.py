@@ -77,13 +77,13 @@ class Platform(ABC):
     def get_file_id(self, project, file_path):
         ''' Get a file id by its full path name '''
 
-    @abstractmethod
-    def get_file(self, file_id):
-        ''' Get a file by its id '''
-        
-    @abstractmethod
-    def get_file_name(self, file):
-        ''' Get a file name by its object or id '''
+    #@abstractmethod
+    #def get_file(self, file_id):
+    #    ''' Get a file by its id '''
+
+    #@abstractmethod
+    #def get_file_name(self, file):
+    #    ''' Get a file name by its object or id '''
 
     @abstractmethod
     def get_files(self, project, filter=None):
