@@ -361,7 +361,7 @@ class ArvadosPlatform(Platform):
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
     # @override
-    def get_files(self, project, filter):
+    def get_files(self, project, filter=None):
         '''
         Retrieve files in a project matching the filter criteria.
 

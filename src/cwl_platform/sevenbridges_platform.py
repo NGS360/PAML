@@ -384,7 +384,7 @@ class SevenBridgesPlatform(Platform):
 
         raise ValueError(f"File not found in specified folder: {file_path}")
 
-    def get_files(self, project, filter):
+    def get_files(self, project, filter=None):
         '''
         Retrieve files in a project matching the filter criteria
 

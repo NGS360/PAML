@@ -86,7 +86,7 @@ class Platform(ABC):
         ''' Get a file name by its object or id '''
 
     @abstractmethod
-    def get_files(self, project, filter):
+    def get_files(self, project, filter=None):
         '''
         Retrieve files in a project matching the filter criteria
 
