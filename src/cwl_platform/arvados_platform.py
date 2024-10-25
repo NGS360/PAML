@@ -382,7 +382,7 @@ class ArvadosPlatform(Platform):
             ["owner_uuid", "=", project["uuid"]],
         ]
         if 'suffix' in filter:
-            arv_filter.append(["name", "like", f"%{filter['suffix']}"])
+            arv_filter.append(["name", "ilike", f"%{filter['suffix']}"])
 
         self.logger.debug("Fetching list of collections in project %s matching filter criteria", project["uuid"], arv_filter)
         collections = self._get_collection(arv_filter)
