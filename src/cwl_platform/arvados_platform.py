@@ -93,10 +93,10 @@ class ArvadosPlatform(Platform):
         :param filter: List of filters to search for collection, e.g. [ ["owner_uuid", "=", project_uuid], ["name", "=", collName] ]
         :return: Matching Collection objects or None
         '''
-        search_result = self.arv.collections().list(filters=filter, offset=0, limit=1000).execute()
+        search_result = self.api.collections().list(filters=filter, offset=0, limit=1000).execute()
         collections = search_result['items']
         while len(collections) < search_result['items_available']:
-            search_result = self.arv.collections().list(filters=filter, offset=len(collections), limit=1000).execute()
+            search_result = self.api.collections().list(filters=filter, offset=len(collections), limit=1000).execute()
             collections += search_result['items']
         return collections
 
