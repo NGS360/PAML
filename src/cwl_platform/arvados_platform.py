@@ -409,7 +409,7 @@ class ArvadosPlatform(Platform):
             self.logger.debug("[%d/%d] Fetching list of files in collection %s", num+1, len(collections), collection["uuid"])
             files += self._get_files_list_in_collection(collection['uuid'], filter=filter)
         self.logger.debug("Return list of %d files", len(files))
-        return files_to_be_returned
+        return files
 
     def get_folder_id(self, project, folder_path):
         '''
