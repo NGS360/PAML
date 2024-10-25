@@ -389,12 +389,14 @@ class ArvadosPlatform(Platform):
             files = self._get_files_list_in_collection(collection['uuid'])
             for file in files:
                 # If a filter is provided, check if the file matches the filter criteria
+                file_name = file.name()
+                self.logger.debug("Checking file %s", file_name)
                 if filter:
-                    if 'name' in filter and filter['name'] != file.name():
+                    if 'name' in filter and filter['name'] != file_name:
                         continue
-                    if 'prefix' in filter and not file.name().startswith(filter['prefix']):
+                    if 'prefix' in filter and not file_name.startswith(filter['prefix']):
                         continue
-                    if 'suffix' in filter and not file.name().endswith(filter['suffix']):
+                    if 'suffix' in filter and not file_name.endswith(filter['suffix']):
                         continue
                     if 'folder' in filter:
                         if filter['folder'] == '/':
