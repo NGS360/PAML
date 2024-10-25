@@ -122,6 +122,8 @@ class ArvadosPlatform(Platform):
         if filter:
             files = []
             for file in file_list:
+                file_name = file.stream_name()
+                self.logger.debug("Checking %s for filter criteria", file_name)
                 if 'name' in filter and filter['name'] == file.stream_name():
                     files.append(file)
                 elif 'prefix' in filter and file.stream_name().startswith(filter['prefix']):
@@ -403,8 +405,8 @@ class ArvadosPlatform(Platform):
         collections = self._get_collection(collection_filter)
 
         files = []
-        for collection in collections:
-            self.logger.debug("Fetching list of files in collection %s", collection["uuid"])
+        for num, collection in enumerate(collections):
+            self.logger.debug("[%d/%d] Fetching list of files in collection %s", num+1, len(collections), collection["uuid"])
             files += self._get_files_list_in_collection(collection['uuid'], filter=filter)
         self.logger.debug("Return list of %d files", len(files))
         return files_to_be_returned
