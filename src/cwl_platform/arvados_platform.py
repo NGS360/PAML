@@ -405,7 +405,7 @@ class ArvadosPlatform(Platform):
         files = []
         for collection in collections:
             self.logger.debug("Fetching list of files in collection %s", collection["uuid"])
-            files += self._get_files_list_in_collection(collection['uuid'], filter)
+            files += self._get_files_list_in_collection(collection['uuid'], filter=filter)
         self.logger.debug("Return list of %d files", len(files))
         return files_to_be_returned
 
