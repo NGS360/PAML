@@ -71,7 +71,7 @@ class ArvadosPlatform(Platform):
         self.keep_client = None
         self.logger = logging.getLogger(__name__)
 
-    def _find_collection_key(self, collection_path):
+    def _find_collection_key(self, project_uuid):
         """
         This is a helper function that given an collection path such that the path is of
         the form: collection/key
@@ -87,6 +87,19 @@ class ArvadosPlatform(Platform):
             key = '/'.join(components[1:])
         return collection_uuid, key
     
+    def _get_collection(self, filter):
+        '''
+        Get a list of collection objects matching filter criteria from Arvados
+        :param filter: List of filters to search for collection, e.g. [ ["owner_uuid", "=", project_uuid], ["name", "=", collName] ]
+        :return: Matching Collection objects or None
+        '''
+        search_result = self.arv.collections().list(filters=filter, offset=0, limit=1000).execute()
+        collections = search_result['items']
+        while len(collections) < search_result['items_available']:
+            search_result = self.arv.collections().list(filters=filter, offset=len(collections), limit=1000).execute()
+            collections += search_result['items']
+        return collections
+
     def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
         '''
         Get list of files in collection, if subdirectory_path is provided, return only files in that subdirectory.
@@ -363,7 +376,13 @@ class ArvadosPlatform(Platform):
             }
         :return: List of file objects matching filter criteria
         '''
-        raise NotImplementedError("Method not implemented")
+        # Iterate over all collections and find files matching filter criteria.
+        files = []
+        filter = [ ["owner_uuid", "=", project["uuid"]] ]
+        collections = self._get_collection(filter)
+        for collection in collections:
+            files += self._get_files_list_in_collection(collection['uuid'])
+        return files
 
     def get_folder_id(self, project, folder_path):
         '''
