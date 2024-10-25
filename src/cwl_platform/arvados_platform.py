@@ -398,7 +398,7 @@ class ArvadosPlatform(Platform):
             ["owner_uuid", "=", project["uuid"]]
         ]
         if 'folder' in filter:
-            collection_filter ['name'] = filter['folder']
+            collection_filter['name'] = filter['folder']
         self.logger.debug("Fetching list of collections matching filter, %s, in project %s", collection_filter, project["uuid"])
         collections = self._get_collection(collection_filter)
 
