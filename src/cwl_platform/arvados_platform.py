@@ -377,20 +377,40 @@ class ArvadosPlatform(Platform):
         :return: List of file objects matching filter criteria
         '''
         # Iterate over all collections and find files matching filter criteria.
-        files = []
+        files_to_be_returned = []
         arv_filter = [
-            ["owner_uuid", "=", project["uuid"]],
+            ["owner_uuid", "=", project["uuid"]]
         ]
-        if 'suffix' in filter:
-            arv_filter.append(["name", "ilike", f"%{filter['suffix']}"])
-
         self.logger.debug("Fetching list of collections in project %s matching filter criteria", project["uuid"], arv_filter)
         collections = self._get_collection(arv_filter)
+
         for collection in collections:
             self.logger.debug("Fetching list of files in collection %s", collection["uuid"])
-            files += self._get_files_list_in_collection(collection['uuid'])
-        self.logger.debug("Return list of %d files", len(files))
-        return files
+            files = self._get_files_list_in_collection(collection['uuid'])
+            for file in files:
+                # If a filter is provided, check if the file matches the filter criteria
+                if filter:
+                    if 'name' in filter and filter['name'] != file.name():
+                        continue
+                    if 'prefix' in filter and not file.name().startswith(filter['prefix']):
+                        continue
+                    if 'suffix' in filter and not file.name().endswith(filter['suffix']):
+                        continue
+                    if 'folder' in filter:
+                        if filter['folder'] == '/':
+                            # The root folder is the name of the collection
+                            if file.stream_name() != collection['name']:
+                                continue
+                        else:
+                            # The first folder in the path is the name of the collection
+                            if file.stream_name() != filter['folder']:
+                                continue
+                    # if 'recursive' in filter and filter['recursive']:
+                    # TODO: Do we need to handle Recursive in Arvados or does _get_files_list_in_collection automatically recurse?
+                    files_to_be_returned.append(file)
+
+        self.logger.debug("Return list of %d files", len(files_to_be_returned))
+        return files_to_be_returned
 
     def get_folder_id(self, project, folder_path):
         '''
