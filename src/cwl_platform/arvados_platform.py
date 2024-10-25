@@ -379,9 +379,12 @@ class ArvadosPlatform(Platform):
         # Iterate over all collections and find files matching filter criteria.
         files = []
         filter = [ ["owner_uuid", "=", project["uuid"]] ]
+        self.logger.debug("Fetching list of collections in project %s matching filter criteria", project["uuid"], filter)
         collections = self._get_collection(filter)
         for collection in collections:
+            self.logger.debug("Fetching list of files in collection %s", collection["uuid"])
             files += self._get_files_list_in_collection(collection['uuid'])
+        self.logger.debug("Return list of %d files", len(files))
         return files
 
     def get_folder_id(self, project, folder_path):
