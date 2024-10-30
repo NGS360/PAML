@@ -95,6 +95,10 @@ class Platform(ABC):
         ''' Get a task's cost '''
 
     @abstractmethod
+    def get_project_cost(self, project):
+        ''' Get a project's cost '''
+
+    @abstractmethod
     def get_project(self):
         ''' Determine what project we are running in '''
 

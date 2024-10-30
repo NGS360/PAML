@@ -429,6 +429,18 @@ class SevenBridgesPlatform(Platform):
         
         return(task_cost)
 
+    def get_project_cost(self, project):
+        # 1.  Get a list of tasks from the project
+        tasks = self.get_tasks_by_name(project)
+
+        # 2.  Iterate over tasks and sum up total cost
+        total_cost = 0.0
+        for task in tasks:
+	        total_cost += self.get_task_cost(task)
+        rounded_total_cost = round(total_cost,2)
+
+        return(rounded_total_cost)
+
     def get_project(self):
         ''' Determine what project we are running in '''
         task_id = os.environ.get('TASK_ID')

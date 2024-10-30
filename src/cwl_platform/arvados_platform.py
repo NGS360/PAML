@@ -408,6 +408,12 @@ class ArvadosPlatform(Platform):
         ]
         if task_name is not None:
             setup_filters.append(["name", '=', task_name])
+            #Potentially easier way suggested by Peter:
+            #setup_filters.append(["name", 'ilike', '%launcher%']) --> should return single process/container, and take its cumulative_cost, should match adding up all container costs
+            #even better:
+            #setup_filters.append(['requesting_container_uuid', '=',None]) --> only the launcher won't have another container request for it, so this is better way to find launcher, then just take its comulative_cost prop
+            #If only want to count completed launchers:
+            #setup_filters_append(["state","=","Final"]) (but then also need to check its corresponding container and should be ["state","=","Complete"] and also check exit_code)
         for container_request in arvados.util.keyset_list_all(
             self.api.container_requests().list,
             filters=setup_filters,
@@ -438,6 +444,21 @@ class ArvadosPlatform(Platform):
 
     def get_task_cost(self, task):
         return(task.container["cost"])
+
+    def get_project_cost(self, project):
+        setup_filters=[
+            ['owner_uuid', '=', project['uuid']], ['priority', '>', 0], ['requesting_container_uuid', '=', None]
+        ]
+
+        projCost = 0.0
+        for container_request in arvados.util.keyset_list_all(
+            self.api.container_requests().list,
+            filters=setup_filters,
+            select=["uuid", "owner_uuid", "container_uuid", "name", "cumulative_cost", "properties", "modified_by_user_uuid", "created_at"]
+        ):
+            projCost += container_request["cumulative_cost"]
+
+        return(projCost)
 
     def get_project(self):
         ''' Determine what project we are running in '''
