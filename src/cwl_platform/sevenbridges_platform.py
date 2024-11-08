@@ -277,7 +277,7 @@ class SevenBridgesPlatform(Platform):
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
 
-    def create_project(self, project_name, project_description, **kwargs=None):
+    def create_project(self, project_name, project_description, **kwargs):
         '''
         Create a project
         

@@ -40,7 +40,7 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def create_project(self, project_name, project_description, **kwargs=None):
+    def create_project(self, project_name, project_description, **kwargs):
         '''
         Create a project
         
