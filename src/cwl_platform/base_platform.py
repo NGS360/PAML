@@ -64,6 +64,10 @@ class Platform(ABC):
 
     # Project methods
     @abstractmethod
+    def add_user_to_project(self, user, project):
+        ''' Add a user to a project '''
+
+    @abstractmethod
     def create_project(self, project_name, project_description, **kwargs):
         '''
         Create a project
@@ -177,6 +181,16 @@ class Platform(ABC):
         :param executing_settings: {use_spot_instance: True/False}
         :return: Task object or None
         '''
+
+    # User methods
+    @abstractmethod
+    def get_user(self, user):
+        """
+        Get a user object from their (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
 
     # Other methods
     @abstractmethod

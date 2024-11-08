@@ -99,6 +99,43 @@ class ArvadosPlatform(Platform):
             cwl_output = json.load(cwl_output_file)
         return cwl_output
 
+    def add_user_to_project(self, user, project):
+        '''
+        Add a user to a project
+        
+        :param user: The user to add
+        :param project: The project to add the user to
+        '''
+        user_uuid = self.getUserUUIDByUserID(userID)
+        if not user_uuid:
+            logger.error("Unable to locate user in Arvados")
+            return
+        logger.info("User found: %s", user_uuid)
+
+        if projectName:
+            project = self.getProjectByName(projectName)
+            if project:
+                project_uuid = project['uuid']
+            else:
+                logger.error("Unable to locate project by name, %s", projectName)
+                return
+
+        if not project_uuid:
+            logger.error("No project uuid provided.")
+            return
+
+        # TODO: Confirm this if statement
+        aPermission = 'can_manage' if permission=="admin" else 'can_write' if permission=="write" else 'can_read' # pylint: disable=line-too-long
+
+        self.arv.links().create(body={"link": {
+                                            "link_class": "permission",
+                                            "name": aPermission,
+                                            "tail_uuid": user_uuid,
+                                            "head_uuid": project_uuid
+                                       }
+                                     }
+                                ).execute()
+
     def connect(self, **kwargs):
         ''' Connect to Arvados '''
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
@@ -461,6 +498,21 @@ class ArvadosPlatform(Platform):
         search_result = self.api.groups().list(filters=[["uuid", "=", project_id]]).execute()
         if len(search_result['items']) > 0:
             return search_result['items'][0]
+        return None
+
+    def get_user(self, user):
+        """
+        Get a user object from their (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
+        if '@' in user:
+            user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
+        else:
+            user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
+        if len(user_resp['items']) > 0:
+            return user_resp["items"][0]
         return None
 
     def rename_file(self, fileid, new_filename):

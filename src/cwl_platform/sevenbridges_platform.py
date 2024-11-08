@@ -193,6 +193,9 @@ class SevenBridgesPlatform(Platform):
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
+    def add_user_to_project(self, user, project):
+        ''' Add a user to a project '''
+
     def connect(self, **kwargs):
         ''' Connect to Sevenbridges '''
         self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
@@ -455,6 +458,21 @@ class SevenBridgesPlatform(Platform):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
+
+    def get_user(self, user):
+        """
+        Get a user object from the (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
+        divisions = self.api.divisions.query().all()
+        for division in divisions:
+            platform_users = self.api.users.query(division=division, limit=500).all()
+            for platform_user in platform_users:
+                if user in platform_user.username or platform_user.email == user:
+                    return platform_user
+        return None
 
     def rename_file(self, fileid, new_filename):
         '''
