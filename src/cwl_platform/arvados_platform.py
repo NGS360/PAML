@@ -235,7 +235,7 @@ class ArvadosPlatform(Platform):
                 destination_workflows.append(self.api.workflows().create(body=workflow).execute())
         return destination_workflows
 
-    def create_project(self, project_name, project_description, **kwargs=None):
+    def create_project(self, project_name, project_description, **kwargs):
         '''
         Create a project
         
