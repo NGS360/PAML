@@ -463,6 +463,21 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
+    def get_user(self, user):
+        """
+        Get a user object from their (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
+        if '@' in user:
+            user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
+        else:
+            user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
+        if len(user_resp['items']) > 0:
+            return user_resp["items"][0]
+        return None
+
     def rename_file(self, fileid, new_filename):
         '''
         Rename a file to new_filename.

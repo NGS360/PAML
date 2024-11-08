@@ -456,6 +456,21 @@ class SevenBridgesPlatform(Platform):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
 
+    def get_user(self, user):
+        """
+        Get a user object from the (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
+        divisions = self.api.divisions.query().all()
+        for division in divisions:
+            platform_users = self.api.users.query(division=division, limit=500).all()
+            for platform_user in platform_users:
+                if user in platform_user.username or platform_user.email == user:
+                    return platform_user
+        return None
+
     def rename_file(self, fileid, new_filename):
         '''
         Rename a file to new_filename.

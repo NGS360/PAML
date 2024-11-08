@@ -178,6 +178,16 @@ class Platform(ABC):
         :return: Task object or None
         '''
 
+    # User methods
+    @abstractmethod
+    def get_user(self, user):
+        """
+        Get a user object from their (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
+
     # Other methods
     @abstractmethod
     def connect(self, **kwargs):
