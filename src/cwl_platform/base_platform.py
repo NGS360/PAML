@@ -64,10 +64,6 @@ class Platform(ABC):
 
     # Project methods
     @abstractmethod
-    def add_user_to_project(self, user, project):
-        ''' Add a user to a project '''
-
-    @abstractmethod
     def create_project(self, project_name, project_description, **kwargs):
         '''
         Create a project

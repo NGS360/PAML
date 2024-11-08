@@ -193,9 +193,6 @@ class SevenBridgesPlatform(Platform):
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
-    def add_user_to_project(self, user, project):
-        ''' Add a user to a project '''
-
     def connect(self, **kwargs):
         ''' Connect to Sevenbridges '''
         self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
