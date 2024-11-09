@@ -240,6 +240,8 @@ class ArvadosPlatform(Platform):
         Create a project
         
         :param project_name: Name of the project
+        :param project_description: Description of the project
+        :param user: User to own project
         :param kwargs: Additional arguments for creating a project
         :return: Project object
         '''
