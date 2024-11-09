@@ -235,23 +235,20 @@ class ArvadosPlatform(Platform):
                 destination_workflows.append(self.api.workflows().create(body=workflow).execute())
         return destination_workflows
 
-    def create_project(self, project_name, project_description, user=None, **kwargs):
+    def create_project(self, project_name, project_description, **kwargs):
         '''
         Create a project
         
         :param project_name: Name of the project
-        :param project_description: Description of the project
-        :param user: User to own project
         :param kwargs: Additional arguments for creating a project
         :return: Project object
         '''
-        if not user:
-            user = self.api.users().current().execute()
-        project = self.api.groups().create(body={"owner_uuid": f'{user["uuid"]}',
+        arvados_user = self.api.users().current().execute()
+        project = self.api.groups().create(body={"owner_uuid": f'{arvados_user["uuid"]}',
                                                  "name": project_name,
                                                  "description": project_description,
                                                  "properties": {
-                                                     "proj_owner": user["username"]
+                                                     "proj_owner": arvados_user["username"]
                                                  },
                                                  "group_class": "project"}
                                            ).execute()
