@@ -277,7 +277,7 @@ class SevenBridgesPlatform(Platform):
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
 
-    def create_project(self, project_name, project_description, **kwargs):
+    def create_project(self, project_name, project_description, user=None, **kwargs):
         '''
         Create a project
         
@@ -288,6 +288,8 @@ class SevenBridgesPlatform(Platform):
         project = self.api.projects.create(name=project_name,
                                            description=project_description,
                                            settings={'use_interruptible_instances':False})
+        if user:
+            self.add_user_to_project(user, project, permissions={'admin': True})
         return project
 
     def delete_task(self, task: sevenbridges.Task):
