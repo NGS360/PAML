@@ -324,6 +324,19 @@ class SevenBridgesPlatform(Platform):
                                                 location=f'{prefix}/{file.name}',
                                                 copy_only=True)
         return export
+    def create_project(self, project_name, project_description, **kwargs):
+        '''
+        Create a project
+        
+        :param project_name: Name of the project
+        :param project_description: Description of the project
+        :param kwargs: Additional arguments for creating a project
+        :return: Project object
+        '''
+        project = self.api.projects.create(name=project_name,
+                                           description=project_description,
+                                           settings={'use_interruptible_instances':False})
+        return project
 
     def delete_task(self, task: sevenbridges.Task):
         ''' Delete a task/workflow/process '''
@@ -524,6 +537,21 @@ class SevenBridgesPlatform(Platform):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
 
+    def get_user(self, user):
+        """
+        Get a user object from the (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
+        divisions = self.api.divisions.query().all()
+        for division in divisions:
+            platform_users = self.api.users.query(division=division, limit=500).all()
+            for platform_user in platform_users:
+                if user in platform_user.username or platform_user.email == user:
+                    return platform_user
+        return None
+
     def rename_file(self, fileid, new_filename):
         '''
         Rename a file to new_filename.
@@ -625,7 +653,15 @@ class SevenBridgesPlatform(Platform):
                             self._add_tag_to_folder(file, "OUTPUT")
 
     def submit_task(self, name, project, workflow, parameters, executing_settings=None):
-        ''' Submit a workflow on the platform '''
+        '''
+        Submit a workflow on the platform
+        :param name: Name of the task to submit
+        :param project: Project to submit the task to
+        :param workflow: Workflow to submit
+        :param parameters: Parameters for the workflow
+        :param executing_settings: {use_spot_instance: True/False}
+        :return: Task object or None
+        '''
         def set_file_metadata(file, metadata):
             ''' Set metadata on a file '''
             if file and file.metadata != metadata:
@@ -656,9 +692,14 @@ class SevenBridgesPlatform(Platform):
             check_metadata(parameters[i])
 
         self.logger.debug("Submitting task (%s) with parameters: %s", name, parameters)
-        task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
-                                     interruptible=use_spot_instance,
-                                     execution_settings=sbg_execution_settings)
+        try:
+            task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
+                                        interruptible=use_spot_instance,
+                                        execution_settings=sbg_execution_settings)
+        except sevenbridges.errors.BadRequest as e:
+            self.logger.error("Error submitting task: %s", e)
+            return None
+
         task.run()
         return task
 

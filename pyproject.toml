@@ -1,6 +1,6 @@
 [project]
 name = "cwl_platform"
-version = "0.2"
+version = "0.2.1"
 authors = [
   { name="Ryan Golhar", email="ryan.golhar@bms.com" }
 ]

@@ -286,6 +286,26 @@ class ArvadosPlatform(Platform):
                 destination_workflows.append(self.api.workflows().create(body=workflow).execute())
         return destination_workflows
 
+    def create_project(self, project_name, project_description, **kwargs):
+        '''
+        Create a project
+        
+        :param project_name: Name of the project
+        :param project_description: Description of the project
+        :param kwargs: Additional arguments for creating a project
+        :return: Project object
+        '''
+        arvados_user = self.api.users().current().execute()
+        project = self.api.groups().create(body={"owner_uuid": f'{arvados_user["uuid"]}',
+                                                 "name": project_name,
+                                                 "description": project_description,
+                                                 "properties": {
+                                                     "proj_owner": arvados_user["username"]
+                                                 },
+                                                 "group_class": "project"}
+                                           ).execute()
+        return project
+
     def delete_task(self, task: ArvadosTask):
         ''' Delete a task/workflow/process '''
         self.api.container_requests().delete(uuid=task.container_request["uuid"]).execute()
@@ -557,6 +577,21 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
+    def get_user(self, user):
+        """
+        Get a user object from their (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
+        if '@' in user:
+            user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
+        else:
+            user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
+        if len(user_resp['items']) > 0:
+            return user_resp["items"][0]
+        return None
+
     def rename_file(self, fileid, new_filename):
         '''
         Rename a file to new_filename.
@@ -684,7 +719,15 @@ class ArvadosPlatform(Platform):
         outputs_collection.save()
 
     def submit_task(self, name, project, workflow, parameters, executing_settings=None):
-        ''' Submit a workflow on the platform '''
+        '''
+        Submit a workflow on the platform
+        :param name: Name of the task to submit
+        :param project: Project to submit the task to
+        :param workflow: Workflow to submit
+        :param parameters: Parameters for the workflow
+        :param executing_settings: {use_spot_instance: True/False}
+        :return: Task object or None
+        '''
         with tempfile.NamedTemporaryFile() as parameter_file:
             with open(parameter_file.name, mode='w', encoding="utf-8") as fout:
                 json.dump(parameters, fout)
