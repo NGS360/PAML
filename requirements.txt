@@ -1,3 +1,4 @@
 chardet
 arvados-python-client
 sevenbridges-python
+smart_open
