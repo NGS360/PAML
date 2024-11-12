@@ -610,6 +610,7 @@ class ArvadosPlatform(Platform):
         :param user: BMS user id or email address
         :return: User object or None
         """
+        user = user.lower()
         if '@' in user:
             # TBD: This is case-sensitive
             user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
