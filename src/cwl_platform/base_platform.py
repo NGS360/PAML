@@ -64,6 +64,18 @@ class Platform(ABC):
 
     # Project methods
     @abstractmethod
+    def add_user_to_project(self, user, project, permission):
+        '''
+        Add a user to a project
+
+        :param user: User to add to project
+        :param project: Project to add user to
+        :param permission: Permission level to grant user
+            {'admin', 'write', 'read', 'manage'}
+        :return: None
+        '''
+
+    @abstractmethod
     def create_project(self, project_name, project_description, **kwargs):
         '''
         Create a project

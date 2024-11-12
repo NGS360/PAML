@@ -4,6 +4,7 @@ SevenBridges Platform class
 import os
 import logging
 import sevenbridges
+from sevenbridges.errors import SbgError
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
 from .base_platform import Platform
@@ -192,6 +193,54 @@ class SevenBridgesPlatform(Platform):
         else:
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
+
+    def add_user_to_project(self, user, project, permission):
+        '''
+        Add a user to a project
+
+        :param user: User to add to project
+        :param project: Project to add user to
+        :param permission: Permission level to grant user
+            {'admin', 'write', 'read', 'manage'}
+        :return: None
+        '''
+        if permission == 'write':
+            user_permissions = {
+                'write': True,
+                'read': True,
+                'copy': True,
+                'execute': True,
+                'admin': False
+            }
+        elif permission == 'manage':
+            user_permissions = {
+                'write': True,
+                'read': True,
+                'copy': True,
+                'execute': True,
+                'admin': False
+            }
+        elif permission == 'admin':
+            user_permissions = {
+                'write': True,
+                'read': True,
+                'copy': True,
+                'execute': True,
+                'admin': True
+            }
+        else:
+            user_permissions = {
+                'write': False,
+                'read': True,
+                'copy': False,
+                'execute': False,
+                'admin': False
+            }
+
+        try:
+            project.add_member(user=user, permissions=user_permissions)
+        except SbgError as err:
+            self.logger.error("%s\nUnable to add %s as member", err.message, user)
 
     def connect(self, **kwargs):
         ''' Connect to Sevenbridges '''

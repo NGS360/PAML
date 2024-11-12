@@ -150,6 +150,32 @@ class ArvadosPlatform(Platform):
             cwl_output = json.load(cwl_output_file)
         return cwl_output
 
+    def add_user_to_project(self, user, project, permission):
+        '''
+        Add a user to a project
+
+        :param user: User to add to project
+        :param project: Project to add user to
+        :param permission: Permission level to grant user
+            {'admin', 'write', 'read', 'manage'}
+        :return: None
+        '''
+        if permission == 'admin':
+            aPermission = 'can_manage'
+        elif permission == 'write':
+            aPermission = 'can_write'
+        elif permission == 'read':
+            aPermission = 'can_read'
+
+        self.arv.links().create(body={"link": {
+                                            "link_class": "permission",
+                                            "name": aPermission,
+                                            "tail_uuid": user["uuid"],
+                                            "head_uuid": project["uuid"]
+                                       }
+                                     }
+                                ).execute()
+
     def connect(self, **kwargs):
         ''' Connect to Arvados '''
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
