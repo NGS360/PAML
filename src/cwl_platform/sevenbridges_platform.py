@@ -593,11 +593,13 @@ class SevenBridgesPlatform(Platform):
         :param user: BMS user id or email address
         :return: User object or None
         """
+        # TBD: Is there a better way to query for a user?
+        user = user.lower()
         divisions = self.api.divisions.query().all()
         for division in divisions:
             platform_users = self.api.users.query(division=division, limit=500).all()
             for platform_user in platform_users:
-                if user in platform_user.username or platform_user.email == user:
+                if user in platform_user.username.lower() or platform_user.email.lower() == user:
                     return platform_user
         return None
 

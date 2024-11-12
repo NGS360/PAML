@@ -611,6 +611,7 @@ class ArvadosPlatform(Platform):
         :return: User object or None
         """
         if '@' in user:
+            # TBD: This is case-sensitive
             user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
         else:
             user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
