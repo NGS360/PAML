@@ -611,13 +611,27 @@ class ArvadosPlatform(Platform):
         :return: User object or None
         """
         user = user.lower()
-        if '@' in user:
-            # TBD: This is case-sensitive
-            user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
-        else:
-            user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
-        if len(user_resp['items']) > 0:
-            return user_resp["items"][0]
+
+        # Implementation 1: Get the full list of users and scan for users with matching username/email
+        # Get the full list of users
+        search_result = self.api.users().list(offset=0, limit=1000).execute()
+        users = search_result['items']
+        while len(users) < search_result['items_available']:
+            search_result = self.api.users().list(offset=len(users), limit=1000).execute()
+            users += search_result['items']
+
+        for platform_user in users:
+            if platform_user['email'].lower() == user or platform_user['username'].lower() == user:
+                return platform_user
+
+        # Implementation 2: Search for user with matching username/email but this is case-sensitive
+        #if '@' in user:
+        #    user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
+        #else:
+        #    user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
+        #if len(user_resp['items']) > 0:
+        #    return user_resp["items"][0]
+
         return None
 
     def rename_file(self, fileid, new_filename):
