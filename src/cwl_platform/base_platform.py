@@ -10,9 +10,60 @@ class Platform(ABC):
         self.connected = False
 
     # File methods
+    # TODO: These file objects should be abstracted to a common File object interface
     @abstractmethod
     def copy_folder(self, source_project, source_folder, destination_project):
         ''' Copy source folder to destination project '''
+
+    @abstractmethod
+    def download_file(self, file, dest_folder):
+        '''
+        Download a file to a local directory
+
+        :param fileid: File to download
+        :param dest_folder: Destination folder to download file to
+        :return: Name of local file downloaded or None
+        '''
+
+    @abstractmethod
+    def export_file(self, file, bucket_name, prefix):
+        '''
+        Use platform specific functionality to copy a file from a platform to an S3 bucket.
+
+        :param file: File to export
+        :param bucket_name: S3 bucket name
+        :param prefix: Destination S3 folder to export file to, path/to/folder
+        :return: s3 file path or None
+        '''
+
+    #@abstractmethod
+    #def get_file(self, file_id):
+    #    ''' Get a file by its id '''
+
+    #@abstractmethod
+    #def get_file_name(self, file):
+    #    ''' Get a file name by its object or id '''
+
+    @abstractmethod
+    def get_files(self, project, filter=None):
+        '''
+        Retrieve files in a project matching the filter criteria
+
+        :param project: Project to search for files
+        :param filter: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        '''
+
+    @abstractmethod
+    def get_folder_id(self, project, folder_path):
+        ''' Get a folder id by its full path name '''
 
     @abstractmethod
     def get_file_id(self, project, file_path):
@@ -126,63 +177,8 @@ class Platform(ABC):
         ''' Delete a task/workflow/process '''
 
     @abstractmethod
-    def download_file(self, file, dest_folder):
-        '''
-        Download a file to a local directory
-
-        :param fileid: File to download
-        :param dest_folder: Destination folder to download file to
-        :return: Name of local file downloaded or None
-        '''
-
-    @abstractmethod
-    def export_file(self, file, bucket_name, prefix):
-        '''
-        Use platform specific functionality to copy a file from a platform to an S3 bucket.
-
-        :param file: File to export
-        :param bucket_name: S3 bucket name
-        :param prefix: Destination S3 folder to export file to, path/to/folder
-        :return: s3 file path or None
-        '''
-
-    @abstractmethod
     def get_current_task(self):
         ''' Get the current task '''
-
-    # TODO: These file objects should be abstracted to a common File object interface
-    @abstractmethod
-    def get_file_id(self, project, file_path):
-        ''' Get a file id by its full path name '''
-
-    #@abstractmethod
-    #def get_file(self, file_id):
-    #    ''' Get a file by its id '''
-
-    #@abstractmethod
-    #def get_file_name(self, file):
-    #    ''' Get a file name by its object or id '''
-
-    @abstractmethod
-    def get_files(self, project, filter=None):
-        '''
-        Retrieve files in a project matching the filter criteria
-
-        :param project: Project to search for files
-        :param filter: Dictionary containing filter criteria
-            {
-                'name': 'file_name',
-                'prefix': 'file_prefix',
-                'suffix': 'file_suffix',
-                'folder': 'folder_name',
-                'recursive': True/False
-            }
-        :return: List of file objects matching filter criteria
-        '''
-
-    @abstractmethod
-    def get_folder_id(self, project, folder_path):
-        ''' Get a folder id by its full path name '''
 
     @abstractmethod
     def get_task_input(self, task, input_name):
