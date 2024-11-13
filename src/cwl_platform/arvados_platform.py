@@ -167,7 +167,7 @@ class ArvadosPlatform(Platform):
         elif permission == 'read':
             aPermission = 'can_read'
 
-        self.arv.links().create(body={"link": {
+        self.api.links().create(body={"link": {
                                             "link_class": "permission",
                                             "name": aPermission,
                                             "tail_uuid": user["uuid"],
