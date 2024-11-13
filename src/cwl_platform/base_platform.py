@@ -9,7 +9,9 @@ class Platform(ABC):
         self.name = name
         self.connected = False
 
+    ###############################
     # File methods
+
     # TODO: These file objects should be abstracted to a common File object interface
     @abstractmethod
     def copy_folder(self, source_project, source_folder, destination_project):
@@ -113,7 +115,9 @@ class Platform(ABC):
         :return: ID of uploaded file.
         '''
 
+    ###############################
     # Project methods
+
     @abstractmethod
     def add_user_to_project(self, user, project, permission):
         '''
@@ -149,7 +153,9 @@ class Platform(ABC):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
 
+    ###############################
     # Task/Workflow methods
+
     @abstractmethod
     def copy_workflow(self, src_workflow, destination_project):
         '''
@@ -241,7 +247,9 @@ class Platform(ABC):
         :return: Task object or None
         '''
 
+    ###############################
     # User methods
+
     @abstractmethod
     def get_user(self, user):
         """
@@ -251,7 +259,9 @@ class Platform(ABC):
         :return: User object or None
         """
 
+    ###############################
     # Other methods
+
     @abstractmethod
     def connect(self, **kwargs):
         ''' Connect to the platform '''
