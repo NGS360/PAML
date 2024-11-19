@@ -91,7 +91,7 @@ class ArvadosPlatform(Platform):
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
                                                               keep_client=self.keep_client)
-        if cwl_output_collection.items() is None:
+        if len(cwl_output_collection.items()) == 0:
             return None
 
         cwl_output = None
