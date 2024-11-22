@@ -405,11 +405,11 @@ class SevenBridgesPlatform(Platform):
     def get_task_output_filename(self, task: sevenbridges.Task, output_name):
         ''' Retrieve the output field of the task and return filename'''
         task = self.api.tasks.get(id=task.id)
-        alloutputs = task.outputs
-        if output_name in alloutputs:
-            outputfile = alloutputs[output_name]
-            if outputfile:
-                return outputfile.name
+        if output_name in task.outputs:
+            if isinstance(task.outputs[output_name], list):
+                return [output.name for output in task.outputs[output_name]]
+            if isinstance(task.outputs[output_name], sevenbridges.File):
+                return task.outputs[output_name].name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
     def get_tasks_by_name(self, project, task_name): # -> list(sevenbridges.Task):
@@ -575,9 +575,12 @@ class SevenBridgesPlatform(Platform):
             check_metadata(parameters[i])
 
         self.logger.debug("Submitting task (%s) with parameters: %s", name, parameters)
-        task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
-                                     interruptible=use_spot_instance,
-                                     execution_settings=sbg_execution_settings)
+        try:
+            task = self.api.tasks.create(name=name, project=project, app=workflow,inputs=parameters,
+                                        interruptible=use_spot_instance,
+                                        execution_settings=sbg_execution_settings)
+        except sevenbridges.errors.SbgError as error:
+            raise ValueError(f"Failed to submit task, error: {error}")
         task.run()
         return task
 
