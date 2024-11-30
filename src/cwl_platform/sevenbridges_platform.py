@@ -4,6 +4,7 @@ SevenBridges Platform class
 import os
 import logging
 import sevenbridges
+from sevenbridges.errors import SbgError
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
 from .base_platform import Platform
@@ -193,6 +194,54 @@ class SevenBridgesPlatform(Platform):
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
+    def add_user_to_project(self, user, project, permission):
+        '''
+        Add a user to a project
+
+        :param user: User to add to project
+        :param project: Project to add user to
+        :param permission: Permission level to grant user
+            {'admin', 'write', 'read', 'manage'}
+        :return: None
+        '''
+        if permission == 'write':
+            user_permissions = {
+                'write': True,
+                'read': True,
+                'copy': True,
+                'execute': True,
+                'admin': False
+            }
+        elif permission == 'manage':
+            user_permissions = {
+                'write': True,
+                'read': True,
+                'copy': True,
+                'execute': True,
+                'admin': False
+            }
+        elif permission == 'admin':
+            user_permissions = {
+                'write': True,
+                'read': True,
+                'copy': True,
+                'execute': True,
+                'admin': True
+            }
+        else:
+            user_permissions = {
+                'write': False,
+                'read': True,
+                'copy': False,
+                'execute': False,
+                'admin': False
+            }
+
+        try:
+            project.add_member(user=user, permissions=user_permissions)
+        except SbgError as err:
+            self.logger.error("%s\nUnable to add %s as member", err.message, user)
+
     def connect(self, **kwargs):
         ''' Connect to Sevenbridges '''
         self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
@@ -277,6 +326,53 @@ class SevenBridgesPlatform(Platform):
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
 
+    def download_file(self, file, dest_folder):
+        '''
+        Download a file to a local directory
+
+        :param file: SevenBridges file id (or object) to download
+        :param dest_folder: Destination folder to download file to
+        :return: Name of local file downloaded or None
+        '''
+        # If file is a str, assume its a file id, else is a file object
+        if type(file) == str:
+            file = self.api.files.get(id=file)
+        file_name = f'{dest_folder}/{file.name}'
+        file.download(file_name)
+        return file_name
+
+    def export_file(self, file, bucket_name, prefix):
+        '''
+        Use platform specific functionality to copy a file from a platform to an S3 bucket.
+
+        :param file: File to export
+        :param bucket_name: S3 bucket name
+        :param prefix: Destination S3 folder to export file to, path/to/folder
+        :return: Export job of file
+
+        For SevenBridges, there are two differences from the expected base implementation:
+        1. the bucket name is translated to a volume name, replacing all dashes with underscores.
+        2. the return value is the export job object, not the S3 file path.
+        '''
+        # If file is a str, assume its a file id, else is a file object
+        if type(file) == str:
+            file = self.api.files.get(id=file)
+
+        volume = None
+        volume_name = bucket_name.replace('-', '_')
+        for v in self.api.volumes.query().all():
+            if v.name == volume_name:
+                volume = v
+                break
+        if not volume:
+            self.logger.error("Volume %s not found", volume_name)
+            return None
+
+        export = self.api.exports.submit_export(file=file,
+                                                volume=volume,
+                                                location=f'{prefix}/{file.name}',
+                                                copy_only=True)
+        return export
     def create_project(self, project_name, project_description, **kwargs):
         '''
         Create a project
@@ -349,6 +445,39 @@ class SevenBridgesPlatform(Platform):
             return file_list[0].id
 
         raise ValueError(f"File not found in specified folder: {file_path}")
+
+    def get_files(self, project, filter=None):
+        '''
+        Retrieve files in a project matching the filter criteria
+
+        :param project: Project to search for files
+        :param filter: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        '''
+        matching_files = []
+        
+        files = self.api.files.query(project=project, limit=100).all()
+        for file in files:
+            if filter.get('name') and file.name != filter['name']:
+                continue
+            if filter.get('prefix') and not file.name.startswith(filter['prefix']):
+                continue
+            if filter.get('suffix') and not file.name.endswith(filter['suffix']):
+                continue
+            if filter.get('folder') and not file.parent.name == filter['folder']:
+                continue
+            if filter.get('recursive') and file.type == 'folder':
+                matching_files.extend(self._list_all_files(files=[file]))
+            else:
+                matching_files.append(file)
+        return matching_files
 
     def get_folder_id(self, project, folder_path):
         '''
@@ -464,11 +593,13 @@ class SevenBridgesPlatform(Platform):
         :param user: BMS user id or email address
         :return: User object or None
         """
+        # TBD: Is there a better way to query for a user?
+        user = user.lower()
         divisions = self.api.divisions.query().all()
         for division in divisions:
             platform_users = self.api.users.query(division=division, limit=500).all()
             for platform_user in platform_users:
-                if user in platform_user.username or platform_user.email == user:
+                if user in platform_user.username.lower() or platform_user.email.lower() == user:
                     return platform_user
         return None
 

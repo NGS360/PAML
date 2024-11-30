@@ -11,6 +11,7 @@ import tempfile
 import chardet
 
 import googleapiclient
+import smart_open
 
 import arvados
 from .base_platform import Platform
@@ -70,24 +71,74 @@ class ArvadosPlatform(Platform):
         self.keep_client = None
         self.logger = logging.getLogger(__name__)
 
-    def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
+    def _find_collection_key(self, project_uuid):
+        """
+        This is a helper function that given an collection path such that the path is of
+        the form: collection/key
+        It will return the collection and the key represented by the path, eg
+        if collection_path == keep:collection_uuid/path/to/file.txt
+        """
+        if collection_path.startswith('keep:'):
+            collection_path = collection_path[5:]
+        components = collection_path.split('/')
+        collection_uuid = components[0]
+        key = ""
+        if len(components) > 1:
+            key = '/'.join(components[1:])
+        return collection_uuid, key
+    
+    def _get_collection(self, filter):
+        '''
+        Get a list of collection objects matching filter criteria from Arvados
+        :param filter: List of filters to search for collection, e.g. [ ["owner_uuid", "=", project_uuid], ["name", "=", collName] ]
+        :return: Matching Collection objects or None
+        '''
+        search_result = self.api.collections().list(filters=filter, offset=0, limit=1000).execute()
+        collections = search_result['items']
+        while len(collections) < search_result['items_available']:
+            search_result = self.api.collections().list(filters=filter, offset=len(collections), limit=1000).execute()
+            collections += search_result['items']
+        return collections
+
+    def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None, filter=None):
         '''
         Get list of files in collection, if subdirectory_path is provided, return only files in that subdirectory.
 
         :param collection_uuid: uuid of the collection
         :param subdirectory_path: subdirectory path to filter files in the collection
+        :param filter: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'recursive': True/False
+            }
         :return: list of files in the collection
         '''
         the_col = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid)
         file_list = the_col.all_files()
         if subdirectory_path:
             return [fl for fl in file_list if os.path.basename(fl.stream_name()) == subdirectory_path]
+        if filter:
+            files = []
+            for file in file_list:
+                file_name = file.name
+                self.logger.debug("Checking %s for filter criteria", file_name)
+                if 'name' in filter and filter['name'] == file.name:
+                    files.append(file)
+                elif 'prefix' in filter and file.name.startswith(filter['prefix']):
+                    files.append(file)
+                elif 'suffix' in filter and file.name.endswith(filter['suffix']):
+                    files.append(file)
+            return files
         return list(file_list)
 
     def _load_cwl_output(self, task: ArvadosTask):
         '''
         Load CWL output from task
         '''
+        if not task.container_request['output_uuid']:
+            return None
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
                                                               keep_client=self.keep_client)
@@ -98,6 +149,32 @@ class ArvadosPlatform(Platform):
         with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
             cwl_output = json.load(cwl_output_file)
         return cwl_output
+
+    def add_user_to_project(self, user, project, permission):
+        '''
+        Add a user to a project
+
+        :param user: User to add to project
+        :param project: Project to add user to
+        :param permission: Permission level to grant user
+            {'admin', 'write', 'read', 'manage'}
+        :return: None
+        '''
+        if permission == 'admin':
+            aPermission = 'can_manage'
+        elif permission == 'write':
+            aPermission = 'can_write'
+        elif permission == 'read':
+            aPermission = 'can_read'
+
+        self.api.links().create(body={"link": {
+                                            "link_class": "permission",
+                                            "name": aPermission,
+                                            "tail_uuid": user["uuid"],
+                                            "head_uuid": project["uuid"]
+                                       }
+                                     }
+                                ).execute()
 
     def connect(self, **kwargs):
         ''' Connect to Arvados '''
@@ -268,6 +345,36 @@ class ArvadosPlatform(Platform):
             return True
         return False
 
+    def download_file(self, file, dest_folder):
+        '''
+        Download a file to a local directory
+
+        :param file: File to download e.g. keep:asdf-asdf-asdf/some/file.txt
+        :param dest_folder: Destination folder to download file to
+        :return: Name of local file downloaded or None
+        '''
+        raise NotImplementedError("Method not implemented")
+
+    def export_file(self, file, bucket_name, prefix):
+        '''
+        Use platform specific functionality to copy a file from a platform to an S3 bucket.
+
+        :param file: File to export, keep:<collection_uuid>/<file_path>
+        :param bucket_name: S3 bucket name
+        :param prefix: Destination S3 folder to export file to, path/to/folder
+        :return: s3 file path or None
+        '''
+        collection_uuid, key = self._find_collection_key(file)
+        c = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid, api_client=self.api)
+        # If the file is in the keep collection
+        if key in c:
+            with c.open(key, "rb") as reader:
+                with smart_open.smart_open(f"s3://{bucket_name}/{prefix}/{key}", "wb") as writer:
+                    content = reader.read(128*1024)
+                    while content:
+                        writer.write(content)
+                        content = reader.read(128*1024)
+
     def get_current_task(self) -> ArvadosTask:
         '''
         Get the current task
@@ -317,6 +424,38 @@ class ArvadosPlatform(Platform):
         # Do we need to check for the file in the collection?  That could add a lot of overhead to query the collection
         # for the file.  Lets see if this comes up before implementing it.
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
+
+    # @override
+    def get_files(self, project, filter=None):
+        '''
+        Retrieve files in a project matching the filter criteria.
+
+        :param project: Project to search for files
+        :param filter: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',  # Here, a root folder is the name of the collection.
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        '''
+        # Iterate over all collections and find files matching filter criteria.
+        collection_filter = [
+            ["owner_uuid", "=", project["uuid"]]
+        ]
+        if filter and 'folder' in filter:
+            collection_filter['name'] = filter['folder']
+        self.logger.debug("Fetching list of collections matching filter, %s, in project %s", collection_filter, project["uuid"])
+        collections = self._get_collection(collection_filter)
+
+        files = []
+        for num, collection in enumerate(collections):
+            self.logger.debug("[%d/%d] Fetching list of files in collection %s", num+1, len(collections), collection["uuid"])
+            files += self._get_files_list_in_collection(collection['uuid'], filter=filter)
+        self.logger.debug("Return list of %d files", len(files))
+        return files
 
     def get_folder_id(self, project, folder_path):
         '''
@@ -471,12 +610,28 @@ class ArvadosPlatform(Platform):
         :param user: BMS user id or email address
         :return: User object or None
         """
+
+        # Implementation 1: Get the full list of users and scan for users with matching username/email
+        # Get the full list of users
+        #user = user.lower()
+        #search_result = self.api.users().list(offset=0, limit=1000).execute()
+        #users = search_result['items']
+        #while len(users) < search_result['items_available']:
+        #    search_result = self.api.users().list(offset=len(users), limit=1000).execute()
+        #    users += search_result['items']
+
+        #for platform_user in users:
+        #    if platform_user['email'].lower() == user or platform_user['username'].lower() == user:
+        #        return platform_user
+
+        # Implementation 2: Search for user with matching username/email
         if '@' in user:
-            user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
+             user_resp = self.api.users().list(filters=[["email","ilike",user]]).execute()
         else:
-            user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
+            user_resp = self.api.users().list(filters=[["username","ilike",user]]).execute()
         if len(user_resp['items']) > 0:
             return user_resp["items"][0]
+
         return None
 
     def rename_file(self, fileid, new_filename):
