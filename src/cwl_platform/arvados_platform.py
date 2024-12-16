@@ -1,9 +1,11 @@
 '''
 Arvados Platform class
 '''
+import collections
 import json
 import logging
 import os
+import pathlib
 import re
 import subprocess
 import tempfile
@@ -13,8 +15,6 @@ import chardet
 import googleapiclient
 
 import arvados
-import collections
-import pathlib
 
 from .base_platform import Platform
 
