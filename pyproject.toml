@@ -1,13 +1,13 @@
 [project]
 name = "cwl_platform"
-version = "0.3-rc2"
+version = "0.3-rc3"
 authors = [
   { name="Ryan Golhar", email="ryan.golhar@bms.com" }
 ]
 description = "Multi-Platform Launcher Template"
 readme = "README.md"
 license = {file = "LICENSE"}
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
