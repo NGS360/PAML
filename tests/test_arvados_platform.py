@@ -2,6 +2,8 @@
 Test Module for Arvados Platform
 '''
 import json
+import os
+
 import unittest
 import mock
 from mock import MagicMock
@@ -99,6 +101,11 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform.delete_task(task)
         # Assert
         self.platform.api.container_requests().delete.assert_called_once_with(uuid="12345")
+
+    def test_detect_platform(self):
+        ''' Test detect_platform method '''
+        os.environ['ARVADOS_API_HOST'] = 'some host'
+        self.assertTrue(ArvadosPlatform.detect())
 
 if __name__ == '__main__':
     unittest.main()

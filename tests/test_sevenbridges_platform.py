@@ -36,6 +36,10 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Assert
         task.delete.assert_called_once_with()
 
+    def test_detect_platform(self):
+        ''' Test detect_platform method '''
+        self.assertTrue(SevenBridgesPlatform.detect())
+
     def test_get_project(self):
         ''' Test that get_project returns None when we do not have a TASK_ID '''
         self.platform.api = MagicMock()

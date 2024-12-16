@@ -18,9 +18,12 @@ REMOVED_HEADER = "### Removed 👋"
 
 
 def get_change_log_notes() -> str:
+    '''
+    Read CHANGELOG.md
+    '''
     in_current_section = False
     current_section_notes: List[str] = []
-    with open("CHANGELOG.md") as changelog:
+    with open("CHANGELOG.md", encoding="utf-8") as changelog:
         for line in changelog:
             if line.startswith("## "):
                 if line.startswith("## Unreleased"):
@@ -44,6 +47,9 @@ def get_change_log_notes() -> str:
 
 
 def get_commit_history() -> str:
+    '''
+    get git commit history
+    '''
     new_version = packaging.version.parse(TAG)
 
     # Pull all tags.
@@ -73,10 +79,10 @@ def get_commit_history() -> str:
 
 
 def main():
+    ''' main '''
     print(get_change_log_notes())
     print(get_commit_history())
 
 
 if __name__ == "__main__":
     main()
-
