@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.3-rc3](https://github.com/NGS360/PAML.git/releases/tag/v0.3-rc3) - 2024-12-16
+
+### Changed
+
+- Update support Python version >= 3.9
+
 ## [v0.3-rc2](https://github.com/NGS360/PAML.git/releases/tag/v0.3-rc2) - 2024-12-16
 
 ### Changed
 
 - Update support Python version >= 3.11
-
 
 ## [v0.3-rc1](https://github.com/NGS360/PAML.git/releases/tag/v0.3-rc1) - 2024-12-16
 
