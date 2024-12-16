@@ -9,14 +9,84 @@ class Platform(ABC):
         self.name = name
         self.connected = False
 
-    @abstractmethod
-    def connect(self, **kwargs):
-        ''' Connect to the platform '''
-
+    # File methods
     @abstractmethod
     def copy_folder(self, source_project, source_folder, destination_project):
         ''' Copy source folder to destination project '''
 
+    @abstractmethod
+    def get_file_id(self, project, file_path):
+        ''' Get a file id by its full path name '''
+
+    @abstractmethod
+    def get_folder_id(self, project, folder_path):
+        ''' Get a folder id by its full path name '''
+
+    @abstractmethod
+    def rename_file(self, fileid, new_filename):
+        '''
+        Rename a file to new_filename.
+
+        :param file: File ID to rename
+        :param new_filename: str of new filename
+        '''
+
+    @abstractmethod
+    def roll_file(self, project, file_name):
+        '''
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
+        '''
+
+    @abstractmethod
+    def stage_output_files(self, project, output_files):
+        '''
+        Stage output files to a project
+
+        :param project: The project to stage files to
+        :param output_files: A list of output files to stage
+        :return: None
+        '''
+
+    @abstractmethod
+    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False):
+        '''
+        Upload a local file to project 
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
+        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param destination_filename: File name after uploaded to destination folder.
+        :param overwrite: Overwrite the file if it already exists.
+        :return: ID of uploaded file.
+        '''
+
+    # Project methods
+    @abstractmethod
+    def create_project(self, project_name, project_description, **kwargs):
+        '''
+        Create a project
+        
+        :param project_name: Name of the project
+        :param project_description: Description of the project
+        :param kwargs: Additional arguments for creating a project
+        :return: Project object
+        '''
+
+    @abstractmethod
+    def get_project(self):
+        ''' Determine what project we are running in '''
+
+    @abstractmethod
+    def get_project_by_name(self, project_name):
+        ''' Get a project by its name '''
+
+    @abstractmethod
+    def get_project_by_id(self, project_id):
+        ''' Get a project by its id '''
+
+    # Task/Workflow methods
     @abstractmethod
     def copy_workflow(self, src_workflow, destination_project):
         '''
@@ -43,21 +113,9 @@ class Platform(ABC):
     def delete_task(self, task):
         ''' Delete a task/workflow/process '''
 
-    @classmethod
-    def detect(cls):
-        ''' Detect platform we are running on '''
-
     @abstractmethod
     def get_current_task(self):
         ''' Get the current task '''
-
-    @abstractmethod
-    def get_file_id(self, project, file_path):
-        ''' Get a file id by its full path name '''
-
-    @abstractmethod
-    def get_folder_id(self, project, folder_path):
-        ''' Get a folder id by its full path name '''
 
     @abstractmethod
     def get_task_input(self, task, input_name):
@@ -91,50 +149,6 @@ class Platform(ABC):
         ''' Get a tasks by its name '''
 
     @abstractmethod
-    def get_project(self):
-        ''' Determine what project we are running in '''
-
-    @abstractmethod
-    def get_project_by_name(self, project_name):
-        ''' Get a project by its name '''
-
-    @abstractmethod
-    def get_project_by_id(self, project_id):
-        ''' Get a project by its id '''
-
-    @abstractmethod
-    def rename_file(self, fileid, new_filename):
-        '''
-        Rename a file to new_filename.
-
-        :param file: File ID to rename
-        :param new_filename: str of new filename
-        '''
-
-    @abstractmethod
-    def roll_file(self, project, file_name):
-        '''
-        Roll (find and rename) a file in a project.
-
-        :param project: The project the file is located in
-        :param file_name: The filename that needs to be rolled
-        '''
-
-    def set_logger(self, logger):
-        ''' Set the logger '''
-        self.logger = logger
-
-    @abstractmethod
-    def stage_output_files(self, project, output_files):
-        '''
-        Stage output files to a project
-
-        :param project: The project to stage files to
-        :param output_files: A list of output files to stage
-        :return: None
-        '''
-
-    @abstractmethod
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
         DEPRECATED: Use stage_output_files instead
@@ -161,16 +175,28 @@ class Platform(ABC):
         :param workflow: Workflow to submit
         :param parameters: Parameters for the workflow
         :param executing_settings: {use_spot_instance: True/False}
+        :return: Task object or None
         '''
 
+    # User methods
     @abstractmethod
-    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
-        '''
-        Upload a local file to project 
-        :param filename: filename of local file to be uploaded.
-        :param project: project that the file is uploaded to.
-        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
-        :param destination_filename: File name after uploaded to destination folder.
-        :param overwrite: Overwrite the file if it already exists.
-        :return: ID of uploaded file.
-        '''
+    def get_user(self, user):
+        """
+        Get a user object from their (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
+
+    # Other methods
+    @abstractmethod
+    def connect(self, **kwargs):
+        ''' Connect to the platform '''
+
+    @classmethod
+    def detect(cls):
+        ''' Detect platform we are running on '''
+
+    def set_logger(self, logger):
+        ''' Set the logger '''
+        self.logger = logger

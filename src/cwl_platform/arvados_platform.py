@@ -1,9 +1,11 @@
 '''
 Arvados Platform class
 '''
+import collections
 import json
 import logging
 import os
+import pathlib
 import re
 import subprocess
 import tempfile
@@ -13,6 +15,7 @@ import chardet
 import googleapiclient
 
 import arvados
+
 from .base_platform import Platform
 
 def open_file_with_inferred_encoding(filename, mode='r'):
@@ -27,7 +30,7 @@ def open_file_with_inferred_encoding(filename, mode='r'):
 
 class ArvadosTask():
     '''
-    Arvados Task class to encapsulate task functionality to mimick SevenBrides task class
+    Arvados Task class to encapsulate task functionality to mimick SevenBridges task class
     '''
     def __init__(self, container_request, container):
         self.container_request = container_request
@@ -70,6 +73,23 @@ class ArvadosPlatform(Platform):
         self.keep_client = None
         self.logger = logging.getLogger(__name__)
 
+    def _all_files(self, root_collection):
+        '''
+        all_files yields tuples of (collection path, file object) for
+        each file in the collection.
+        '''
+
+        stream_queue = collections.deque([pathlib.PurePosixPath('.')])
+        while stream_queue:
+            stream_path = stream_queue.popleft()
+            subcollection = root_collection.find(str(stream_path))
+            for name, item in subcollection.items():
+                if isinstance(item, arvados.arvfile.ArvadosFile):
+                    yield (stream_path / name, item)
+                else:
+                    stream_queue.append(stream_path / name)
+
+
     def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
         '''
         Get list of files in collection, if subdirectory_path is provided, return only files in that subdirectory.
@@ -79,7 +99,7 @@ class ArvadosPlatform(Platform):
         :return: list of files in the collection
         '''
         the_col = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid)
-        file_list = the_col.all_files()
+        file_list = self._all_files(the_col)
         if subdirectory_path:
             return [fl for fl in file_list if os.path.basename(fl.stream_name()) == subdirectory_path]
         return list(file_list)
@@ -91,7 +111,7 @@ class ArvadosPlatform(Platform):
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
                                                               keep_client=self.keep_client)
-        if cwl_output_collection.items() is None:
+        if len(cwl_output_collection.items()) == 0:
             return None
 
         cwl_output = None
@@ -234,6 +254,26 @@ class ArvadosPlatform(Platform):
                 del workflow['uuid']
                 destination_workflows.append(self.api.workflows().create(body=workflow).execute())
         return destination_workflows
+
+    def create_project(self, project_name, project_description, **kwargs):
+        '''
+        Create a project
+        
+        :param project_name: Name of the project
+        :param project_description: Description of the project
+        :param kwargs: Additional arguments for creating a project
+        :return: Project object
+        '''
+        arvados_user = self.api.users().current().execute()
+        project = self.api.groups().create(body={"owner_uuid": f'{arvados_user["uuid"]}',
+                                                 "name": project_name,
+                                                 "description": project_description,
+                                                 "properties": {
+                                                     "proj_owner": arvados_user["username"]
+                                                 },
+                                                 "group_class": "project"}
+                                           ).execute()
+        return project
 
     def delete_task(self, task: ArvadosTask):
         ''' Delete a task/workflow/process '''
@@ -389,8 +429,12 @@ class ArvadosPlatform(Platform):
                                                               keep_client=self.keep_client)
         with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
             cwl_output = json.load(cwl_output_file)
-        output_file = cwl_output[output_name]['basename']
-        return output_file
+        if output_name in cwl_output:
+            if isinstance(cwl_output[output_name], list):
+                return [output['basename'] for output in cwl_output[output_name]]
+            if isinstance(cwl_output[output_name], dict):
+                return cwl_output[output_name]['basename']
+        raise ValueError(f"Output {output_name} does not exist for task {task.container_request['uuid']}.")
 
     def get_tasks_by_name(self, project, task_name): # -> list(ArvadosTask):
         '''
@@ -442,6 +486,21 @@ class ArvadosPlatform(Platform):
         search_result = self.api.groups().list(filters=[["uuid", "=", project_id]]).execute()
         if len(search_result['items']) > 0:
             return search_result['items'][0]
+        return None
+
+    def get_user(self, user):
+        """
+        Get a user object from their (platform) user id or email address
+
+        :param user: BMS user id or email address
+        :return: User object or None
+        """
+        if '@' in user:
+            user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
+        else:
+            user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
+        if len(user_resp['items']) > 0:
+            return user_resp["items"][0]
         return None
 
     def rename_file(self, fileid, new_filename):
@@ -571,7 +630,15 @@ class ArvadosPlatform(Platform):
         outputs_collection.save()
 
     def submit_task(self, name, project, workflow, parameters, execution_settings=None):
-        ''' Submit a workflow on the platform '''
+        '''
+        Submit a workflow on the platform
+        :param name: Name of the task to submit
+        :param project: Project to submit the task to
+        :param workflow: Workflow to submit
+        :param parameters: Parameters for the workflow
+        :param executing_settings: {use_spot_instance: True/False}
+        :return: Task object or None
+        '''
         with tempfile.NamedTemporaryFile() as parameter_file:
             with open(parameter_file.name, mode='w', encoding="utf-8") as fout:
                 json.dump(parameters, fout)
