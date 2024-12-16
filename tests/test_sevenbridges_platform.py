@@ -4,7 +4,7 @@ Test Module for SevenBridges Platform
 import unittest
 import os
 import mock
-from mock import MagicMock, patch
+from mock import MagicMock
 import sevenbridges
 
 from cwl_platform.sevenbridges_platform import SevenBridgesPlatform
