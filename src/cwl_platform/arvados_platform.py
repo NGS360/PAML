@@ -379,8 +379,11 @@ class ArvadosPlatform(Platform):
         '''
         if refresh:
             # On newly submitted jobs, we'll only have a container_request, uuid.
-            task.container_request = arvados.api().container_requests().get(uuid = task.container_request['uuid']).execute() # pylint: disable=line-too-long
-            task.container = arvados.api().containers().get(uuid = task.container_request['container_uuid']).execute()
+            # pylint gives a warning that avvados.api is not callable, when in fact it is.
+            task.container_request = arvados.api().container_requests().get( # pylint: disable=not-callable
+                uuid = task.container_request['uuid']
+            ).execute()
+            task.container = arvados.api().containers().get(uuid = task.container_request['container_uuid']).execute() # pylint: disable=not-callable
 
         if task.container['exit_code'] == 0:
             return 'Complete'
