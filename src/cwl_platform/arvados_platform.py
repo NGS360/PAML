@@ -629,7 +629,7 @@ class ArvadosPlatform(Platform):
                             source_collection=source_collection, overwrite=True)
         outputs_collection.save()
 
-    def submit_task(self, name, project, workflow, parameters, executing_settings=None):
+    def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         '''
         Submit a workflow on the platform
         :param name: Name of the task to submit
@@ -643,7 +643,7 @@ class ArvadosPlatform(Platform):
             with open(parameter_file.name, mode='w', encoding="utf-8") as fout:
                 json.dump(parameters, fout)
 
-            use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
+            use_spot_instance = execution_settings.get('use_spot_instance', True) if execution_settings else True
             if use_spot_instance:
                 cmd_spot_instance = "--enable-preemptible"
             else:
