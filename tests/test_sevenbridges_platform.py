@@ -5,6 +5,7 @@ import unittest
 import os
 import mock
 from mock import MagicMock, patch
+import sevenbridges
 
 from cwl_platform.sevenbridges_platform import SevenBridgesPlatform
 
@@ -46,34 +47,74 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         actual_value = self.platform.get_project()
         self.assertIsNone(actual_value)
 
-    def test_roll_file(self):
-        ''' Test that we roll a specific file '''
-        # Set up test parameters
-        mock_file = MagicMock()
-        mock_file.name = "output.txt"
-        mock_file.id = 1
-        mock_file_2 = MagicMock()
-        mock_file_2.name = "sampleA_workflow1_output.txt"
-        mock_file_3 = MagicMock()
-        mock_file_3.name = "sampleB_workflow2_output.txt"
-
-        project_files = [
-            mock_file,
-            mock_file_2,
-            mock_file_3
-        ]
+    def test_get_task_output_filename_single_file(self):
+        ''' Test get_task_output_filename when output_name is a single file '''
         # Set up mocks
+        expected_filename = "output_file.txt"
+        task = MagicMock()
+        task.id = 'a12345'
+        task.outputs = {
+            'output_name': MagicMock(spec = sevenbridges.File)
+        }
+        task.outputs['output_name'].name = expected_filename
         self.platform.api = MagicMock()
-        self.platform.api.files.query.return_value.all.return_value = project_files
-        self.platform.api.files.query.return_value.__len__.return_value = 1
-        self.platform.api.files.query.return_value.__getitem__.return_value = mock_file
+        self.platform.api.tasks.get.return_value = task
 
         # Test
-        with patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform.rename_file') as mock_rename:
-            self.platform.roll_file('test_project', 'output.txt')
-            # Test that output.txt -> _1_output.txt and no other files in project are affected.
-            mock_rename.assert_called_once_with(mock_file.id, '_1_output.txt')
+        actual_filename = self.platform.get_task_output_filename(task, 'output_name')
 
+        # Assert
+        self.platform.api.tasks.get.assert_called_once()
+        self.assertEqual(actual_filename, expected_filename)
+
+    def test_get_task_output_filename_list(self):
+        ''' Test get_task_output_filename when output_name is a list of files '''
+        # Set up mocks
+        expected_filenames = ["output_file1.txt", "output_file2.txt"]
+        task = MagicMock()
+        task.id = '12345'
+        task.outputs = {
+            'output_name': [
+                MagicMock(),
+                MagicMock()
+            ]
+        }
+        task.outputs['output_name'][0].name = expected_filenames[0]
+        task.outputs['output_name'][1].name = expected_filenames[1]
+        self.platform.api = MagicMock()
+        self.platform.api.tasks.get.return_value = task
+
+        # Test
+        actual_filenames = self.platform.get_task_output_filename(task, 'output_name')
+
+        # Assert
+        self.assertListEqual(actual_filenames, expected_filenames)
+
+    def test_output_filename_nonexistant_output_name(self):
+        ''' Test get_task_output_filename when output_name does not exist '''
+        # Set up mocks
+        task = MagicMock()
+        task.id = '12345'
+        task.outputs = {"output_name": []}
+        self.platform.api = MagicMock()
+        self.platform.api.tasks.get.return_value = task
+
+        # Test
+        with self.assertRaises(ValueError):
+            self.platform.get_task_output_filename(task, 'not_an_output_name')
+
+    def test_output_filename_none(self):
+        ''' Test get_task_output_filename when value of output_name is None '''
+        # Set up mocks
+        task = MagicMock()
+        task.id = '12345'
+        task.outputs = {"output_name": None}
+        self.platform.api = MagicMock()
+        self.platform.api.tasks.get.return_value = task
+
+        # Test
+        with self.assertRaises(ValueError):
+            self.platform.get_task_output_filename(task, 'output_name')
 
     def test_submit_task(self):
         ''' Test submit_task method is able to properly parse and a list of integers '''

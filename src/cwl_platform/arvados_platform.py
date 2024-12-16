@@ -27,7 +27,7 @@ def open_file_with_inferred_encoding(filename, mode='r'):
 
 class ArvadosTask():
     '''
-    Arvados Task class to encapsulate task functionality to mimick SevenBrides task class
+    Arvados Task class to encapsulate task functionality to mimick SevenBridges task class
     '''
     def __init__(self, container_request, container):
         self.container_request = container_request
@@ -409,8 +409,12 @@ class ArvadosPlatform(Platform):
                                                               keep_client=self.keep_client)
         with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
             cwl_output = json.load(cwl_output_file)
-        output_file = cwl_output[output_name]['basename']
-        return output_file
+        if output_name in cwl_output:
+            if isinstance(cwl_output[output_name], list):
+                return [output['basename'] for output in cwl_output[output_name]]
+            if isinstance(cwl_output[output_name], dict):
+                return cwl_output[output_name]['basename']
+        raise ValueError(f"Output {output_name} does not exist for task {task.container_request['uuid']}.")
 
     def get_tasks_by_name(self, project, task_name): # -> list(ArvadosTask):
         '''

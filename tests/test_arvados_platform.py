@@ -1,6 +1,7 @@
 '''
 Test Module for Arvados Platform
 '''
+import json
 import os
 
 import unittest
@@ -31,6 +32,66 @@ class TestArvadosPlaform(unittest.TestCase):
         }
         self.platform.connect()
         self.assertTrue(self.platform.connected)
+
+    @mock.patch("arvados.collection.Collection")
+    def test_get_task_output_filename_single_file(self, mock_collection):
+        ''' Test get_task_output_filename method with single dictionary output '''
+        # Set up mocks
+        expected_filename = "output_file.txt"
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        mock_collection.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps({
+            "output_name": {"basename": expected_filename}
+        })
+
+        # Test
+        filename = self.platform.get_task_output_filename(task, "output_name")
+
+        # Assert
+        mock_collection.assert_called_once()
+        mock_collection.return_value.open.assert_called_once()
+        self.assertEqual(filename, expected_filename)
+
+    @mock.patch("arvados.collection.Collection")
+    def test_get_task_output_filename_list(self, mock_collection):
+        ''' Test get_task_output_filename method with list output '''
+        # Set up mocks
+        expected_filenames = ["output_file1.txt", "output_file2.txt"]
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        mock_collection.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps({
+            "output_name": [{"basename": expected_filenames[0]}, {"basename": expected_filenames[1]}]
+        })
+
+        # Test
+        filenames = self.platform.get_task_output_filename(task, "output_name")
+
+        # Assert
+        self.assertListEqual(filenames, expected_filenames)
+
+    @mock.patch("arvados.collection.Collection")
+    def test_output_filename_nonexistant_output_name(self, mock_collection):
+        ''' Test get_task_output_filename method when output name does not exist '''
+        # Set up mocks
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        mock_collection.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps({
+            "output_name": []
+        })
+
+        # Test
+        with self.assertRaises(ValueError):
+            self.platform.get_task_output_filename(task, "not_an_output_name")
+
+    @mock.patch("arvados.collection.Collection")
+    def test_output_filename_none(self, mock_collection):
+        ''' Test get_task_output_filename method when value of output_name is None '''
+        # Set up mocks
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        mock_collection.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps({
+            "output_name": None
+        })
+
+        # Test
+        with self.assertRaises(ValueError):
+            self.platform.get_task_output_filename(task, "output_name")
 
     def test_delete_task(self):
         ''' Test delete_task method '''
