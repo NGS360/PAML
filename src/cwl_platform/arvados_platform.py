@@ -78,17 +78,15 @@ class ArvadosPlatform(Platform):
         all_files yields tuples of (collection path, file object) for
         each file in the collection.
         '''
-
         stream_queue = collections.deque([pathlib.PurePosixPath('.')])
         while stream_queue:
             stream_path = stream_queue.popleft()
             subcollection = root_collection.find(str(stream_path))
             for name, item in subcollection.items():
                 if isinstance(item, arvados.arvfile.ArvadosFile):
-                    yield (stream_path / name, item)
+                    yield stream_path
                 else:
-                    stream_queue.append(stream_path / name)
-
+                    stream_queue.append(stream_path)
 
     def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
         '''
@@ -98,8 +96,8 @@ class ArvadosPlatform(Platform):
         :param subdirectory_path: subdirectory path to filter files in the collection
         :return: list of files in the collection
         '''
-        the_col = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid)
-        file_list = self._all_files(the_col)
+        collection_reader = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid)
+        file_list = self._all_files(collection_reader)
         if subdirectory_path:
             return [fl for fl in file_list if os.path.basename(fl.stream_name()) == subdirectory_path]
         return list(file_list)
