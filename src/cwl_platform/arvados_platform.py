@@ -81,22 +81,17 @@ class ArvadosPlatform(Platform):
         :param subdirectory_path: subdirectory path to filter files in the collection
         :return: list of StreamFileReaders in the collection
         '''
-        file_list = []
         root_collection = arvados.collection.Collection(collection_uuid, api_client=self.api)
-        # Start work from the base stream.
+
         stream_queue = collections.deque([pathlib.PurePosixPath('.')])
         while stream_queue:
             stream_path = stream_queue.popleft()
-            collection = root_collection.find(str(stream_path))
-            for item_name in collection:
-                try:
-                    my_file = collection.open(item_name)
-                    file_list.append(my_file)
-                except IsADirectoryError:
-                    # item_name refers to a stream. Queue it to walk later.
-                    stream_queue.append(stream_path / item_name)
-                    continue
-        return list(file_list)
+            subcollection = root_collection.find(str(stream_path))
+            for name, item in subcollection.items():
+                if isinstance(item, arvados.arvfile.ArvadosFile):
+                    yield str(stream_path / name)
+                else:
+                    stream_queue.append(stream_path / name)
 
     def _load_cwl_output(self, task: ArvadosTask):
         '''
@@ -175,10 +170,8 @@ class ArvadosPlatform(Platform):
         source_collection = arvados.collection.Collection(source_collection["uuid"])
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
-        for source_file in source_files:
-            source_path = f"{source_file.stream_name()}/{source_file.name()}"
-            if source_path not in [f"{destination_file.stream_name()}/{destination_file.name()}"
-                                for destination_file in destination_files]:
+        for source_path in source_files:
+            if source_path not in destination_files:
                 target_collection.copy(source_path, target_path=source_path, source_collection=source_collection)
         target_collection.save()
 
