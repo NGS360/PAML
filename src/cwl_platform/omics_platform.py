@@ -30,14 +30,14 @@ class OmicsPlatform(Platform):
         self.output_bucket = kwargs.get('output_bucket')
         self.role_arn = kwargs.get('role_arn')
 
-    def copy_folder(self, reference_project, reference_folder, destination_project):
+    def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Do nothing and return reference folder, which should be an S3 path.
         NOTE: Launchers copy the reference folder to the destination project so that everything is co-located.
               However this can cause lots of data duplication in S3.  For now we will just use the reference folder
               until another use-case is identified that we need to copy the data.
         '''
-        return reference_folder
+        return source_folder
 
     def copy_workflow(self, src_workflow, destination_project):
         '''Do nothing and return workflow id'''
@@ -45,6 +45,10 @@ class OmicsPlatform(Platform):
 
     def copy_workflows(self, reference_project, destination_project):
         '''Do nothing. This function seems not used in launcher?'''
+        pass
+
+    def create_project(self, project_name, project_description, **kwargs):
+        ''' Do nothing'''
         pass
 
     def delete_task(self, task):
@@ -157,6 +161,10 @@ class OmicsPlatform(Platform):
         }
         return project
 
+    def get_user(self, user):
+        '''Get a user object from their (platform) user id or email address'''
+        raise ValueError("Not yet implemented")
+
     def rename_file(self, fileid, new_filename):
         raise ValueError("Not yet implemented")
 
@@ -167,12 +175,12 @@ class OmicsPlatform(Platform):
         ''' TODO '''
         return
 
-    def stage_task_output(self, task, project, output_to_export, output_directory_name, download=False):
+    def stage_task_output(self, task, project, output_to_export, output_directory_name):
         ''' TODO '''
         return
 
     @retry(wait=wait_fixed(1))
-    def submit_task(self, name, project, workflow, parameters):
+    def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         '''
         Submit workflow for one sample.
         name: sample ID.
