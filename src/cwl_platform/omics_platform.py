@@ -19,6 +19,7 @@ class OmicsPlatform(Platform):
         self.api = None
         self.output_bucket = None
         self.role_arn = None
+        self.s3_client = None
 
     def _list_file_in_s3(self, s3path):
         '''
@@ -44,12 +45,10 @@ class OmicsPlatform(Platform):
 
         If ~/.aws/credentials or ~/.aws/config does not provide a region, region should be specified in the AWS_DEFAULT_REGION environment variable.
         '''
-        self.api = boto3.client('omics',  # TODO - Still needs to provide aws key here
-            region_name='us-east-1')
+        self.api = boto3.client('omics', region_name='us-east-1')
         self.output_bucket = kwargs.get('output_bucket', "bmsrd-ngs-omics/Outputs")
         self.role_arn = kwargs.get('role_arn', "arn:aws:iam::483421617021:role/ngs360-servicerole")
-        self.s3_client = boto3.client('s3', # TODO - Still needs to provide aws key here
-            region_name='us-east-1')
+        self.s3_client = boto3.client('s3', region_name='us-east-1')
 
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
