@@ -6,7 +6,7 @@ import logging
 import boto3
 import botocore
 
-from tenacity import retry, wait_fixed
+from tenacity import retry, wait_fixed, stop_after_attempt
 
 from .base_platform import Platform
 
@@ -20,15 +20,36 @@ class OmicsPlatform(Platform):
         self.output_bucket = None
         self.role_arn = None
 
+    def _list_file_in_s3(self, s3path):
+        '''
+        List all files in S3 path.
+        s3path: S3 path to directory, formatted as s3://bucket/path/to/folder/.
+
+        return list of files within the directory with full s3 path.
+
+        '''
+        bucket = s3path.split('s3://')[1].split('/')[0]
+        prefix = s3path.split(bucket+'/')[1]
+        response = self.s3_client.list_objects_v2(
+            Bucket=bucket,
+            Prefix=prefix)
+        files = []
+        for element in response.get('Contents', []):
+            files += ['s3://'+bucket+'/'+element['Key']]
+        return files
+
     def connect(self, **kwargs):
         ''' 
         Connect to AWS Omics platform
 
         If ~/.aws/credentials or ~/.aws/config does not provide a region, region should be specified in the AWS_DEFAULT_REGION environment variable.
         '''
-        self.api = boto3.client('omics')
-        self.output_bucket = kwargs.get('output_bucket')
-        self.role_arn = kwargs.get('role_arn')
+        self.api = boto3.client('omics',  # TODO - Still needs to provide aws key here
+            region_name='us-east-1')
+        self.output_bucket = kwargs.get('output_bucket', "bmsrd-ngs-omics/Outputs")
+        self.role_arn = kwargs.get('role_arn', "arn:aws:iam::483421617021:role/ngs360-servicerole")
+        self.s3_client = boto3.client('s3', # TODO - Still needs to provide aws key here
+            region_name='us-east-1')
 
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
@@ -112,15 +133,28 @@ class OmicsPlatform(Platform):
 
     def get_task_output(self, task, output_name):
         ''' Retrieve the output field of the task '''
-        taskinfo = self.api.get_run(id=task)
-        # TODO: get_run only returns OutputUri. Get file path based on output_name (filename)?
-        filename = None
-        # TODO: We shouldn't be hard-coding stuff like this.  these functions should be very generic.
-        if output_name == 'RecalibratedBAM':
-            filename = taskinfo.name + '.bam'
-        if filename == None:
-            raise ValueError(f"Cannot find output file for: {output_name}")
-        return taskinfo['outputUri'] + filename
+        # Get all files in output folder
+        taskinfo = self.api.get_run(id=task["id"])
+        outputUri = taskinfo['outputUri'] + task["id"] + "/out/"
+        outputUri_files = self._list_file_in_s3(outputUri)
+
+        # Match output_name with existing files in output folder
+        if "*" not in output_name:
+            output = outputUri + output_name
+            if output in outputUri_files:
+                return output
+            else:
+                return None
+        else:
+            output = []
+            prefix=output_name.split('*')[0]
+            suffix=output_name.split('*')[-1]
+            for output_file in outputUri_files:
+                filename = output_file.split('/')[-1]
+                if (prefix == "" or filename.startswith(prefix)) and \
+                    (suffix == "" or filename.endswith(suffix)):
+                    output+=[output_file]
+            return output
 
     def get_task_output_filename(self, task, output_name):
         ''' Retrieve the output field of the task and return filename'''
@@ -130,15 +164,10 @@ class OmicsPlatform(Platform):
     def get_tasks_by_name(self, project, task_name):
         ''' Get a tasks by its name '''
         tasks = []
-        runs = self.api.list_runs(name=task_name)
+        runs = self.api.list_runs(name=task_name, runGroupId=project['ProjectId'])
         for item in runs['items']:
             run = self.api.get_run(id=item['id'])
-            if 'ProjectId' in project:
-                if run['tags']['ProjectId'] == project['ProjectId']:
-                    tasks.append(run)
-            elif 'ProjectName' in project:
-                if run['tags']['ProjectName'] == project['ProjectName']:
-                    tasks.append(run)
+            tasks.append(run)
         return tasks
 
     def get_project(self):
@@ -179,7 +208,7 @@ class OmicsPlatform(Platform):
         ''' TODO '''
         return
 
-    @retry(wait=wait_fixed(1))
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(3))
     def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         '''
         Submit workflow for one sample.
@@ -205,7 +234,8 @@ class OmicsPlatform(Platform):
                                      roleArn=self.role_arn,
                                      parameters=parameters,
                                      name=name,
-                                     tags=project,
+                                     runGroupId=project["ProjectId"],
+                                     tags={"ProjectId": project["ProjectId"]},
                                      outputUri=base_output_path)
             logger.info('Started run for %s, RunID: %s',name,job['id'])
             return job
