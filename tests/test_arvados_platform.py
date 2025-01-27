@@ -33,6 +33,17 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
+    @mock.patch('ArvadosPlatform._load_cwl_output')
+    def test_get_task_output(self, mock_load_cwl_output):
+        # Set up test parameters
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        # Set up supporting mocks
+        mock_load_cwl_output.return_value = {}
+        # Test
+        actual_value = self.platform.get_task_output(task, 'some_output_field')
+        # Check results
+        self.assertIsNone(actual_value)
+
     @mock.patch("arvados.collection.Collection")
     def test_get_task_output_filename_single_file(self, mock_collection):
         ''' Test get_task_output_filename method with single dictionary output '''
