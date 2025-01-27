@@ -35,6 +35,7 @@ class TestArvadosPlaform(unittest.TestCase):
 
     @mock.patch('ArvadosPlatform._load_cwl_output')
     def test_get_task_output(self, mock_load_cwl_output):
+        ''' Test that get_task_output can handle cases when the cwl_output is {} '''
         # Set up test parameters
         task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
         # Set up supporting mocks
