@@ -99,21 +99,21 @@ class ArvadosPlatform(Platform):
             key = "/".join(components[1:])
         return collection_uuid, key
 
-    def _get_collection(self, filter):
+    def _get_collection(self, filters):
         """
         Get a list of collection objects matching filter criteria from Arvados
-        :param filter: List of filters to search for collection, e.g.
+        :param filters: List of filters to search for collection, e.g.
           [ ["owner_uuid", "=", project_uuid], ["name", "=", collName] ]
         :return: Matching Collection objects or None
         """
         search_result = (
-            self.api.collections().list(filters=filter, offset=0, limit=1000).execute()
+            self.api.collections().list(filters=filters, offset=0, limit=1000).execute()
         )
         collections = search_result["items"]
         while len(collections) < search_result["items_available"]:
             search_result = (
                 self.api.collections()
-                .list(filters=filter, offset=len(collections), limit=1000)
+                .list(filters=filters, offset=len(collections), limit=1000)
                 .execute()
             )
             collections += search_result["items"]
