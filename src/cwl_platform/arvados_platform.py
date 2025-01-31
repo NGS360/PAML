@@ -206,17 +206,17 @@ class ArvadosPlatform(Platform):
         :return: None
         """
         if permission == "admin":
-            aPermission = "can_manage"
+            arv_permission = "can_manage"
         elif permission == "write":
-            aPermission = "can_write"
-        elif permission == "read":
-            aPermission = "can_read"
+            arv_permission = "can_write"
+        else: #elif permission == "read":
+            arv_permission = "can_read"
 
         self.api.links().create(
             body={
                 "link": {
                     "link_class": "permission",
-                    "name": aPermission,
+                    "name": arv_permission,
                     "tail_uuid": user["uuid"],
                     "head_uuid": project["uuid"],
                 }
