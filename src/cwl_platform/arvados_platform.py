@@ -136,14 +136,14 @@ class ArvadosPlatform(Platform):
                     stream_queue.append(stream_path / name)
 
     def _get_files_list_in_collection(
-        self, collection_uuid, subdirectory_path=None, filter=None
+        self, collection_uuid, subdirectory_path=None, filters=None
     ):
         """
         Get list of files in collection, if subdirectory_path is provided, return only files in that subdirectory.
 
         :param collection_uuid: uuid of the collection
         :param subdirectory_path: subdirectory path to filter files in the collection
-        :param filter: Dictionary containing filter criteria
+        :param filters: Dictionary containing filter criteria
             {
                 'name': 'file_name',
                 'prefix': 'file_prefix',
@@ -162,16 +162,16 @@ class ArvadosPlatform(Platform):
                 for fl in file_list
                 if os.path.basename(fl.stream_name()) == subdirectory_path
             ]
-        if filter:
+        if filters:
             files = []
             for file in file_list:
                 file_name = file.name
                 self.logger.debug("Checking %s for filter criteria", file_name)
-                if "name" in filter and filter["name"] == file.name:
+                if "name" in filters and filters["name"] == file.name:
                     files.append(file)
-                elif "prefix" in filter and file.name.startswith(filter["prefix"]):
+                elif "prefix" in filters and file.name.startswith(filters["prefix"]):
                     files.append(file)
-                elif "suffix" in filter and file.name.endswith(filter["suffix"]):
+                elif "suffix" in filters and file.name.endswith(filters["suffix"]):
                     files.append(file)
             return files
         return list(file_list)
@@ -575,12 +575,12 @@ class ArvadosPlatform(Platform):
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
     # @override
-    def get_files(self, project, filter=None):
+    def get_files(self, project, filters=None):
         """
         Retrieve files in a project matching the filter criteria.
 
         :param project: Project to search for files
-        :param filter: Dictionary containing filter criteria
+        :param filters: Dictionary containing filter criteria
             {
                 'name': 'file_name',
                 'prefix': 'file_prefix',
@@ -592,25 +592,25 @@ class ArvadosPlatform(Platform):
         """
         # Iterate over all collections and find files matching filter criteria.
         collection_filter = [["owner_uuid", "=", project["uuid"]]]
-        if filter and "folder" in filter:
-            collection_filter["name"] = filter["folder"]
+        if filters and "folder" in filter:
+            collection_filter["name"] = filters["folder"]
         self.logger.debug(
             "Fetching list of collections matching filter, %s, in project %s",
             collection_filter,
             project["uuid"],
         )
-        collections = self._get_collection(collection_filter)
+        matching_collections = self._get_collection(collection_filter)
 
         files = []
-        for num, collection in enumerate(collections):
+        for num, collection in enumerate(matching_collections):
             self.logger.debug(
                 "[%d/%d] Fetching list of files in collection %s",
                 num + 1,
-                len(collections),
+                len(matching_collections),
                 collection["uuid"],
             )
             files += self._get_files_list_in_collection(
-                collection["uuid"], filter=filter
+                collection["uuid"], filters=filters
             )
         self.logger.debug("Return list of %d files", len(files))
         return files
