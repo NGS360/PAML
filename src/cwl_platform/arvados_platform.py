@@ -109,15 +109,15 @@ class ArvadosPlatform(Platform):
         search_result = (
             self.api.collections().list(filters=filters, offset=0, limit=1000).execute()
         )
-        collections = search_result["items"]
-        while len(collections) < search_result["items_available"]:
+        matching_collections = search_result["items"]
+        while len(matching_collections) < search_result["items_available"]:
             search_result = (
                 self.api.collections()
-                .list(filters=filters, offset=len(collections), limit=1000)
+                .list(filters=filters, offset=len(matching_collections), limit=1000)
                 .execute()
             )
-            collections += search_result["items"]
-        return collections
+            matching_collections += search_result["items"]
+        return matching_collections
 
     def _all_files(self, root_collection):
         """
