@@ -67,10 +67,6 @@ class Platform(ABC):
         """
 
     @abstractmethod
-    def get_folder_id(self, project, folder_path):
-        """Get a folder id by its full path name"""
-
-    @abstractmethod
     def get_file_id(self, project, file_path):
         """Get a file id by its full path name"""
 
