@@ -575,12 +575,12 @@ class ArvadosPlatform(Platform):
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
     # @override
-    def get_files(self, project, filters=None):
+    def get_files(self, project, filter=None):
         """
         Retrieve files in a project matching the filter criteria.
 
         :param project: Project to search for files
-        :param filters: Dictionary containing filter criteria
+        :param filter: Dictionary containing filter criteria
             {
                 'name': 'file_name',
                 'prefix': 'file_prefix',
@@ -592,8 +592,8 @@ class ArvadosPlatform(Platform):
         """
         # Iterate over all collections and find files matching filter criteria.
         collection_filter = [["owner_uuid", "=", project["uuid"]]]
-        if filters and "folder" in filter:
-            collection_filter["name"] = filters["folder"]
+        if filter and "folder" in filter:
+            collection_filter["name"] = filter["folder"]
         self.logger.debug(
             "Fetching list of collections matching filter, %s, in project %s",
             collection_filter,
@@ -610,7 +610,7 @@ class ArvadosPlatform(Platform):
                 collection["uuid"],
             )
             files += self._get_files_list_in_collection(
-                collection["uuid"], filters=filters
+                collection["uuid"], filters=filter
             )
         self.logger.debug("Return list of %d files", len(files))
         return files
