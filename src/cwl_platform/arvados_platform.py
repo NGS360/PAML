@@ -71,7 +71,7 @@ class ArvadosPlatform(Platform):
         self.keep_client = None
         self.logger = logging.getLogger(__name__)
 
-    def _find_collection_key(self, project_uuid):
+    def _find_collection_key(self, collection_path):
         """
         This is a helper function that given an collection path such that the path is of
         the form: collection/key
