@@ -548,11 +548,11 @@ class SevenBridgesPlatform(Platform):
     def get_task_output_filename(self, task: sevenbridges.Task, output_name):
         ''' Retrieve the output field of the task and return filename'''
         task = self.api.tasks.get(id=task.id)
-        alloutputs = task.outputs
-        if output_name in alloutputs:
-            outputfile = alloutputs[output_name]
-            if outputfile:
-                return outputfile.name
+        if output_name in task.outputs:
+            if isinstance(task.outputs[output_name], list):
+                return [output.name for output in task.outputs[output_name]]
+            if isinstance(task.outputs[output_name], sevenbridges.File):
+                return task.outputs[output_name].name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
     def get_tasks_by_name(self, project, task_name): # -> list(sevenbridges.Task):
@@ -703,7 +703,7 @@ class SevenBridgesPlatform(Platform):
                         elif file.type == "folder":
                             self._add_tag_to_folder(file, "OUTPUT")
 
-    def submit_task(self, name, project, workflow, parameters, executing_settings=None):
+    def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         '''
         Submit a workflow on the platform
         :param name: Name of the task to submit
@@ -729,7 +729,7 @@ class SevenBridgesPlatform(Platform):
                         sbgfile = self.api.files.get(id=entry['location'])
                     set_file_metadata(sbgfile, entry['metadata'])
 
-        use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
+        use_spot_instance = execution_settings.get('use_spot_instance', True) if execution_settings else True
         sbg_execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
 
         # This metadata code will come out as part of the metadata removal effort.

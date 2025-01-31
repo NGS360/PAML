@@ -1,9 +1,11 @@
 '''
 Arvados Platform class
 '''
+import collections
 import json
 import logging
 import os
+import pathlib
 import re
 import subprocess
 import tempfile
@@ -14,6 +16,7 @@ import googleapiclient
 import smart_open
 
 import arvados
+
 from .base_platform import Platform
 
 def open_file_with_inferred_encoding(filename, mode='r'):
@@ -28,7 +31,7 @@ def open_file_with_inferred_encoding(filename, mode='r'):
 
 class ArvadosTask():
     '''
-    Arvados Task class to encapsulate task functionality to mimick SevenBrides task class
+    Arvados Task class to encapsulate task functionality to mimick SevenBridges task class
     '''
     def __init__(self, container_request, container):
         self.container_request = container_request
@@ -86,7 +89,7 @@ class ArvadosPlatform(Platform):
         if len(components) > 1:
             key = '/'.join(components[1:])
         return collection_uuid, key
-    
+
     def _get_collection(self, filter):
         '''
         Get a list of collection objects matching filter criteria from Arvados
@@ -99,6 +102,22 @@ class ArvadosPlatform(Platform):
             search_result = self.api.collections().list(filters=filter, offset=len(collections), limit=1000).execute()
             collections += search_result['items']
         return collections
+
+    def _all_files(self, root_collection):
+        '''
+        all_files yields tuples of (collection path, file object) for
+        each file in the collection.
+        '''
+
+        stream_queue = collections.deque([pathlib.PurePosixPath('.')])
+        while stream_queue:
+            stream_path = stream_queue.popleft()
+            subcollection = root_collection.find(str(stream_path))
+            for name, item in subcollection.items():
+                if isinstance(item, arvados.arvfile.ArvadosFile):
+                    yield (stream_path / name, item)
+                else:
+                    stream_queue.append(stream_path / name)
 
     def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None, filter=None):
         '''
@@ -116,7 +135,7 @@ class ArvadosPlatform(Platform):
         :return: list of files in the collection
         '''
         the_col = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid)
-        file_list = the_col.all_files()
+        file_list = self._all_files(the_col)
         if subdirectory_path:
             return [fl for fl in file_list if os.path.basename(fl.stream_name()) == subdirectory_path]
         if filter:
@@ -142,7 +161,7 @@ class ArvadosPlatform(Platform):
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
                                                               keep_client=self.keep_client)
-        if cwl_output_collection.items() is None:
+        if len(cwl_output_collection.items()) == 0:
             return None
 
         cwl_output = None
@@ -498,8 +517,11 @@ class ArvadosPlatform(Platform):
         '''
         if refresh:
             # On newly submitted jobs, we'll only have a container_request, uuid.
-            task.container_request = arvados.api().container_requests().get(uuid = task.container_request['uuid']).execute() # pylint: disable=line-too-long
-            task.container = arvados.api().containers().get(uuid = task.container_request['container_uuid']).execute()
+            # pylint gives a warning that avvados.api is not callable, when in fact it is.
+            task.container_request = arvados.api().container_requests().get( # pylint: disable=not-callable
+                uuid = task.container_request['uuid']
+            ).execute()
+            task.container = arvados.api().containers().get(uuid = task.container_request['container_uuid']).execute() # pylint: disable=not-callable
 
         if task.container['exit_code'] == 0:
             return 'Complete'
@@ -517,22 +539,26 @@ class ArvadosPlatform(Platform):
         ''' Retrieve the output field of the task '''
         cwl_output = self._load_cwl_output(task)
 
-        if cwl_output.get(output_name, 'None'):
-            output_field = cwl_output[output_name]
+        if cwl_output is None:
+            return None
+        if not output_name in cwl_output:
+            return None
 
-            if isinstance(output_field, list):
-                # If the output is a list, return a list of file locations
-                output_files = []
-                for output in output_field:
-                    if 'location' in output:
-                        output_file = output['location']
-                        output_files.append(f"keep:{task.container_request['output_uuid']}/{output_file}")
-                return output_files
+        output_field = cwl_output[output_name]
 
-            if 'location' in output_field:
-                # If the output is a single file, return the file location
-                output_file = cwl_output[output_name]['location']
-                return f"keep:{task.container_request['output_uuid']}/{output_file}"
+        if isinstance(output_field, list):
+            # If the output is a list, return a list of file locations
+            output_files = []
+            for output in output_field:
+                if 'location' in output:
+                    output_file = output['location']
+                    output_files.append(f"keep:{task.container_request['output_uuid']}/{output_file}")
+            return output_files
+
+        if 'location' in output_field:
+            # If the output is a single file, return the file location
+            output_file = cwl_output[output_name]['location']
+            return f"keep:{task.container_request['output_uuid']}/{output_file}"
 
         return None
 
@@ -548,8 +574,12 @@ class ArvadosPlatform(Platform):
                                                               keep_client=self.keep_client)
         with cwl_output_collection.open('cwl.output.json') as cwl_output_file:
             cwl_output = json.load(cwl_output_file)
-        output_file = cwl_output[output_name]['basename']
-        return output_file
+        if output_name in cwl_output:
+            if isinstance(cwl_output[output_name], list):
+                return [output['basename'] for output in cwl_output[output_name]]
+            if isinstance(cwl_output[output_name], dict):
+                return cwl_output[output_name]['basename']
+        raise ValueError(f"Output {output_name} does not exist for task {task.container_request['uuid']}.")
 
     def get_tasks_by_name(self, project, task_name): # -> list(ArvadosTask):
         '''
@@ -760,7 +790,7 @@ class ArvadosPlatform(Platform):
                             source_collection=source_collection, overwrite=True)
         outputs_collection.save()
 
-    def submit_task(self, name, project, workflow, parameters, executing_settings=None):
+    def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         '''
         Submit a workflow on the platform
         :param name: Name of the task to submit
@@ -774,7 +804,7 @@ class ArvadosPlatform(Platform):
             with open(parameter_file.name, mode='w', encoding="utf-8") as fout:
                 json.dump(parameters, fout)
 
-            use_spot_instance = executing_settings.get('use_spot_instance', True) if executing_settings else True
+            use_spot_instance = execution_settings.get('use_spot_instance', True) if execution_settings else True
             if use_spot_instance:
                 cmd_spot_instance = "--enable-preemptible"
             else:
