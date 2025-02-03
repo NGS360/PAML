@@ -666,7 +666,7 @@ class ArvadosPlatform(Platform):
             # On newly submitted jobs, we'll only have a container_request, uuid.
             # pylint gives a warning that avvados.api is not callable, when in fact it is.
             task.container_request = (
-                arvados.api()
+                self.api
                 .container_requests()
                 .get(  # pylint: disable=not-callable
                     uuid=task.container_request["uuid"]
@@ -674,7 +674,7 @@ class ArvadosPlatform(Platform):
                 .execute()
             )
             task.container = (
-                arvados.api()
+                self.api
                 .containers()
                 .get(uuid=task.container_request["container_uuid"])
                 .execute()
