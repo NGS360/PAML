@@ -369,7 +369,7 @@ class SevenBridgesPlatform(Platform):
         :return: Name of local file downloaded or None
         """
         # If file is a str, assume its a file id, else is a file object
-        if isinstance(file) == str:
+        if isinstance(file, str):
             file = self.api.files.get(id=file)
         file_name = f"{dest_folder}/{file.name}"
         file.download(file_name)
