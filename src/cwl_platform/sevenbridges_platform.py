@@ -389,7 +389,7 @@ class SevenBridgesPlatform(Platform):
         2. the return value is the export job object, not the S3 file path.
         """
         # If file is a str, assume its a file id, else is a file object
-        if type(file) == str:
+        if isinstance(file, str):
             file = self.api.files.get(id=file)
 
         volume = None
