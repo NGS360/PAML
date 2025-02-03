@@ -477,12 +477,12 @@ class SevenBridgesPlatform(Platform):
 
         raise ValueError(f"File not found in specified folder: {file_path}")
 
-    def get_files(self, project, filter=None):
+    def get_files(self, project, filters=None):
         """
         Retrieve files in a project matching the filter criteria
 
         :param project: Project to search for files
-        :param filter: Dictionary containing filter criteria
+        :param filters: Dictionary containing filter criteria
             {
                 'name': 'file_name',
                 'prefix': 'file_prefix',
@@ -496,15 +496,15 @@ class SevenBridgesPlatform(Platform):
 
         files = self.api.files.query(project=project, limit=100).all()
         for file in files:
-            if filter.get("name") and file.name != filter["name"]:
+            if filters.get("name") and file.name != filters["name"]:
                 continue
-            if filter.get("prefix") and not file.name.startswith(filter["prefix"]):
+            if filters.get("prefix") and not file.name.startswith(filters["prefix"]):
                 continue
-            if filter.get("suffix") and not file.name.endswith(filter["suffix"]):
+            if filters.get("suffix") and not file.name.endswith(filters["suffix"]):
                 continue
-            if filter.get("folder") and not file.parent.name == filter["folder"]:
+            if filters.get("folder") and not file.parent.name == filters["folder"]:
                 continue
-            if filter.get("recursive") and file.type == "folder":
+            if filters.get("recursive") and file.type == "folder":
                 matching_files.extend(self._list_all_files(files=[file]))
             else:
                 matching_files.append(file)

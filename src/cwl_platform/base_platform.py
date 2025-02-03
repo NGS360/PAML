@@ -50,12 +50,12 @@ class Platform(ABC):
     #    ''' Get a file name by its object or id '''
 
     @abstractmethod
-    def get_files(self, project, filter=None):
+    def get_files(self, project, filters=None):
         """
         Retrieve files in a project matching the filter criteria
 
         :param project: Project to search for files
-        :param filter: Dictionary containing filter criteria
+        :param filters: Dictionary containing filter criteria
             {
                 'name': 'file_name',
                 'prefix': 'file_prefix',
