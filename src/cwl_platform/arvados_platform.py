@@ -57,6 +57,21 @@ class ArvadosTaskEncoder(json.JSONEncoder):
             return o.to_dict()
         return super().default(o)
 
+class StreamFileReader(arvados.arvfile.ArvadosFileReader):
+    class _NameAttribute(str):
+        # The Python file API provides a plain .name attribute.
+        # Older SDK provided a name() method.
+        # This class provides both, for maximum compatibility.
+        def __call__(self):
+            return self
+
+    def __init__(self, arvadosfile):
+        super(StreamFileReader, self).__init__(arvadosfile)
+        self.name = self._NameAttribute(arvadosfile.name)
+
+    def stream_name(self):
+        return super().stream_name().lstrip("./")
+    
 # custom JSON decoder
 def arvados_task_decoder(obj):
     ''' Arvados Task Decoder class '''
@@ -85,10 +100,9 @@ class ArvadosPlatform(Platform):
             subcollection = root_collection.find(str(stream_path))
             for name, item in subcollection.items():
                 if isinstance(item, arvados.arvfile.ArvadosFile):
-                    yield (stream_path / name, item)
+                    yield StreamFileReader(item)
                 else:
                     stream_queue.append(stream_path / name)
-
 
     def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
         '''
