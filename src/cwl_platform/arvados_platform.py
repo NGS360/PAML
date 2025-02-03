@@ -73,11 +73,15 @@ class ArvadosPlatform(Platform):
         self.keep_client = None
         self.logger = logging.getLogger(__name__)
 
-    def _all_files(self, root_collection):
+    def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
         '''
-        all_files yields tuples of (collection path, file object) for
-        each file in the collection.
+        Get list of files in collection, if subdirectory_path is provided, return only files in that subdirectory.
+
+        :param collection_uuid: uuid of the collection
+        :param subdirectory_path: subdirectory path to filter files in the collection
+        :return: list of StreamFileReaders in the collection
         '''
+        root_collection = arvados.collection.Collection(collection_uuid, api_client=self.api)
 
         stream_queue = collections.deque([pathlib.PurePosixPath('.')])
         while stream_queue:
@@ -85,24 +89,9 @@ class ArvadosPlatform(Platform):
             subcollection = root_collection.find(str(stream_path))
             for name, item in subcollection.items():
                 if isinstance(item, arvados.arvfile.ArvadosFile):
-                    yield (stream_path / name, item)
+                    yield str(stream_path / name)
                 else:
                     stream_queue.append(stream_path / name)
-
-
-    def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
-        '''
-        Get list of files in collection, if subdirectory_path is provided, return only files in that subdirectory.
-
-        :param collection_uuid: uuid of the collection
-        :param subdirectory_path: subdirectory path to filter files in the collection
-        :return: list of files in the collection
-        '''
-        the_col = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid)
-        file_list = self._all_files(the_col)
-        if subdirectory_path:
-            return [fl for fl in file_list if os.path.basename(fl.stream_name()) == subdirectory_path]
-        return list(file_list)
 
     def _load_cwl_output(self, task: ArvadosTask):
         '''
@@ -181,10 +170,8 @@ class ArvadosPlatform(Platform):
         source_collection = arvados.collection.Collection(source_collection["uuid"])
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
-        for source_file in source_files:
-            source_path = f"{source_file.stream_name()}/{source_file.name()}"
-            if source_path not in [f"{destination_file.stream_name()}/{destination_file.name()}"
-                                for destination_file in destination_files]:
+        for source_path in source_files:
+            if source_path not in destination_files:
                 target_collection.copy(source_path, target_path=source_path, source_collection=source_collection)
         target_collection.save()
 
