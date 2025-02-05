@@ -28,8 +28,7 @@ jobs:
     - name: Install packages
       run: |
         sudo apt-get update
-        sudo apt-get uninstall pycurl
-        sudo apt-get install libcurl4-gnutls-dev libgnutls28-dev pycurl
+        sudo apt-get install libcurl4-gnutls-dev libgnutls28-dev
 
     - name: Install dependencies
       run: |
