@@ -17,4 +17,5 @@ test:
 	coverage html
 
 lint:
-	pylint --max-line-length=120 --ignore-imports=y --exit-zero $$(git ls-files '*.py')
+	find . -name "*.py" | xargs pylint --max-line-length=120 --ignore-imports=y --exit-zero
+
