@@ -34,4 +34,4 @@ jobs:
 
     - name: Analysing the code with pylint
       run: |
-        pylint --max-line-length=120 --ignore-imports=y $(git ls-files '*.py')
+        make lint
