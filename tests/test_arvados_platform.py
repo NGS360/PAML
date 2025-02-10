@@ -183,7 +183,6 @@ class TestArvadosPlaform(unittest.TestCase):
 
     @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
-    @unittest.skip("This test is skipped for now.")
     def test_copy_folder_source_collection_notfound(self, mock_get_files_list, MockCollection):
         ''' Test copy_folder method with file streaming when the source collection is NOT found'''
         # Mocking the source collection empty              
