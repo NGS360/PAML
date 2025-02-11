@@ -121,11 +121,11 @@ class TestArvadosPlaform(unittest.TestCase):
 
     @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
-    def test_copy_folder_success(self, mock_get_files_list, MockCollection):
+    def test_copy_folder_success(self, mock_get_files_list, mock_collection):
         ''' Test copy_folder method with file streaming'''
-        # Mocking the source collection        
+        # Mocking the source collection
         # Mocking the API responses for finding the source and destination collections
-        MockCollection.return_value = MagicMock()
+        mock_collection.return_value = MagicMock()
         source_collection = {
             'items': [
                 {
@@ -149,7 +149,8 @@ class TestArvadosPlaform(unittest.TestCase):
                 }
             ]
         }
-        self.platform.api.collections().list.return_value.execute.side_effect = [source_collection, destination_collection]
+        self.platform.api.collections().list.return_value.execute.side_effect = [
+source_collection, destination_collection]
 
         # Simulate the files being streamed using StreamFileReader
         file1_stream = MagicMock()
@@ -179,7 +180,8 @@ class TestArvadosPlaform(unittest.TestCase):
         # Assertions
         self.assertIsNotNone(result)  # Ensure the result is not None
         self.assertEqual(result['uuid'], 'destination-uuid')  # Ensure we got the correct destination UUID
-        self.assertEqual(self.platform.api.collections().list.call_count, 2) # Ensure the collection listing function was called twice
+        # Ensure the collection listing function was called twice
+        self.assertEqual(self.platform.api.collections().list.call_count, 2)
         self.assertEqual(mock_get_files_list.call_count, 2) # Ensure the file listing function was called twice
 
     def test_copy_folder_source_collection_notfound(self):
@@ -200,11 +202,11 @@ class TestArvadosPlaform(unittest.TestCase):
 
     @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
-    def test_copy_folder_create_destination_collection(self, mock_get_files_list, MockCollection):
+    def test_copy_folder_create_destination_collection(self, mock_get_files_list, mock_collection):
         ''' Test copy_folder method with file streaming to CREATE the destination collection'''
-        # Mocking the source collection 
+        # Mocking the source collection
         # Mocking the API responses for finding the source and destination collections
-        MockCollection.return_value = MagicMock()
+        mock_collection.return_value = MagicMock()
         source_collection = {
             'items': [
                 {
@@ -221,7 +223,8 @@ class TestArvadosPlaform(unittest.TestCase):
         destination_collection = {
             'items': []
             }
-        self.platform.api.collections().list.return_value.execute.side_effect = [source_collection, destination_collection]
+        self.platform.api.collections().list.return_value.execute.side_effect = [
+source_collection, destination_collection]
 
         self.platform.api.collections().create.return_value.execute.return_value = {
             "uuid": "destination-uuid",
@@ -258,8 +261,10 @@ class TestArvadosPlaform(unittest.TestCase):
         # Assertions
         self.assertIsNotNone(result)  # Ensure the result is not None
         self.assertEqual(result['uuid'], 'destination-uuid')  # Ensure we got the correct destination UUID
-        self.assertEqual(self.platform.api.collections().list.call_count, 2) # Ensure the collection listing function was called once
-        self.assertEqual(self.platform.api.collections().create.call_count, 1) # Ensure the collection creating function was called once
+        # Ensure the collection listing function was called once
+        self.assertEqual(self.platform.api.collections().list.call_count, 2)
+        # Ensure the collection creating function was called once
+        self.assertEqual(self.platform.api.collections().create.call_count, 1)
         self.assertEqual(mock_get_files_list.call_count, 2) # Ensure the file listing function was called twice
 
 if __name__ == '__main__':
