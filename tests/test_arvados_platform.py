@@ -118,13 +118,14 @@ class TestArvadosPlaform(unittest.TestCase):
         ''' Test detect_platform method '''
         os.environ['ARVADOS_API_HOST'] = 'some host'
         self.assertTrue(ArvadosPlatform.detect())
-        
+
     @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
     def test_copy_folder_success(self, mock_get_files_list, MockCollection):
         ''' Test copy_folder method with file streaming'''
-        # Mocking the source collection                
+        # Mocking the source collection        
         # Mocking the API responses for finding the source and destination collections
+        MockCollection.return_value = MagicMock()
         source_collection = {
             'items': [
                 {
@@ -135,8 +136,8 @@ class TestArvadosPlaform(unittest.TestCase):
             ]
         }
         self.platform.api.collections().list.return_value.execute.return_value = source_collection
-        
-        # Mocking the destination collection empty              
+
+        # Mocking the destination collection empty
         # Mocking the API responses for finding the source and destination collections
         destination_collection = {
             'items': [
@@ -167,25 +168,25 @@ class TestArvadosPlaform(unittest.TestCase):
 
         # Mock _get_files_list_in_collection to return the file readers (file-like objects)
         mock_get_files_list.return_value = [file1_reader, file2_reader]
-        
+
         # Call the copy_folder method
         source_project = {"uuid": "source-uuid"}
         destination_project = {"uuid": "destination-uuid"}
         source_folder = "source-folder"
-                
+
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
-                
+
         # Assertions
         self.assertIsNotNone(result)  # Ensure the result is not None
         self.assertEqual(result['uuid'], 'destination-uuid')  # Ensure we got the correct destination UUID
         self.assertEqual(self.platform.api.collections().list.call_count, 2) # Ensure the collection listing function was called twice
         self.assertEqual(mock_get_files_list.call_count, 2) # Ensure the file listing function was called twice
 
-    @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
-    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
-    def test_copy_folder_source_collection_notfound(self, mock_get_files_list, MockCollection):
+#    @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
+#    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    def test_copy_folder_source_collection_notfound(self):
         ''' Test copy_folder method with file streaming when the source collection is NOT found'''
-        # Mocking the source collection empty              
+        # Mocking the source collection empty
         # Mocking the API responses for finding the source and destination collections
         self.platform.api.collections().list.return_value.execute.return_value = {'items': []}
 
@@ -193,9 +194,9 @@ class TestArvadosPlaform(unittest.TestCase):
         source_project = {"uuid": "source-uuid"}
         destination_project = {"uuid": "destination-uuid"}
         source_folder = "source-folder"
-                
+
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
-                
+
         # Assertions
         self.assertIsNotNone(result)  # Ensure the result is not None
 
@@ -203,7 +204,7 @@ class TestArvadosPlaform(unittest.TestCase):
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
     def test_copy_folder_create_destination_collection(self, mock_get_files_list, MockCollection):
         ''' Test copy_folder method with file streaming to CREATE the destination collection'''
-        # Mocking the source collection                
+        # Mocking the source collection 
         # Mocking the API responses for finding the source and destination collections
         source_collection = {
             'items': [
@@ -215,8 +216,8 @@ class TestArvadosPlaform(unittest.TestCase):
             ]
         }
         self.platform.api.collections().list.return_value.execute.return_value = source_collection
-        
-        # Mocking the destination collection empty              
+
+        # Mocking the destination collection empty
         # Mocking the API responses for finding the source and destination collections
         destination_collection = {
             'items': []
@@ -247,12 +248,12 @@ class TestArvadosPlaform(unittest.TestCase):
 
         # Mock _get_files_list_in_collection to return the file readers (file-like objects)
         mock_get_files_list.return_value = [file1_reader, file2_reader]
-        
+
         # Call the copy_folder method
         source_project = {"uuid": "source-uuid"}
         destination_project = {"uuid": "destination-uuid"}
         source_folder = "source-folder"
-                
+
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
 
         # Assertions
