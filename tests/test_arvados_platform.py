@@ -204,6 +204,7 @@ class TestArvadosPlaform(unittest.TestCase):
         ''' Test copy_folder method with file streaming to CREATE the destination collection'''
         # Mocking the source collection 
         # Mocking the API responses for finding the source and destination collections
+        MockCollection.return_value = MagicMock()
         source_collection = {
             'items': [
                 {
