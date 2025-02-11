@@ -182,8 +182,6 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertEqual(self.platform.api.collections().list.call_count, 2) # Ensure the collection listing function was called twice
         self.assertEqual(mock_get_files_list.call_count, 2) # Ensure the file listing function was called twice
 
-#    @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
-#    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
     def test_copy_folder_source_collection_notfound(self):
         ''' Test copy_folder method with file streaming when the source collection is NOT found'''
         # Mocking the source collection empty
