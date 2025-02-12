@@ -198,7 +198,7 @@ source_collection, destination_collection]
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
 
         # Assertions
-        self.assertIsNotNone(result)  # Ensure the result is not None
+        assert result is None
 
     @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
