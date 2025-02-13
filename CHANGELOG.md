@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.2.3](https://github.com/NGS360/PAML.git/releases/tag/v0.2.3) - 2025-02-12
+
+- Fix removal of collection.all_files() from Arvados Python SDK.
+
 ## [v0.2.2](https://github.com/NGS360/PAML.git/releases/tag/v0.2.2) - 2025-01-27
+
+- Downgraded support for arvados-python to 2.7.4
 
 ## [v0.3-rc3](https://github.com/NGS360/PAML.git/releases/tag/v0.3-rc3) - 2024-12-16
 

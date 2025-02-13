@@ -64,7 +64,21 @@ class ArvadosTaskEncoder(json.JSONEncoder):
             return o.to_dict()
         return super().default(o)
 
+class StreamFileReader(arvados.arvfile.ArvadosFileReader):
+    class _NameAttribute(str):
+        # The Python file API provides a plain .name attribute.
+        # Older SDK provided a name() method.
+        # This class provides both, for maximum compatibility.
+        def __call__(self):
+            return self
 
+    def __init__(self, arvadosfile):
+        super(StreamFileReader, self).__init__(arvadosfile)
+        self.name = self._NameAttribute(arvadosfile.name)
+
+    def stream_name(self):
+        return super().stream_name().lstrip("./")
+    
 # custom JSON decoder
 def arvados_task_decoder(obj):
     """Arvados Task Decoder class"""
@@ -131,11 +145,11 @@ class ArvadosPlatform(Platform):
             subcollection = root_collection.find(str(stream_path))
             for name, item in subcollection.items():
                 if isinstance(item, arvados.arvfile.ArvadosFile):
-                    yield (stream_path / name, item)
+                    yield StreamFileReader(item)
                 else:
                     stream_queue.append(stream_path / name)
 
-    def _get_files_list_in_collection(
+    def _get_files_in_collection(
         self, collection_uuid, subdirectory_path=None, filters=None
     ):
         """
@@ -318,13 +332,13 @@ class ArvadosPlatform(Platform):
         self.logger.debug(
             "Get list of files in source collection, %s", source_collection["uuid"]
         )
-        source_files = self._get_files_list_in_collection(source_collection["uuid"])
+        source_files = self._get_files_in_collection(source_collection["uuid"])
         self.logger.debug(
             "Getting list of files in destination collection, %s",
             destination_collection["uuid"],
         )
         destination_files = list(
-            self._get_files_list_in_collection(destination_collection["uuid"])
+            self._get_files_in_collection(destination_collection["uuid"])
         )
 
         source_collection = arvados.collection.Collection(source_collection["uuid"])
@@ -609,7 +623,7 @@ class ArvadosPlatform(Platform):
                 len(matching_collections),
                 collection["uuid"],
             )
-            files += self._get_files_list_in_collection(
+            files += self._get_files_in_collection(
                 collection["uuid"], filters=filters
             )
         self.logger.debug("Return list of %d files", len(files))
