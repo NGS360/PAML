@@ -11,7 +11,7 @@ build:
 install: build
 	python3 -m pip install --upgrade dist/*.whl
 
-test:
+test: # This may not work on Mac due to pycurl issues.  Use run_tests_in_docker.sh instead
 	PYTHONPATH=src coverage run --source=src -m pytest
 	coverage report
 	coverage html

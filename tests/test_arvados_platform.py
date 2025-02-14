@@ -56,7 +56,7 @@ class TestArvadosPlaform(unittest.TestCase):
         actual_value = self.platform.get_task_output(task, 'some_output_field')
         # Check results
         self.assertIsNone(actual_value)
-        
+
     @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
     def test_get_task_output_nonexistent_output(self, mock__load_cwl_output):
         ''' Test that get_task_output can handle cases when the output is non-existent in cwl_output '''
@@ -144,7 +144,7 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertTrue(ArvadosPlatform.detect())
 
     @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
-    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_in_collection")
     def test_copy_folder_success(self, mock_get_files_list, mock_collection):
         ''' Test copy_folder method with file streaming'''
         # Mocking the source collection
@@ -225,7 +225,7 @@ source_collection, destination_collection]
         self.assertIsNone(result)
 
     @mock.patch("arvados.collection.Collection")  # Ensure this patch decorator is correctly placed
-    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_in_collection")
     def test_copy_folder_create_destination_collection(self, mock_get_files_list, mock_collection):
         ''' Test copy_folder method with file streaming to CREATE the destination collection'''
         # Mocking the source collection
