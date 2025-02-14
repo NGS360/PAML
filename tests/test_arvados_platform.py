@@ -56,7 +56,6 @@ class TestArvadosPlaform(unittest.TestCase):
         actual_value = self.platform.get_task_output(task, 'some_output_field')
         # Check results
         self.assertIsNone(actual_value)
-        
     @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
     def test_get_task_output_nonexistent_output(self, mock__load_cwl_output):
         ''' Test that get_task_output can handle cases when the output is non-existent in cwl_output '''
@@ -220,7 +219,7 @@ class TestArvadosPlaform(unittest.TestCase):
         source_collection = None
 
         mock_lookup_folder_name.side_effect = [source_collection]
-        
+
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
 
         # Assertions
