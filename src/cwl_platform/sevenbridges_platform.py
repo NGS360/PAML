@@ -350,6 +350,39 @@ class SevenBridgesPlatform(Platform):
 
         raise ValueError(f"File not found in specified folder: {file_path}")
 
+    def get_files(self, project, filters=None):
+        """
+        Retrieve files in a project matching the filter criteria
+
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        """
+        matching_files = []
+
+        files = self.api.files.query(project=project, limit=100).all()
+        for file in files:
+            if filters.get("name") and file.name != filters["name"]:
+                continue
+            if filters.get("prefix") and not file.name.startswith(filters["prefix"]):
+                continue
+            if filters.get("suffix") and not file.name.endswith(filters["suffix"]):
+                continue
+            if filters.get("folder") and not file.parent.name == filters["folder"]:
+                continue
+            if filters.get("recursive") and file.type == "folder":
+                matching_files.extend(self._list_all_files(files=[file]))
+            else:
+                matching_files.append(file)
+        return matching_files
+
     def get_folder_id(self, project, folder_path):
         '''
         Get the folder id in a project

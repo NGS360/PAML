@@ -33,6 +33,37 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
+    def test_get_files(self):
+        ''' Test get_files method '''
+        # Set up test parameters
+        project = {"uuid": "project_uuid"}
+        filters = {
+            'name': 'file1.txt',
+            'prefix': 'file',
+            'suffix': '.txt',
+            'folder': 'folder1',
+            'recursive': False
+        }
+
+        # Set up mocks
+        mock_files_query = self.platform.api.files.query.return_value
+        file1 = MagicMock()
+        file1.name = 'file1.txt'
+        file1.parent = MagicMock()
+        file1.parent.name = 'folder1'
+        mock_files_query.all.return_value = [
+            file1,
+            MagicMock(name='file2', type='file', parent=MagicMock(name='folder1')),
+            MagicMock(name='file3', type='folder', parent=MagicMock(name='folder1'))
+        ]
+
+        # Test
+        results = self.platform.get_files(project, filters)
+
+        # Check results
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].name, 'file1.txt')
+
     @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
     def test_get_task_output(self, mock__load_cwl_output):
         ''' Test that get_task_output can handle cases when the cwl_output is {} '''
