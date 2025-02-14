@@ -174,7 +174,7 @@ class TestArvadosPlaform(unittest.TestCase):
             ]
         }
         self.platform.api.collections().list.return_value.execute.side_effect = [
-source_collection, destination_collection]
+            source_collection, destination_collection]
 
         # Simulate the files being streamed using StreamFileReader
         file1_stream = MagicMock()
@@ -248,7 +248,7 @@ source_collection, destination_collection]
             'items': []
             }
         self.platform.api.collections().list.return_value.execute.side_effect = [
-source_collection, destination_collection]
+            source_collection, destination_collection]
 
         self.platform.api.collections().create.return_value.execute.return_value = {
             "uuid": "destination-uuid",
