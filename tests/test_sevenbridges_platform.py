@@ -16,6 +16,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
     def setUp(self) -> None:
         os.environ['SESSION_ID'] = 'dummy'
         self.platform = SevenBridgesPlatform('SevenBridges')
+        self.platform.api = MagicMock()
         return super().setUp()
 
     @mock.patch('sevenbridges.Api')
@@ -39,6 +40,37 @@ class TestSevenBridgesPlaform(unittest.TestCase):
     def test_detect_platform(self):
         ''' Test detect_platform method '''
         self.assertTrue(SevenBridgesPlatform.detect())
+
+    def test_get_files(self):
+        ''' Test get_files method '''
+        # Set up test parameters
+        project = {"uuid": "project_uuid"}
+        filters = {
+            'name': 'file1.txt',
+            'prefix': 'file',
+            'suffix': '.txt',
+            'folder': 'folder1',
+            'recursive': False
+        }
+        # Set up mocks
+        mock_files_query = self.platform.api.files.query.return_value
+        file1 = MagicMock()
+        file1.name = 'file1.txt'
+        file1.parent = MagicMock()
+        file1.parent.name = 'folder1'
+        mock_files_query.all.return_value = [
+            file1,
+            MagicMock(name='file2', type='file', parent=MagicMock(name='folder1')),
+            MagicMock(name='file3', type='folder', parent=MagicMock(name='folder1'))
+        ]
+
+        # Test
+        results = self.platform.get_files(project, filters)
+
+        # Check results
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].name, 'file1.txt')
+
 
     def test_get_project(self):
         ''' Test that get_project returns None when we do not have a TASK_ID '''
