@@ -52,6 +52,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
             'folder': 'folder1',
             'recursive': False
         }
+
         # Set up mocks
         mock_files_query = self.platform.api.files.query.return_value
         file1 = MagicMock()
@@ -70,7 +71,6 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Check results
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].name, 'file1.txt')
-
 
     def test_get_project(self):
         ''' Test that get_project returns None when we do not have a TASK_ID '''
