@@ -377,7 +377,10 @@ class ArvadosPlatform(Platform):
             collection_filter,
             project["uuid"],
         )
-        matching_collections = self._get_collection(collection_filter)
+#        matching_collections = self._get_collection(collection_filter)
+        search_result = self.api.collections().list(filters=[collection_filter]).execute()
+        if len(search_result['items']) > 0:
+            matching_collections = search_result['items']
 
         files = []
         for num, collection in enumerate(matching_collections):
