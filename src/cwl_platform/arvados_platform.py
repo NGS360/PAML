@@ -133,6 +133,33 @@ class ArvadosPlatform(Platform):
             cwl_output = json.load(cwl_output_file)
         return cwl_output
 
+    def _lookup_collection_from_foldername(self, project, folder):
+        '''
+        Give a folder path, return the corresponding collection in the project.
+        
+        :param project: The arvados project
+        :param folder: The "file path" of the folder e.g. /rootfolder
+        :return: Collection object for folder
+        '''
+        # 1. Get the source collection
+        # The first element of the source_folder path is the name of the collection.
+        if folder.startswith('/'):
+            collection_name = folder.split('/')[1]
+        else:
+            collection_name = folder.split('/')[0]
+
+        # Look up the collect
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", collection_name]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            self.logger.debug("Found source collection %s in project %s", collection_name, project["uuid"])
+            return search_result['items'][0]
+
+        self.logger.error("Source collection %s not found in project %s", collection_name, project["uuid"])
+        return None
+
     def connect(self, **kwargs):
         ''' Connect to Arvados '''
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
@@ -151,38 +178,16 @@ class ArvadosPlatform(Platform):
         self.logger.debug("Copying folder %s from project %s to project %s",
                      source_folder, source_project["uuid"], destination_project["uuid"])
 
-        # 1. Get the source collection
-        # The first element of the source_folder path is the name of the collection.
-        if source_folder.startswith('/'):
-            collection_name = source_folder.split('/')[1]
-        else:
-            collection_name = source_folder.split('/')[0]
-
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", source_project["uuid"]],
-            ["name", "=", collection_name]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            self.logger.debug("Found source collection %s in project %s", collection_name, source_project["uuid"])
-            source_collection = search_result['items'][0]
-        else:
-            self.logger.error("Source collection %s not found in project %s", collection_name, source_project["uuid"])
+        source_collection = self._lookup_collection_from_foldername(source_project, source_folder)
+        if not source_collection:
             return None
 
         # 2. Get the destination project collection
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", destination_project["uuid"]],
-            ["name", "=", collection_name]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            self.logger.debug("Found destination folder %s in project %s", collection_name, destination_project["uuid"])
-            destination_collection = search_result['items'][0]
-        else:
-            self.logger.debug("Destination folder %s not found in project %s, creating",
-                              collection_name, destination_project["uuid"])
+        destination_collection = self._lookup_collection_from_foldername(destination_project, source_folder)
+        if not destination_collection:
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": destination_project["uuid"],
-                "name": collection_name,
+                "name": source_collection['name'],
                 "description": source_collection["description"],
                 "preserve_version":True}).execute()
 
@@ -190,7 +195,7 @@ class ArvadosPlatform(Platform):
         self.logger.debug("Get list of files in source collection, %s", source_collection["uuid"])
         source_files = self._get_files_list_in_collection(source_collection["uuid"])
         self.logger.debug("Getting list of files in destination collection, %s", destination_collection["uuid"])
-        destination_files = list(self._get_files_list_in_collection(destination_collection["uuid"]))
+        destination_files = self._get_files_list_in_collection(destination_collection["uuid"])
 
         source_collection = arvados.collection.Collection(source_collection["uuid"])
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
