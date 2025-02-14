@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.2.4](https://github.com/NGS360/PAML.git/releases/tag/v0.2.4) - 2025-02-14
+
+- Fix get_task_output for optional fields when queried in Arvados
+
 ## [v0.2.3](https://github.com/NGS360/PAML.git/releases/tag/v0.2.3) - 2025-02-12
 
 - Fix removal of collection.all_files() from Arvados Python SDK.

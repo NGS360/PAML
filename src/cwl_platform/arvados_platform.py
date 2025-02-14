@@ -717,6 +717,9 @@ class ArvadosPlatform(Platform):
 
         output_field = cwl_output[output_name]
 
+        if output_field is None:
+            return None
+
         if isinstance(output_field, list):
             # If the output is a list, return a list of file locations
             output_files = []
