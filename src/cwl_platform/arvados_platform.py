@@ -352,6 +352,47 @@ class ArvadosPlatform(Platform):
         # for the file.  Lets see if this comes up before implementing it.
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
+    # @override
+    def get_files(self, project, filters=None):
+        """
+        Retrieve files in a project matching the filter criteria.
+
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',  # Here, a root folder is the name of the collection.
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        """
+        # Iterate over all collections and find files matching filter criteria.
+        collection_filter = [["owner_uuid", "=", project["uuid"]]]
+        if filter and "folder" in filter:
+            collection_filter.append(["name", "=", filters["folder"]])
+        self.logger.debug(
+            "Fetching list of collections matching filter, %s, in project %s",
+            collection_filter,
+            project["uuid"],
+        )
+        matching_collections = self._get_collection(collection_filter)
+
+        files = []
+        for num, collection in enumerate(matching_collections):
+            self.logger.debug(
+                "[%d/%d] Fetching list of files in collection %s",
+                num + 1,
+                len(matching_collections),
+                collection["uuid"],
+            )
+            files += self._get_files_in_collection(
+                collection["uuid"], filters=filters
+            )
+        self.logger.debug("Return list of %d files", len(files))
+        return files
+
     def get_folder_id(self, project, folder_path):
         '''
         Get the folder id in a project
