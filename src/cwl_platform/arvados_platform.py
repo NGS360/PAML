@@ -370,7 +370,7 @@ class ArvadosPlatform(Platform):
         """
         # Iterate over all collections and find files matching filter criteria.
         collection_filter = [["owner_uuid", "=", project["uuid"]]]
-        if filter and "folder" in filter:
+        if filters and "folder" in filters:
             collection_filter.append(["name", "=", filters["folder"]])
         self.logger.debug(
             "Fetching list of collections matching filter, %s, in project %s",
