@@ -20,6 +20,16 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform.keep_client = MagicMock()
         return super().setUp()
 
+    def test_add_user_to_project(self):
+        # Set up test parameters
+        platform_user = {'uuid': 'auser'}
+        project = {'uuid': 'aproject'}
+        permission = 'admin'
+        # Test
+        self.platform.add_user_to_project(platform_user, project, permission)
+        # Check results 
+        self.platform.api.links().create().execute.assert_called_once
+
     @mock.patch("arvados.api_from_config")
     @mock.patch("arvados.KeepClient")
     def test_connect(self, mock_keep_client, mock_arvados_api):
