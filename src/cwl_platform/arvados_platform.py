@@ -517,21 +517,6 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
-    def get_user(self, user):
-        """
-        Get a user object from their (platform) user id or email address
-
-        :param user: BMS user id or email address
-        :return: User object or None
-        """
-        if '@' in user:
-            user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
-        else:
-            user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
-        if len(user_resp['items']) > 0:
-            return user_resp["items"][0]
-        return None
-
     def rename_file(self, fileid, new_filename):
         '''
         Rename a file to new_filename.
@@ -757,3 +742,36 @@ class ArvadosPlatform(Platform):
                 arv_file.write(local_content) # pylint: disable=no-member
             target_collection.save()
         return f"keep:{destination_collection['uuid']}/{target_filepath}"
+
+    ### User Methods
+    def add_user_to_project(self, platform_user, project, permission):
+        """
+        Add a user to a project on the platform
+        :param platform_user: platform user (from get_user)
+        :param project: platform project
+        :param permission: permission (permission="read|write|execute|admin")
+        """
+        aPermission = 'can_manage' if permission=="admin" else 'can_write' if permission=="write" else 'can_read'
+        self.api.links().create(body={"link": {
+                                            "link_class": "permission",
+                                            "name": aPermission,
+                                            "tail_uuid": platform_user['uuid'],
+                                            "head_uuid": project['uuid']
+                                       }
+                                     }
+                                ).execute()
+
+    def get_user(self, user):
+        """
+        Get a user object from their (platform) user id or email address
+
+        :param user: user id or email address
+        :return: User object or None
+        """
+        if '@' in user:
+            user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
+        else:
+            user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
+        if len(user_resp['items']) > 0:
+            return user_resp["items"][0]
+        return None

@@ -18,6 +18,16 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform = SevenBridgesPlatform('SevenBridges')
         return super().setUp()
 
+    def test_add_user_to_project(self):
+        # Set up test parameters
+        platform_user = 'auser'
+        project = MagicMock()
+        permission = 'admin'
+        # Test
+        self.platform.add_user_to_project(platform_user, project, permission)
+        # Check results 
+        project.add_member.assert_called_once
+
     @mock.patch('sevenbridges.Api')
     def test_connect(self, mock_api_client):
         ''' Test connect method '''
