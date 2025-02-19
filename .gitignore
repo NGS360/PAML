@@ -2,6 +2,9 @@
 *.pyc
 *.pyo
 
+# Ignore dist files
+**/**.egg-info/
+
 # Ignore virtual environment directories
 venv/
 *env/

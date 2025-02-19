@@ -490,21 +490,6 @@ class SevenBridgesPlatform(Platform):
         ''' Get a project by its id '''
         return self.api.projects.get(project_id)
 
-    def get_user(self, user):
-        """
-        Get a user object from the (platform) user id or email address
-
-        :param user: BMS user id or email address
-        :return: User object or None
-        """
-        divisions = self.api.divisions.query().all()
-        for division in divisions:
-            platform_users = self.api.users.query(division=division, limit=500).all()
-            for platform_user in platform_users:
-                if user in platform_user.username or platform_user.email == user:
-                    return platform_user
-        return None
-
     def rename_file(self, fileid, new_filename):
         '''
         Rename a file to new_filename.
@@ -656,7 +641,7 @@ class SevenBridgesPlatform(Platform):
         task.run()
         return task
 
-    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
@@ -692,3 +677,53 @@ class SevenBridgesPlatform(Platform):
 
         # return file id if file already exists
         return existing_file[0].id
+
+    ### User Methods
+    def add_user_to_project(self, platform_user, project, permission):
+        """
+        Add a user to a project on the platform
+        :param platform_user: platform user (from get_user)
+        :param project: platform project
+        :param permission: permission (permission="read|write|execute|admin")
+        """
+        user_permissions = {
+            'read': False,
+            'write': False,
+            'copy': False,
+            'execute': False,
+            'admin': False
+        }
+        if permission == 'read':
+            user_permissions['read'] = True
+        elif permission == 'write':
+            user_permissions['read'] = True
+            user_permissions['write'] = True
+        elif permission == 'execute':
+            user_permissions['read'] = True
+            user_permissions['write'] = True
+            user_permissions['execute'] = True
+        elif permission == 'admin':
+            user_permissions['read'] = True
+            user_permissions['write'] = True
+            user_permissions['execute'] = True
+            user_permissions['admin'] = True
+        # If the user already exists in the project, an exception will be raised.
+        try:
+            project.add_member(user=platform_user, permissions=user_permissions)
+        except sevenbridges.errors.SbgError as err:
+            pass
+
+    def get_user(self, user):
+        """
+        Get a user object from the (platform) user id or email address
+
+        :param user: user id or email address
+        :return: User object or None
+        """
+        divisions = self.api.divisions.query().all()
+        for division in divisions:
+            platform_users = self.api.users.query(division=division, limit=500).all()
+            for platform_user in platform_users:
+                if user in platform_user.username or platform_user.email == user:
+                    return platform_user
+        return None

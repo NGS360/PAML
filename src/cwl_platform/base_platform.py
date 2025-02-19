@@ -67,7 +67,7 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False):
+    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False):
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
@@ -196,11 +196,20 @@ class Platform(ABC):
 
     # User methods
     @abstractmethod
+    def add_user_to_project(self, platform_user, project, permission):
+        """
+        Add a user to a project on the platform
+        :param platform_user: platform user (from get_user)
+        :param project: platform project
+        :param permission: permission (permission="read|write|execute|admin")
+        """
+
+    @abstractmethod
     def get_user(self, user):
         """
         Get a user object from their (platform) user id or email address
 
-        :param user: BMS user id or email address
+        :param user: user id or email address
         :return: User object or None
         """
 
