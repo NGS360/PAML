@@ -608,7 +608,7 @@ class SevenBridgesPlatform(Platform):
         task.run()
         return task
 
-    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
