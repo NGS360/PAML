@@ -292,6 +292,18 @@ class TestArvadosPlaform(unittest.TestCase):
                 self.assertEqual(mock_destination_collection_object().copy.call_count, 2)
                 self.assertEqual(mock_destination_collection_object().save.call_count, 1)
 
+    @mock.patch('arvados.collection.Collection')
+    def test_upload_file(self, mock_collection):
+        # Set up test parameters
+        filename = "file.txt"
+        project = {'uuid': 'aproject'}
+        dest_folder = '/inputs'
+        # Set up supporting mocks
+        self.platform.api.collections().create().execute.return_value = {'uuid': 'a_destination_collection'}
+        # Test
+        actual_result = self.platform.upload_file(filename, project, dest_folder, destination_filename=None, overwrite=False)
+        # Check results
+        self.assertEqual(actual_result, "keep:a_destination_collection/file.txt")
 
 if __name__ == '__main__':
     unittest.main()
