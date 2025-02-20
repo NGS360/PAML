@@ -373,7 +373,7 @@ class ArvadosPlatform(Platform):
             }
         :return: List of file objects matching filter criteria
         """
-        # Iterate over all collections and find files matching filter criteria.
+        # Iterate over all collections and find collections matching filter criteria.
         collection_filter = [["owner_uuid", "=", project["uuid"]]]
         if filters and "folder" in filters:
             collection_filter.append(["name", "=", filters["folder"]])
@@ -382,11 +382,12 @@ class ArvadosPlatform(Platform):
             collection_filter,
             project["uuid"],
         )
-#        matching_collections = self._get_collection(collection_filter)
+        matching_collections = []
         search_result = self.api.collections().list(filters=[collection_filter]).execute()
         if len(search_result['items']) > 0:
             matching_collections = search_result['items']
 
+        # Iterate over the collections an find files matching filter criteria
         files = []
         for num, collection in enumerate(matching_collections):
             self.logger.debug(
@@ -395,8 +396,8 @@ class ArvadosPlatform(Platform):
                 len(matching_collections),
                 collection["uuid"],
             )
-            files += self._get_files_in_collection(
-                collection["uuid"], filters=filters
+            files += self._get_files_list_in_collection(
+                collection["uuid"]
             )
         self.logger.debug("Return list of %d files", len(files))
         return files

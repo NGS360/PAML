@@ -44,7 +44,9 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertTrue(self.platform.connected)
 
     def test_get_files(self):
-        ''' Test get_files method '''
+        '''
+        Test get_files method returns a single file matching filter criteria given there are 3 files in the project.
+        '''
         # Set up test parameters
         project = {"uuid": "project_uuid"}
         filters = {
@@ -56,19 +58,26 @@ class TestArvadosPlaform(unittest.TestCase):
         }
 
         # Set up mocks
-        mock_files_query = self.platform.api.files.query.return_value
+        self.platform.api.collections().list().execute.return_value = {
+            'items': [
+                MagicMock(name="collection1"),
+            ]
+        }
         file1 = MagicMock()
         file1.name = 'file1.txt'
         file1.parent = MagicMock()
         file1.parent.name = 'folder1'
-        mock_files_query.all.return_value = [
-            file1,
-            MagicMock(name='file2', type='file', parent=MagicMock(name='folder1')),
-            MagicMock(name='file3', type='folder', parent=MagicMock(name='folder1'))
-        ]
-
+        #self.platform.api.collections.list.execute.return_value = {
+        #    'items': [
+        #        file1,
+        #        MagicMock(name='file2', type='file', parent=MagicMock(name='folder1')),
+        #        MagicMock(name='file3', type='folder', parent=MagicMock(name='folder1'))
+        #    ]
+        #}
         # Test
-        results = self.platform.get_files(project, filters)
+        with mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection") as mock_gflic:
+            mock_gflic.return_value = [file1]
+            results = self.platform.get_files(project, filters)
 
         # Check results
         self.assertEqual(len(results), 1)
