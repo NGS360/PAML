@@ -67,13 +67,6 @@ class TestArvadosPlaform(unittest.TestCase):
         file1.name = 'file1.txt'
         file1.parent = MagicMock()
         file1.parent.name = 'folder1'
-        #self.platform.api.collections.list.execute.return_value = {
-        #    'items': [
-        #        file1,
-        #        MagicMock(name='file2', type='file', parent=MagicMock(name='folder1')),
-        #        MagicMock(name='file3', type='folder', parent=MagicMock(name='folder1'))
-        #    ]
-        #}
         # Test
         with mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection") as mock_gflic:
             mock_gflic.return_value = [file1]
