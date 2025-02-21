@@ -724,6 +724,6 @@ class SevenBridgesPlatform(Platform):
         for division in divisions:
             platform_users = self.api.users.query(division=division, limit=500).all()
             for platform_user in platform_users:
-                if user in platform_user.username or platform_user.email == user:
+                if user.lower() in platform_user.username.lower() or platform_user.email.lower() == user.lower():
                     return platform_user
         return None
