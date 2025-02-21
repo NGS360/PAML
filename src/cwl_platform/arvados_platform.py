@@ -814,9 +814,9 @@ class ArvadosPlatform(Platform):
         :return: User object or None
         """
         if '@' in user:
-            user_resp = self.api.users().list(filters=[["email","=",user]]).execute()
+            user_resp = self.api.users().list(filters=[["email","ilike",user]]).execute()
         else:
-            user_resp = self.api.users().list(filters=[["username","=",user]]).execute()
+            user_resp = self.api.users().list(filters=[["username","ilike",user]]).execute()
         if len(user_resp['items']) > 0:
             return user_resp["items"][0]
         return None
