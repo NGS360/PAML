@@ -274,26 +274,6 @@ class ArvadosPlatform(Platform):
                 destination_workflows.append(self.api.workflows().create(body=workflow).execute())
         return destination_workflows
 
-    def create_project(self, project_name, project_description, **kwargs):
-        '''
-        Create a project
-        
-        :param project_name: Name of the project
-        :param project_description: Description of the project
-        :param kwargs: Additional arguments for creating a project
-        :return: Project object
-        '''
-        arvados_user = self.api.users().current().execute()
-        project = self.api.groups().create(body={"owner_uuid": f'{arvados_user["uuid"]}',
-                                                 "name": project_name,
-                                                 "description": project_description,
-                                                 "properties": {
-                                                     "proj_owner": arvados_user["username"]
-                                                 },
-                                                 "group_class": "project"}
-                                           ).execute()
-        return project
-
     def delete_task(self, task: ArvadosTask):
         ''' Delete a task/workflow/process '''
         self.api.container_requests().delete(uuid=task.container_request["uuid"]).execute()
@@ -488,34 +468,6 @@ class ArvadosPlatform(Platform):
             container = self.api.containers().get(uuid=container_request['container_uuid']).execute()
             tasks.append(ArvadosTask(container_request, container))
         return tasks
-
-    def get_project(self):
-        ''' Determine what project we are running in '''
-        try:
-            current_container = self.api.containers().current().execute()
-            request = self.api.container_requests().list(filters=[
-                    ["container_uuid", "=", current_container["uuid"]]
-                ]).execute()
-            return self.get_project_by_id(request["items"][0]['owner_uuid'])
-        except arvados.errors.ApiError:
-            return None
-
-    def get_project_by_name(self, project_name):
-        ''' Get a project by its name '''
-        self.logger.debug("Searching for project %s", project_name)
-        search_result = self.api.groups().list(filters=[["name", "=", project_name]]).execute()
-        if len(search_result['items']) > 0:
-            self.logger.debug("Found project %s", search_result['items'][0]['uuid'])
-            return search_result['items'][0]
-        self.logger.debug("Could not find project")
-        return None
-
-    def get_project_by_id(self, project_id):
-        ''' Get a project by its id '''
-        search_result = self.api.groups().list(filters=[["uuid", "=", project_id]]).execute()
-        if len(search_result['items']) > 0:
-            return search_result['items'][0]
-        return None
 
     def rename_file(self, fileid, new_filename):
         '''
@@ -742,6 +694,60 @@ class ArvadosPlatform(Platform):
                 arv_file.write(local_content) # pylint: disable=no-member
             target_collection.save()
         return f"keep:{destination_collection['uuid']}/{target_filepath}"
+
+    ### Project methods
+    def create_project(self, project_name, project_description, **kwargs):
+        '''
+        Create a project
+        
+        :param project_name: Name of the project
+        :param project_description: Description of the project
+        :param kwargs: Additional arguments for creating a project
+        :return: Project object
+        '''
+        arvados_user = self.api.users().current().execute()
+        project = self.api.groups().create(body={"owner_uuid": f'{arvados_user["uuid"]}',
+                                                 "name": project_name,
+                                                 "description": project_description,
+                                                 "properties": {
+                                                     "proj_owner": arvados_user["username"]
+                                                 },
+                                                 "group_class": "project"}
+                                           ).execute()
+        return project
+
+    def delete_project_by_name(self, project_name):
+        '''
+        Delete a project on the platform 
+        '''
+
+    def get_project(self):
+        ''' Determine what project we are running in '''
+        try:
+            current_container = self.api.containers().current().execute()
+            request = self.api.container_requests().list(filters=[
+                    ["container_uuid", "=", current_container["uuid"]]
+                ]).execute()
+            return self.get_project_by_id(request["items"][0]['owner_uuid'])
+        except arvados.errors.ApiError:
+            return None
+
+    def get_project_by_name(self, project_name):
+        ''' Get a project by its name '''
+        self.logger.debug("Searching for project %s", project_name)
+        search_result = self.api.groups().list(filters=[["name", "=", project_name]]).execute()
+        if len(search_result['items']) > 0:
+            self.logger.debug("Found project %s", search_result['items'][0]['uuid'])
+            return search_result['items'][0]
+        self.logger.debug("Could not find project")
+        return None
+
+    def get_project_by_id(self, project_id):
+        ''' Get a project by its id '''
+        search_result = self.api.groups().list(filters=[["uuid", "=", project_id]]).execute()
+        if len(search_result['items']) > 0:
+            return search_result['items'][0]
+        return None
 
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):
