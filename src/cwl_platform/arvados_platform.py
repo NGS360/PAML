@@ -384,7 +384,7 @@ class ArvadosPlatform(Platform):
             project["uuid"],
         )
         matching_collections = []
-        search_result = self.api.collections().list(filters=[collection_filter]).execute()
+        search_result = self.api.collections().list(filters=collection_filter).execute()
         if len(search_result['items']) > 0:
             matching_collections = search_result['items']
 
