@@ -193,26 +193,6 @@ class SevenBridgesPlatform(Platform):
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
-    def connect(self, **kwargs):
-        ''' Connect to Sevenbridges '''
-        self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
-        self.token = kwargs.get('token', self.token)
-
-        if self._session_id:
-            self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
-                                        error_handlers=[rate_limit_sleeper,
-                                                        maintenance_sleeper,
-                                                        general_error_sleeper],
-                                        advance_access=True)
-            self.api._session_id = self._session_id  # pylint: disable=protected-access
-        else:
-            self.api = sevenbridges.Api(config=self.api_config,
-                                        error_handlers=[rate_limit_sleeper,
-                                                        maintenance_sleeper,
-                                                        general_error_sleeper],
-                                        advance_access=True)
-        self.connected = True
-
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy reference folder to destination project
@@ -238,68 +218,6 @@ class SevenBridgesPlatform(Platform):
                     continue
                 reference_file.copy_to_folder(parent=sbg_destination_folder)
         return sbg_destination_folder
-
-    def copy_workflow(self, src_workflow, destination_project):
-        '''
-        Copy a workflow from one project to another, if a workflow with the same name
-        does not already exist in the destination project.
-
-        :param src_workflow: The workflow to copy
-        :param destination_project: The project to copy the workflow to
-        :return: The workflow that was copied or exists in the destination project
-        '''
-        app = self.api.apps.get(id=src_workflow)
-        wf_name = app.name
-
-        # Get the existing (if any) workflow in the destination project with the same name as the
-        # reference workflow
-        for existing_workflow in destination_project.get_apps().all():
-            if existing_workflow.name == wf_name:
-                return existing_workflow.id
-        return app.copy(project=destination_project.id).id
-
-    def copy_workflows(self, reference_project, destination_project):
-        '''
-        Copy all workflows from the reference_project to project,
-        IF the workflow (by name) does not already exist in the project.
-
-        :param reference_project: The project to copy workflows from
-        :param destination_project: The project to copy workflows to
-        :return: List of workflows that were copied
-        '''
-        # Get list of reference workflows
-        reference_workflows = reference_project.get_apps().all()
-        destination_workflows = list(destination_project.get_apps().all())
-        # Copy the workflow if it doesn't already exist in the destination project
-        for workflow in reference_workflows:
-            # NOTE This is also copies archived apps.  How do we filter those out?  Asked Nikola, waiting for response.
-            if workflow.name not in [wf.name for wf in destination_workflows]:
-                destination_workflows.append(workflow.copy(project=destination_project.id))
-        return destination_workflows
-
-    def delete_task(self, task: sevenbridges.Task):
-        ''' Delete a task/workflow/process '''
-        task.delete()
-
-    @classmethod
-    def detect(cls):
-        '''
-        Determine if we are running on this platform
-        '''
-        session_id = os.environ.get('SESSION_ID')
-        if session_id:
-            return True
-        return False
-
-    def get_current_task(self) -> sevenbridges.Task:
-        ''' Get the current task '''
-
-        task_id = os.environ.get('TASK_ID')
-        if not task_id:
-            raise ValueError("ERROR: Environment variable TASK_ID not set.")
-        self.logger.info("TASK_ID: %s", task_id)
-        task = self.api.tasks.get(id=task_id)
-        return task
 
     def get_file_id(self, project, file_path):
         '''
@@ -360,6 +278,68 @@ class SevenBridgesPlatform(Platform):
                     parent = file.id
                     break
         return parent
+
+    # Task/Workflow methods
+    def copy_workflow(self, src_workflow, destination_project):
+        '''
+        Copy a workflow from one project to another, if a workflow with the same name
+        does not already exist in the destination project.
+
+        :param src_workflow: The workflow to copy
+        :param destination_project: The project to copy the workflow to
+        :return: The workflow that was copied or exists in the destination project
+        '''
+        app = self.api.apps.get(id=src_workflow)
+        wf_name = app.name
+
+        # Get the existing (if any) workflow in the destination project with the same name as the
+        # reference workflow
+        for existing_workflow in destination_project.get_apps().all():
+            if existing_workflow.name == wf_name:
+                return existing_workflow.id
+        return app.copy(project=destination_project.id).id
+
+    def copy_workflows(self, reference_project, destination_project):
+        '''
+        Copy all workflows from the reference_project to project,
+        IF the workflow (by name) does not already exist in the project.
+
+        :param reference_project: The project to copy workflows from
+        :param destination_project: The project to copy workflows to
+        :return: List of workflows that were copied
+        '''
+        # Get list of reference workflows
+        reference_workflows = reference_project.get_apps().all()
+        destination_workflows = list(destination_project.get_apps().all())
+        # Copy the workflow if it doesn't already exist in the destination project
+        for workflow in reference_workflows:
+            # NOTE This is also copies archived apps.  How do we filter those out?  Asked Nikola, waiting for response.
+            if workflow.name not in [wf.name for wf in destination_workflows]:
+                destination_workflows.append(workflow.copy(project=destination_project.id))
+        return destination_workflows
+
+    def get_workflows(self, project):
+        '''
+        Get workflows in a project
+
+        :param: Platform Project
+        :return: List of workflows
+        '''
+        return list(project.get_apps().all())
+
+    def delete_task(self, task: sevenbridges.Task):
+        ''' Delete a task/workflow/process '''
+        task.delete()
+
+    def get_current_task(self) -> sevenbridges.Task:
+        ''' Get the current task '''
+
+        task_id = os.environ.get('TASK_ID')
+        if not task_id:
+            raise ValueError("ERROR: Environment variable TASK_ID not set.")
+        self.logger.info("TASK_ID: %s", task_id)
+        task = self.api.tasks.get(id=task_id)
+        return task
 
     def get_task_input(self, task: sevenbridges.Task, input_name):
         ''' Retrieve the input field of the task '''
@@ -703,3 +683,34 @@ class SevenBridgesPlatform(Platform):
                 if user.lower() in platform_user.username.lower() or platform_user.email.lower() == user.lower():
                     return platform_user
         return None
+
+    # Other methods
+    def connect(self, **kwargs):
+        ''' Connect to Sevenbridges '''
+        self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
+        self.token = kwargs.get('token', self.token)
+
+        if self._session_id:
+            self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
+                                        error_handlers=[rate_limit_sleeper,
+                                                        maintenance_sleeper,
+                                                        general_error_sleeper],
+                                        advance_access=True)
+            self.api._session_id = self._session_id  # pylint: disable=protected-access
+        else:
+            self.api = sevenbridges.Api(config=self.api_config,
+                                        error_handlers=[rate_limit_sleeper,
+                                                        maintenance_sleeper,
+                                                        general_error_sleeper],
+                                        advance_access=True)
+        self.connected = True
+
+    @classmethod
+    def detect(cls):
+        '''
+        Determine if we are running on this platform
+        '''
+        session_id = os.environ.get('SESSION_ID')
+        if session_id:
+            return True
+        return False
