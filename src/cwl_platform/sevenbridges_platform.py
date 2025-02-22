@@ -627,6 +627,9 @@ class SevenBridgesPlatform(Platform):
         '''
         Delete a project on the platform 
         '''
+        project = self.get_project_by_name(project_name)
+        if project:
+            project.delete()
 
     def get_project(self):
         ''' Determine what project we are running in '''

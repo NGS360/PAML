@@ -720,6 +720,9 @@ class ArvadosPlatform(Platform):
         '''
         Delete a project on the platform 
         '''
+        project = self.get_project_by_name(project_name)
+        if project:
+            self.api.groups().delete(uuid=project['uuid']).execute()
 
     def get_project(self):
         ''' Determine what project we are running in '''
