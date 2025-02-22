@@ -277,20 +277,6 @@ class SevenBridgesPlatform(Platform):
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
 
-    def create_project(self, project_name, project_description, **kwargs):
-        '''
-        Create a project
-        
-        :param project_name: Name of the project
-        :param project_description: Description of the project
-        :param kwargs: Additional arguments for creating a project
-        :return: Project object
-        '''
-        project = self.api.projects.create(name=project_name,
-                                           description=project_description,
-                                           settings={'use_interruptible_instances':False})
-        return project
-
     def delete_task(self, task: sevenbridges.Task):
         ''' Delete a task/workflow/process '''
         task.delete()
@@ -466,29 +452,6 @@ class SevenBridgesPlatform(Platform):
             if task.name == task_name:
                 tasks.append(task)
         return tasks
-
-    def get_project(self):
-        ''' Determine what project we are running in '''
-        task_id = os.environ.get('TASK_ID')
-        if not task_id:
-            return None
-
-        try:
-            task = self.api.tasks.get(id=task_id)
-            return self.api.projects.get(id=task.project)
-        except sevenbridges.errors.SbgError:
-            return None
-
-    def get_project_by_name(self, project_name):
-        ''' Get a project by its name '''
-        projects = self.api.projects.query(name=project_name)
-        if projects:
-            return projects[0]
-        return None
-
-    def get_project_by_id(self, project_id):
-        ''' Get a project by its id '''
-        return self.api.projects.get(project_id)
 
     def rename_file(self, fileid, new_filename):
         '''
@@ -677,6 +640,52 @@ class SevenBridgesPlatform(Platform):
 
         # return file id if file already exists
         return existing_file[0].id
+
+    ### Project methods
+    def create_project(self, project_name, project_description, **kwargs):
+        '''
+        Create a project
+        
+        :param project_name: Name of the project
+        :param project_description: Description of the project
+        :param kwargs: Additional arguments for creating a project
+        :return: Project object
+        '''
+        project = self.api.projects.create(name=project_name,
+                                           description=project_description,
+                                           settings={'use_interruptible_instances':False})
+        return project
+
+    def delete_project_by_name(self, project_name):
+        '''
+        Delete a project on the platform 
+        '''
+        project = self.get_project_by_name(project_name)
+        if project:
+            project.delete()
+
+    def get_project(self):
+        ''' Determine what project we are running in '''
+        task_id = os.environ.get('TASK_ID')
+        if not task_id:
+            return None
+
+        try:
+            task = self.api.tasks.get(id=task_id)
+            return self.api.projects.get(id=task.project)
+        except sevenbridges.errors.SbgError:
+            return None
+
+    def get_project_by_name(self, project_name):
+        ''' Get a project by its name '''
+        projects = self.api.projects.query(name=project_name)
+        if projects:
+            return projects[0]
+        return None
+
+    def get_project_by_id(self, project_id):
+        ''' Get a project by its id '''
+        return self.api.projects.get(project_id)
 
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):

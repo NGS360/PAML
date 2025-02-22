@@ -78,30 +78,6 @@ class Platform(ABC):
         :return: ID of uploaded file.
         '''
 
-    # Project methods
-    @abstractmethod
-    def create_project(self, project_name, project_description, **kwargs):
-        '''
-        Create a project
-        
-        :param project_name: Name of the project
-        :param project_description: Description of the project
-        :param kwargs: Additional arguments for creating a project
-        :return: Project object
-        '''
-
-    @abstractmethod
-    def get_project(self):
-        ''' Determine what project we are running in '''
-
-    @abstractmethod
-    def get_project_by_name(self, project_name):
-        ''' Get a project by its name '''
-
-    @abstractmethod
-    def get_project_by_id(self, project_id):
-        ''' Get a project by its id '''
-
     # Task/Workflow methods
     @abstractmethod
     def copy_workflow(self, src_workflow, destination_project):
@@ -193,6 +169,36 @@ class Platform(ABC):
         :param executing_settings: {use_spot_instance: True/False}
         :return: Task object or None
         '''
+
+    # Project methods
+    @abstractmethod
+    def create_project(self, project_name, project_description, **kwargs):
+        '''
+        Create a project
+        
+        :param project_name: Name of the project
+        :param project_description: Description of the project
+        :param kwargs: Additional arguments for creating a project
+        :return: Project object
+        '''
+
+    @abstractmethod
+    def delete_project_by_name(self, project_name):
+        '''
+        Delete a project on the platform 
+        '''
+
+    @abstractmethod
+    def get_project(self):
+        ''' Determine what project we are running in '''
+
+    @abstractmethod
+    def get_project_by_name(self, project_name):
+        ''' Get a project by its name '''
+
+    @abstractmethod
+    def get_project_by_id(self, project_id):
+        ''' Get a project by its id '''
 
     # User methods
     @abstractmethod
