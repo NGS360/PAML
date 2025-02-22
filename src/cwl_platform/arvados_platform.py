@@ -160,12 +160,6 @@ class ArvadosPlatform(Platform):
         self.logger.error("Source collection %s not found in project %s", collection_name, project["uuid"])
         return None
 
-    def connect(self, **kwargs):
-        ''' Connect to Arvados '''
-        self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
-        self.keep_client = arvados.KeepClient(self.api)
-        self.connected = True
-
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy folder to destination project
@@ -210,6 +204,107 @@ class ArvadosPlatform(Platform):
         self.logger.debug("Done copying folder.")
         return destination_collection
 
+    # @override
+    def get_files(self, project, filters=None):
+        """
+        Retrieve files in a project matching the filter criteria.
+
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',  # Here, a root folder is the name of the collection.
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        """
+        # Iterate over all collections and find collections matching filter criteria.
+        collection_filter = [["owner_uuid", "=", project["uuid"]]]
+        if filters and "folder" in filters:
+            folder = filters['folder'].lstrip('/')
+            collection_filter.append(["name", "=", folder])
+        self.logger.debug(
+            "Fetching list of collections matching filter, %s, in project %s",
+            collection_filter,
+            project["uuid"],
+        )
+        matching_collections = []
+        search_result = self.api.collections().list(filters=collection_filter).execute()
+        if len(search_result['items']) > 0:
+            matching_collections = search_result['items']
+
+        # Iterate over the collections an find files matching filter criteria
+        files = []
+        for num, collection in enumerate(matching_collections):
+            self.logger.debug(
+                "[%d/%d] Fetching list of files in collection %s",
+                num + 1,
+                len(matching_collections),
+                collection["uuid"],
+            )
+            files += self._get_files_list_in_collection(
+                collection["uuid"]
+            )
+        self.logger.debug("Return list of %d files", len(files))
+        return files
+
+    def get_file_id(self, project, file_path):
+        '''
+        Get a file id by its full path name
+
+        :param project: The project to search
+        :param file_path: The full path of the file to search for
+        :return: The file id or None if not found
+        '''
+        if file_path.startswith('http') or file_path.startswith('keep'):
+            return file_path
+
+        # Get the collection
+        # file_path is assumed to a full path name, starting with a '/'.
+        # the first folder in the path is the name of the collection.
+        folder_tree = file_path.split('/')
+        if not folder_tree[0]:
+            folder_tree = folder_tree[1:]
+
+        # The first folder is the name of the collection.
+        collection_name = folder_tree[0]
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", collection_name]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            collection = search_result['items'][0]
+        else:
+            raise ValueError(f"Collection {collection_name} not found in project {project['uuid']}")
+
+        # Do we need to check for the file in the collection?  That could add a lot of overhead to query the collection
+        # for the file.  Lets see if this comes up before implementing it.
+        return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
+
+    def get_folder_id(self, project, folder_path):
+        '''
+        Get the folder id in a project
+
+        :param project: The project to search for the file
+        :param file_path: The path to the folder
+        :return: The file id of the folder
+        '''
+        # The first folder is the name of the collection.
+        collection_name, folder_path = os.path.split(folder_path)
+        collection_name = collection_name.lstrip("/")
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", collection_name]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            collection = search_result['items'][0]
+        else:
+            return None
+        return f"keep:{collection['uuid']}/{folder_path}"
+
+    # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
         '''
         Copy a workflow from one project to another, if a workflow with the same name
@@ -260,12 +355,8 @@ class ArvadosPlatform(Platform):
         IF the workflow (by name) does not already exist in the project.
         '''
         # Get list of reference workflows
-        reference_workflows = self.api.workflows().list(filters=[
-            ["owner_uuid", "=", reference_project["uuid"]]
-            ]).execute()
-        destination_workflows = self.api.workflows().list(filters=[
-            ["owner_uuid", "=", destination_project["uuid"]]]
-            ).execute()
+        reference_workflows = self.get_workflows(reference_project)
+        destination_workflows = self.get_workflows(destination_project)
         # Copy the workflow if it doesn't already exist in the destination project
         for workflow in reference_workflows["items"]:
             if workflow["name"] not in [workflow["name"] for workflow in destination_workflows["items"]]:
@@ -274,18 +365,21 @@ class ArvadosPlatform(Platform):
                 destination_workflows.append(self.api.workflows().create(body=workflow).execute())
         return destination_workflows
 
+    def get_workflows(self, project):
+        '''
+        Get workflows in a project
+
+        :param: Platform Project
+        :return: List of workflows
+        '''
+        workflows = self.api.workflows().list(filters=[
+            ["owner_uuid", "=", project["uuid"]]
+            ]).execute()
+        return workflows["items"]
+
     def delete_task(self, task: ArvadosTask):
         ''' Delete a task/workflow/process '''
         self.api.container_requests().delete(uuid=task.container_request["uuid"]).execute()
-
-    @classmethod
-    def detect(cls):
-        '''
-        Detect if we are running in a Arvados environment
-        '''
-        if os.environ.get('ARVADOS_API_HOST', None):
-            return True
-        return False
 
     def get_current_task(self) -> ArvadosTask:
         '''
@@ -303,106 +397,6 @@ class ArvadosPlatform(Platform):
         if 'items' in request and len(request['items']) > 0:
             return ArvadosTask(request['items'][0], current_container)
         raise ValueError("Current task not associated with a container")
-
-    def get_file_id(self, project, file_path):
-        '''
-        Get a file id by its full path name
-        
-        :param project: The project to search
-        :param file_path: The full path of the file to search for
-        :return: The file id or None if not found
-        '''
-        if file_path.startswith('http') or file_path.startswith('keep'):
-            return file_path
-
-        # Get the collection
-        # file_path is assumed to a full path name, starting with a '/'.
-        # the first folder in the path is the name of the collection.
-        folder_tree = file_path.split('/')
-        if not folder_tree[0]:
-            folder_tree = folder_tree[1:]
-
-        # The first folder is the name of the collection.
-        collection_name = folder_tree[0]
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", project["uuid"]],
-            ["name", "=", collection_name]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            collection = search_result['items'][0]
-        else:
-            raise ValueError(f"Collection {collection_name} not found in project {project['uuid']}")
-
-        # Do we need to check for the file in the collection?  That could add a lot of overhead to query the collection
-        # for the file.  Lets see if this comes up before implementing it.
-        return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
-
-    # @override
-    def get_files(self, project, filters=None):
-        """
-        Retrieve files in a project matching the filter criteria.
-
-        :param project: Project to search for files
-        :param filters: Dictionary containing filter criteria
-            {
-                'name': 'file_name',
-                'prefix': 'file_prefix',
-                'suffix': 'file_suffix',
-                'folder': 'folder_name',  # Here, a root folder is the name of the collection.
-                'recursive': True/False
-            }
-        :return: List of file objects matching filter criteria
-        """
-        # Iterate over all collections and find collections matching filter criteria.
-        collection_filter = [["owner_uuid", "=", project["uuid"]]]
-        if filters and "folder" in filters:
-            folder = filters['folder'].lstrip('/')
-            collection_filter.append(["name", "=", folder])
-        self.logger.debug(
-            "Fetching list of collections matching filter, %s, in project %s",
-            collection_filter,
-            project["uuid"],
-        )
-        matching_collections = []
-        search_result = self.api.collections().list(filters=collection_filter).execute()
-        if len(search_result['items']) > 0:
-            matching_collections = search_result['items']
-
-        # Iterate over the collections an find files matching filter criteria
-        files = []
-        for num, collection in enumerate(matching_collections):
-            self.logger.debug(
-                "[%d/%d] Fetching list of files in collection %s",
-                num + 1,
-                len(matching_collections),
-                collection["uuid"],
-            )
-            files += self._get_files_list_in_collection(
-                collection["uuid"]
-            )
-        self.logger.debug("Return list of %d files", len(files))
-        return files
-
-    def get_folder_id(self, project, folder_path):
-        '''
-        Get the folder id in a project
-
-        :param project: The project to search for the file
-        :param file_path: The path to the folder
-        :return: The file id of the folder
-        '''
-        # The first folder is the name of the collection.
-        collection_name, folder_path = os.path.split(folder_path)
-        collection_name = collection_name.lstrip("/")
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", project["uuid"]],
-            ["name", "=", collection_name]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            collection = search_result['items'][0]
-        else:
-            return None
-        return f"keep:{collection['uuid']}/{folder_path}"
 
     def get_task_input(self, task, input_name):
         ''' Retrieve the input field of the task '''
@@ -830,3 +824,19 @@ class ArvadosPlatform(Platform):
         if len(user_resp['items']) > 0:
             return user_resp["items"][0]
         return None
+
+    # Other methods
+    def connect(self, **kwargs):
+        ''' Connect to Arvados '''
+        self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
+        self.keep_client = arvados.KeepClient(self.api)
+        self.connected = True
+
+    @classmethod
+    def detect(cls):
+        '''
+        Detect if we are running in a Arvados environment
+        '''
+        if os.environ.get('ARVADOS_API_HOST', None):
+            return True
+        return False
