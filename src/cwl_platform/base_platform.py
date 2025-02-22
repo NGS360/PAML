@@ -86,6 +86,15 @@ class Platform(ABC):
         '''
 
     @abstractmethod
+    def get_workflows(self, project):
+        '''
+        Get workflows in a project
+
+        :param: Platform Project
+        :return: List of workflows
+        '''
+
+    @abstractmethod
     def delete_task(self, task):
         ''' Delete a task/workflow/process '''
 
