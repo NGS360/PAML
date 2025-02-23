@@ -209,6 +209,10 @@ class Platform(ABC):
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
 
+    @abstractmethod
+    def get_project_users(self, project):
+        ''' Return a list of user objects associated with a project '''
+
     # User methods
     @abstractmethod
     def add_user_to_project(self, platform_user, project, permission):

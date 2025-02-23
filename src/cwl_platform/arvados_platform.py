@@ -792,6 +792,21 @@ class ArvadosPlatform(Platform):
             return search_result['items'][0]
         return None
 
+    def get_project_users(self, project):
+        ''' Return a list of user objects associated with a project '''
+        users = []
+        links = self.api.links().list(
+            filters=[
+                ["head_uuid", "=", project['uuid']]
+            ]).execute()
+        for link in links['items']:
+            users.append(
+                self.api.users().list(filters=[
+                    ["uuid", "=", link['tail_uuid']]
+                ]).execute()["items"][0]
+            )
+        return users
+
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):
         """
