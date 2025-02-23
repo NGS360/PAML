@@ -160,6 +160,7 @@ class ArvadosPlatform(Platform):
         self.logger.error("Source collection %s not found in project %s", collection_name, project["uuid"])
         return None
 
+    # File methods
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy folder to destination project
