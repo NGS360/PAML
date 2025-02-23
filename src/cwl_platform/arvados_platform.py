@@ -305,6 +305,63 @@ class ArvadosPlatform(Platform):
             return None
         return f"keep:{collection['uuid']}/{folder_path}"
 
+    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+        '''
+        Upload a local file to project 
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
+        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param destination_filename: File name after uploaded to destination folder.
+        :param overwrite: Overwrite the file if it already exists.
+        :return: ID of uploaded file.
+        '''
+
+        if dest_folder is None:
+            self.logger.error("Must provide a collection name for Arvados file upload.")
+            return None
+
+        # trim slash at beginning and end
+        folder_tree = dest_folder.split('/')
+        try:
+            if not folder_tree[0]:
+                folder_tree = folder_tree[1:]
+            if not folder_tree[-1]:
+                folder_tree = folder_tree[:-1]
+            collection_name = folder_tree[0]
+        except IndexError:
+            self.logger.error("Must provide a collection name for Arvados file upload.")
+            return None
+
+        # Get the destination collection
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", collection_name]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            destination_collection = search_result['items'][0]
+        else:
+            destination_collection = self.api.collections().create(body={
+                "owner_uuid": project["uuid"],
+                "name": collection_name}).execute()
+
+        target_collection = arvados.collection.Collection(destination_collection['uuid'])
+
+        if destination_filename is None:
+            destination_filename = filename.split('/')[-1]
+
+        if len(folder_tree) > 1:
+            target_filepath = '/'.join(folder_tree[1:]) + '/' + destination_filename
+        else:
+            target_filepath = destination_filename
+
+        if overwrite or target_collection.find(target_filepath) is None:
+            with open_file_with_inferred_encoding(filename) as local_file:
+                local_content = local_file.read()
+            with target_collection.open(target_filepath, 'w') as arv_file:
+                arv_file.write(local_content) # pylint: disable=no-member
+            target_collection.save()
+        return f"keep:{destination_collection['uuid']}/{target_filepath}"
+
     # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
         '''
@@ -678,63 +735,6 @@ class ArvadosPlatform(Platform):
             except IOError as err:
                 self.logger.error("ERROR LOG: %s", str(err))
         return None
-
-    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
-        '''
-        Upload a local file to project 
-        :param filename: filename of local file to be uploaded.
-        :param project: project that the file is uploaded to.
-        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
-        :param destination_filename: File name after uploaded to destination folder.
-        :param overwrite: Overwrite the file if it already exists.
-        :return: ID of uploaded file.
-        '''
-
-        if dest_folder is None:
-            self.logger.error("Must provide a collection name for Arvados file upload.")
-            return None
-
-        # trim slash at beginning and end
-        folder_tree = dest_folder.split('/')
-        try:
-            if not folder_tree[0]:
-                folder_tree = folder_tree[1:]
-            if not folder_tree[-1]:
-                folder_tree = folder_tree[:-1]
-            collection_name = folder_tree[0]
-        except IndexError:
-            self.logger.error("Must provide a collection name for Arvados file upload.")
-            return None
-
-        # Get the destination collection
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", project["uuid"]],
-            ["name", "=", collection_name]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            destination_collection = search_result['items'][0]
-        else:
-            destination_collection = self.api.collections().create(body={
-                "owner_uuid": project["uuid"],
-                "name": collection_name}).execute()
-
-        target_collection = arvados.collection.Collection(destination_collection['uuid'])
-
-        if destination_filename is None:
-            destination_filename = filename.split('/')[-1]
-
-        if len(folder_tree) > 1:
-            target_filepath = '/'.join(folder_tree[1:]) + '/' + destination_filename
-        else:
-            target_filepath = destination_filename
-
-        if overwrite or target_collection.find(target_filepath) is None:
-            with open_file_with_inferred_encoding(filename) as local_file:
-                local_content = local_file.read()
-            with target_collection.open(target_filepath, 'w') as arv_file:
-                arv_file.write(local_content) # pylint: disable=no-member
-            target_collection.save()
-        return f"keep:{destination_collection['uuid']}/{target_filepath}"
 
     ### Project methods
     def create_project(self, project_name, project_description, **kwargs):
