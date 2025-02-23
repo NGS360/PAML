@@ -126,13 +126,11 @@ class SevenBridgesPlatform(Platform):
         :return: List of file objects matching filter criteria
         """
         matching_files = []
-
         for f in self.api.files.query(project, limit=1000).all():
             if f.type == 'folder':
                     matching_files += self._get_folder_contents(f, f'/{f.name}')
             else:
                 matching_files.append(f"/{f.name}")
-
         return matching_files
 
     def get_folder_id(self, project, folder_path):
