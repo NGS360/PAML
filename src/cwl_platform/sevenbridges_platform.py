@@ -158,6 +158,30 @@ class SevenBridgesPlatform(Platform):
                     break
         return parent
 
+    def stage_output_files(self, project, output_files):
+        '''
+        Stage output files to a project
+
+        :param project: The project to stage files to
+        :param output_files: A list of output files to stage
+        :return: None
+        '''
+        for output_file in output_files:
+            self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
+            outfile = self.api.files.get(id=output_file['source'])
+            if isinstance(outfile, sevenbridges.models.file.File):
+                if outfile.type == "file":
+                    self._add_tag_to_file(outfile, "OUTPUT")
+                elif outfile.type == "folder":
+                    self._add_tag_to_folder(outfile, "OUTPUT")
+            if isinstance(outfile, list):
+                for file in outfile:
+                    if isinstance(file, sevenbridges.models.file.File):
+                        if file.type == "file":
+                            self._add_tag_to_file(file, "OUTPUT")
+                        elif file.type == "folder":
+                            self._add_tag_to_folder(file, "OUTPUT")
+
     def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         '''
         Upload a local file to project 
@@ -357,30 +381,6 @@ class SevenBridgesPlatform(Platform):
 
         # 3. Rename the file
         self.rename_file(sbg_file.id, new_filename)
-
-    def stage_output_files(self, project, output_files):
-        '''
-        Stage output files to a project
-
-        :param project: The project to stage files to
-        :param output_files: A list of output files to stage
-        :return: None
-        '''
-        for output_file in output_files:
-            self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
-            outfile = self.api.files.get(id=output_file['source'])
-            if isinstance(outfile, sevenbridges.models.file.File):
-                if outfile.type == "file":
-                    self._add_tag_to_file(outfile, "OUTPUT")
-                elif outfile.type == "folder":
-                    self._add_tag_to_folder(outfile, "OUTPUT")
-            if isinstance(outfile, list):
-                for file in outfile:
-                    if isinstance(file, sevenbridges.models.file.File):
-                        if file.type == "file":
-                            self._add_tag_to_file(file, "OUTPUT")
-                        elif file.type == "folder":
-                            self._add_tag_to_folder(file, "OUTPUT")
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
