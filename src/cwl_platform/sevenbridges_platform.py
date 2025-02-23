@@ -31,168 +31,7 @@ class SevenBridgesPlatform(Platform):
             else:
                 raise ValueError('No SevenBridges credentials found')
 
-    def _add_tag_to_file(self, target_file, newtag):
-        ''' Add a tag to a file '''
-        if newtag not in target_file.tags:
-            target_file.tags += [newtag]
-            target_file.save()
-        if hasattr(target_file,'secondary_files') and target_file.secondary_files is not None:
-            secondary_files = target_file.secondary_files
-            for secfile in secondary_files:
-                if isinstance(secfile,sevenbridges.models.file.File) and secfile.tags and newtag not in secfile.tags:
-                    secfile.tags += [newtag]
-                    secfile.save()
-
-    def _add_tag_to_folder(self,target_folder, newtag):
-        ''' Add a tag to all files in a folder '''
-        folder = self.api.files.get(id=target_folder.id)
-        allfiles = folder.list_files()
-        for file in allfiles:
-            if not isinstance(file,sevenbridges.models.file.File):
-                continue
-            if file.type == "file":
-                self._add_tag_to_file(file, newtag)
-            elif file.type == "folder":
-                self._add_tag_to_folder(file, newtag)
-
-    def _find_or_create_path(self, project, path):
-        """
-        Go down virtual folder path, creating missing folders.
-
-        :param path: virtual folder path as string
-        :param project: `sevenbridges.Project` entity
-        :return: `sevenbridges.File` entity of type folder to which path indicates
-        """
-        folders = path.split("/")
-        # If there is a leading slash, remove it
-        if not folders[0]:
-            folders = folders[1:]
-
-        parent = self.api.files.query(project=project, names=[folders[0]])
-        if len(parent) == 0:
-            parent = None
-            for folder in folders:
-                parent = self.api.files.create_folder(
-                    name=folder,
-                    parent=parent,
-                    project=None if parent else project
-                )
-        elif not parent[0].is_folder():
-            raise FileExistsError(f"File with name {parent[0].name} already exists!")
-        else:
-            parent = parent[0]
-            for folder in folders[1:]:
-                nested = [x for x in parent.list_files().all() if x.name == folder]
-                if not nested:
-                    parent = self.api.files.create_folder(
-                        name=folder,
-                        parent=parent,
-                    )
-                else:
-                    parent = nested[0]
-                    if not parent.is_folder():
-                        raise FileExistsError(
-                            f"File with name {parent.name} already exists!")
-        return parent
-
-    def _get_folder_contents(self, folder, tag, path):
-        '''
-        Recusivelly returns all the files in a directory and subdirectories in a SevenBridges project.
-        :param folder: SB Project reference
-        :param tag: tag to filter by
-        :param path: path of file
-        :return: List of files and paths
-        '''
-        files = []
-        for file in folder.list_files().all():
-            if file.type == 'folder':
-                files += self._get_folder_contents(file, tag, f"{path}/{file.name}")
-            else:
-                if tag is None:
-                    files.append((file, path))
-                elif file.tags and (tag in file.tags):
-                    files.append((file, path))
-        return files
-
-    def _get_project_files(self, sb_project_id, tag=None, name=None):
-        '''
-        Get all (named)) files (with tag) from a project
-
-        :param sb_project_id: SevenBridges project id
-        :param tag: Tag to filter by (can only specify one, but should be changed)
-        :param name: Name(s) of file to filter by
-        :return: List of SevenBridges file objects and their paths e.g.
-                 [(file1, path1), (file2, path2)]
-        '''
-        project = self.api.projects.get(sb_project_id)
-        sb_files = []
-        limit = 1000
-        if name is None:
-            for file in self.api.files.query(project, cont_token='init', limit=limit).all():
-                if file.type == 'folder':
-                    sb_files += self._get_folder_contents(file, tag, f'/{file.name}')
-                else:
-                    if tag is None:
-                        sb_files.append((file, '/'))
-                    elif file.tags and (tag in file.tags):
-                        sb_files.append((file, '/'))
-        else:
-            for i in range(0, len(name), limit):
-                files_chunk = name[i:i+limit]
-                sb_files_chunk = self.api.files.query(project=sb_project_id, names=[files_chunk])
-                for file in sb_files_chunk:
-                    sb_files.append((file, '/'))
-        return sb_files
-
-    def _list_all_files(self, files=None, project=None):
-        """
-        Returns a list of files (files within folders are included).
-        Provide a list of file objects OR a project object/id
-        :param files: List of file (and folder) objects
-        :param project: Project object or id
-        :return: Flattened list of files (no folder objects)
-        """
-        if not files and not project:
-            self.logger.error("Provide either a list of files OR a project object/id")
-            return []
-
-        if project and not files:
-            self.logger.info("Recursively listing all files in project %s", project)
-            files = self.api.files.query(project=project, limit=100).all()
-        file_list = []
-        for file in files:
-            if not file.is_folder():
-                file_list.append(file)
-            elif file.is_folder():
-                child_nodes = self.api.files.get(id=file.id).list_files().all()
-                file_list.extend(self._list_all_files(files=child_nodes))
-        return file_list
-
-    def _list_files_in_folder(self, project=None, folder=None, recursive=False):
-        """
-        List all file contents of a folder.
-        
-        Project object and folder path both required
-        Folder path format "folder_1/folder_2"
-        
-        Option to list recursively, eg. return file objects only
-        :param project: `sevenbridges.Project` entity
-        :param folder: Folder string name
-        :param recursive: Boolean
-        :return: List of file objects
-        """
-        parent = self._find_or_create_path(
-            path=folder,
-            project=project
-        )
-        if recursive:
-            file_list = self._list_all_files(
-                files=[parent]
-            )
-        else:
-            file_list = self.api.files.get(id=parent.id).list_files().all()
-        return file_list
-
+    # File methods
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy reference folder to destination project
@@ -254,6 +93,46 @@ class SevenBridgesPlatform(Platform):
 
         raise ValueError(f"File not found in specified folder: {file_path}")
 
+    def _get_folder_contents(self, folder, path):
+        '''
+        Recusivelly returns all the files in a directory and subdirectories in a SevenBridges project.
+
+        :param folder: SB Project reference
+        :param tag: tag to filter by
+        :param path: path of file
+        :return: List of files and paths
+        '''
+        files = []
+        for f in folder.list_files().all():
+            if f.type == 'folder':
+                files += self._get_folder_contents(f, f"{path}/{f.name}")
+            else:
+                files.append(f"{path}/{f.name}")
+        return files
+
+    def get_files(self, project, filters=None):
+        """
+        Retrieve files in a project matching the filter criteria
+
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of file objects matching filter criteria
+        """
+        matching_files = []
+        for f in self.api.files.query(project, limit=1000).all():
+            if f.type == 'folder':
+                    matching_files += self._get_folder_contents(f, f'/{f.name}')
+            else:
+                matching_files.append(f"/{f.name}")
+        return matching_files
+
     def get_folder_id(self, project, folder_path):
         '''
         Get the folder id in a project
@@ -278,6 +157,109 @@ class SevenBridgesPlatform(Platform):
                     parent = file.id
                     break
         return parent
+
+    def rename_file(self, fileid, new_filename):
+        '''
+        Rename a file to new_filename.
+
+        :param file: File ID to rename
+        :param new_filename: str of new filename
+        '''
+        file = self.api.files.get(id=fileid)
+        file.name = new_filename
+        file.save()
+
+    def roll_file(self, project, file_name):
+        ''' 
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
+        '''
+        # 1. Get the file reference of the file to be renamed
+        sbg_file = self.api.files.query(project=project, names=[file_name])
+        if not sbg_file: # Do nothing if file not exists
+            return
+        sbg_file = sbg_file[0]
+
+        # 2. Determine what new filename to be used
+        ## Get a list of all files with file_name in the files name...
+        file_list = self.api.files.query(project=project).all()
+        existing_filenames = []
+        for x in file_list:
+            if file_name in x.name:
+                existing_filenames += [x.name]
+        i = 1
+        ## "Roll" the filename by adding a number to the filename
+        ## and make sure it doesn't already exist in existing_filenames
+        new_filename = "_" + str(i) + "_" + file_name
+        while new_filename in existing_filenames:
+            i += 1
+            new_filename = "_" + str(i) + "_" + file_name
+
+        # 3. Rename the file
+        self.rename_file(sbg_file.id, new_filename)
+
+    def stage_output_files(self, project, output_files):
+        '''
+        Stage output files to a project
+
+        :param project: The project to stage files to
+        :param output_files: A list of output files to stage
+        :return: None
+        '''
+        for output_file in output_files:
+            self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
+            outfile = self.api.files.get(id=output_file['source'])
+            if isinstance(outfile, sevenbridges.models.file.File):
+                if outfile.type == "file":
+                    self._add_tag_to_file(outfile, "OUTPUT")
+                elif outfile.type == "folder":
+                    self._add_tag_to_folder(outfile, "OUTPUT")
+            if isinstance(outfile, list):
+                for file in outfile:
+                    if isinstance(file, sevenbridges.models.file.File):
+                        if file.type == "file":
+                            self._add_tag_to_file(file, "OUTPUT")
+                        elif file.type == "folder":
+                            self._add_tag_to_folder(file, "OUTPUT")
+
+    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+        '''
+        Upload a local file to project 
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
+        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param destination_filename: File name after uploaded to destination folder.
+        :param overwrite: Overwrite the file if it already exists.
+        :return: ID of uploaded file.
+        '''
+        if destination_filename is None:
+            destination_filename = filename.split('/')[-1]
+
+        if dest_folder is not None:
+            if dest_folder[-1] == '/': # remove slash at the end
+                dest_folder = dest_folder[:-1]
+            parent_folder = self._find_or_create_path(project, dest_folder)
+            parent_folder_id = parent_folder.id
+        else:
+            parent_folder_id = None
+
+        # check if file already exists on SBG
+        existing_file = self.api.files.query(names=[destination_filename],
+                                             parent=parent_folder_id,
+                                             project=None if parent_folder_id else project)
+
+        # upload file if overwrite is True or if file does not exists
+        if overwrite or len(existing_file) == 0:
+            update_state = self.api.files.upload(filename, overwrite=overwrite,
+                                                 parent=parent_folder_id,
+                                                 file_name=destination_filename,
+                                                 project=None if parent_folder_id else project)
+            return None if update_state.status == 'FAILED' else update_state.result().id
+
+        # return file id if file already exists
+        return existing_file[0].id
 
     # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
@@ -400,72 +382,6 @@ class SevenBridgesPlatform(Platform):
                 tasks.append(task)
         return tasks
 
-    def rename_file(self, fileid, new_filename):
-        '''
-        Rename a file to new_filename.
-
-        :param file: File ID to rename
-        :param new_filename: str of new filename
-        '''
-        file = self.api.files.get(id=fileid)
-        file.name = new_filename
-        file.save()
-
-    def roll_file(self, project, file_name):
-        ''' 
-        Roll (find and rename) a file in a project.
-
-        :param project: The project the file is located in
-        :param file_name: The filename that needs to be rolled
-        '''
-        # 1. Get the file reference of the file to be renamed
-        sbg_file = self.api.files.query(project=project, names=[file_name])
-        if not sbg_file: # Do nothing if file not exists
-            return
-        sbg_file = sbg_file[0]
-
-        # 2. Determine what new filename to be used
-        ## Get a list of all files with file_name in the files name...
-        file_list = self.api.files.query(project=project).all()
-        existing_filenames = []
-        for x in file_list:
-            if file_name in x.name:
-                existing_filenames += [x.name]
-        i = 1
-        ## "Roll" the filename by adding a number to the filename
-        ## and make sure it doesn't already exist in existing_filenames
-        new_filename = "_" + str(i) + "_" + file_name
-        while new_filename in existing_filenames:
-            i += 1
-            new_filename = "_" + str(i) + "_" + file_name
-
-        # 3. Rename the file
-        self.rename_file(sbg_file.id, new_filename)
-
-    def stage_output_files(self, project, output_files):
-        '''
-        Stage output files to a project
-
-        :param project: The project to stage files to
-        :param output_files: A list of output files to stage
-        :return: None
-        '''
-        for output_file in output_files:
-            self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
-            outfile = self.api.files.get(id=output_file['source'])
-            if isinstance(outfile, sevenbridges.models.file.File):
-                if outfile.type == "file":
-                    self._add_tag_to_file(outfile, "OUTPUT")
-                elif outfile.type == "folder":
-                    self._add_tag_to_folder(outfile, "OUTPUT")
-            if isinstance(outfile, list):
-                for file in outfile:
-                    if isinstance(file, sevenbridges.models.file.File):
-                        if file.type == "file":
-                            self._add_tag_to_file(file, "OUTPUT")
-                        elif file.type == "folder":
-                            self._add_tag_to_folder(file, "OUTPUT")
-
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
         Prepare/Copy output files of a task for export.
@@ -550,43 +466,6 @@ class SevenBridgesPlatform(Platform):
 
         task.run()
         return task
-
-    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
-        '''
-        Upload a local file to project 
-        :param filename: filename of local file to be uploaded.
-        :param project: project that the file is uploaded to.
-        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
-        :param destination_filename: File name after uploaded to destination folder.
-        :param overwrite: Overwrite the file if it already exists.
-        :return: ID of uploaded file.
-        '''
-        if destination_filename is None:
-            destination_filename = filename.split('/')[-1]
-
-        if dest_folder is not None:
-            if dest_folder[-1] == '/': # remove slash at the end
-                dest_folder = dest_folder[:-1]
-            parent_folder = self._find_or_create_path(project, dest_folder)
-            parent_folder_id = parent_folder.id
-        else:
-            parent_folder_id = None
-
-        # check if file already exists on SBG
-        existing_file = self.api.files.query(names=[destination_filename],
-                                             parent=parent_folder_id,
-                                             project=None if parent_folder_id else project)
-
-        # upload file if overwrite is True or if file does not exists
-        if overwrite or len(existing_file) == 0:
-            update_state = self.api.files.upload(filename, overwrite=overwrite,
-                                                 parent=parent_folder_id,
-                                                 file_name=destination_filename,
-                                                 project=None if parent_folder_id else project)
-            return None if update_state.status == 'FAILED' else update_state.result().id
-
-        # return file id if file already exists
-        return existing_file[0].id
 
     ### Project methods
     def create_project(self, project_name, project_description, **kwargs):

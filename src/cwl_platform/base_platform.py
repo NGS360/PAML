@@ -19,6 +19,22 @@ class Platform(ABC):
         ''' Get a file id by its full path name '''
 
     @abstractmethod
+    def get_files(self, project, filters=None):
+         """
+         Retrieve files in a project matching the filter criteria
+         :param project: Project to search for files
+         :param filters: Dictionary containing filter criteria
+             {
+                 'name': 'file_name',
+                 'prefix': 'file_prefix',
+                 'suffix': 'file_suffix',
+                 'folder': 'folder_name',
+                 'recursive': True/False
+             }
+         :return: List of file objects matching filter criteria
+         """
+
+    @abstractmethod
     def get_folder_id(self, project, folder_path):
         ''' Get a folder id by its full path name '''
 
