@@ -17,5 +17,5 @@ test:
 	coverage html
 
 lint:
-	find . -name "*.py" | xargs pylint --max-line-length=120 --ignore-imports=y --exit-zero
+	find . -name "*.py" | xargs pylint --max-line-length=120 --ignore-imports=y
 
