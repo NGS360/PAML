@@ -305,6 +305,34 @@ class ArvadosPlatform(Platform):
             return None
         return f"keep:{collection['uuid']}/{folder_path}"
 
+    def rename_file(self, fileid, new_filename):
+        '''
+        Rename a file to new_filename.
+
+        :param file: File ID to rename
+        :param new_filename: str of new filename
+        '''
+        collection_uuid = fileid.split('keep:')[1].split('/')[0]
+        filepath = fileid.split(collection_uuid+'/')[1]
+        if len(filepath.split('/'))>1:
+            newpath = '/'.join(filepath.split('/')[:-1]+[new_filename])
+        else:
+            newpath = new_filename
+        collection = arvados.collection.Collection(collection_uuid, api_client=self.api)
+        collection.copy(filepath, newpath)
+        collection.remove(filepath, recursive=True)
+        collection.save()
+
+    def roll_file(self, project, file_name):
+        '''
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
+        '''
+        # Each run of a workflow will have a unique output collection, hence there will be no
+        # name conflicts.
+
     def stage_output_files(self, project, output_files):
         '''
         Stage output files to a project
@@ -612,34 +640,6 @@ class ArvadosPlatform(Platform):
             container = self.api.containers().get(uuid=container_request['container_uuid']).execute()
             tasks.append(ArvadosTask(container_request, container))
         return tasks
-
-    def rename_file(self, fileid, new_filename):
-        '''
-        Rename a file to new_filename.
-
-        :param file: File ID to rename
-        :param new_filename: str of new filename
-        '''
-        collection_uuid = fileid.split('keep:')[1].split('/')[0]
-        filepath = fileid.split(collection_uuid+'/')[1]
-        if len(filepath.split('/'))>1:
-            newpath = '/'.join(filepath.split('/')[:-1]+[new_filename])
-        else:
-            newpath = new_filename
-        collection = arvados.collection.Collection(collection_uuid, api_client=self.api)
-        collection.copy(filepath, newpath)
-        collection.remove(filepath, recursive=True)
-        collection.save()
-
-    def roll_file(self, project, file_name):
-        '''
-        Roll (find and rename) a file in a project.
-
-        :param project: The project the file is located in
-        :param file_name: The filename that needs to be rolled
-        '''
-        # Each run of a workflow will have a unique output collection, hence there will be no
-        # name conflicts.
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
