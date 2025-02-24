@@ -32,6 +32,46 @@ class SevenBridgesPlatform(Platform):
                 raise ValueError('No SevenBridges credentials found')
 
     # File methods
+    def _find_or_create_path(self, project, path):
+        """
+        Go down virtual folder path, creating missing folders.
+
+        :param path: virtual folder path as string
+        :param project: `sevenbridges.Project` entity
+        :return: `sevenbridges.File` entity of type folder to which path indicates
+        """
+        folders = path.split("/")
+        # If there is a leading slash, remove it
+        if not folders[0]:
+            folders = folders[1:]
+
+        parent = self.api.files.query(project=project, names=[folders[0]])
+        if len(parent) == 0:
+            parent = None
+            for folder in folders:
+                parent = self.api.files.create_folder(
+                    name=folder,
+                    parent=parent,
+                    project=None if parent else project
+                )
+        elif not parent[0].is_folder():
+            raise FileExistsError(f"File with name {parent[0].name} already exists!")
+        else:
+            parent = parent[0]
+            for folder in folders[1:]:
+                nested = [x for x in parent.list_files().all() if x.name == folder]
+                if not nested:
+                    parent = self.api.files.create_folder(
+                        name=folder,
+                        parent=parent,
+                    )
+                else:
+                    parent = nested[0]
+                    if not parent.is_folder():
+                        raise FileExistsError(
+                            f"File with name {parent.name} already exists!")
+        return parent
+
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy reference folder to destination project
