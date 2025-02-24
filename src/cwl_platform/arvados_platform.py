@@ -434,11 +434,14 @@ class ArvadosPlatform(Platform):
             ):
                 conts[container["uuid"]] = container
 
+        seen_cids = set()
         for cr in cont_reqs:
             cid = cr["container_uuid"]
             if cid in conts:
                 c = conts[cid]
-                tasks.append(ArvadosTask(cr,c))
+                if cid not in seen_cids:
+                    seen_cids.add(cid)
+                    tasks.append(ArvadosTask(cr,c))
 
         return tasks
 
@@ -447,7 +450,7 @@ class ArvadosPlatform(Platform):
 
     def get_project_cost(self, project):
         setup_filters=[
-            ['owner_uuid', '=', project['uuid']], ['priority', '>', 0], ['requesting_container_uuid', '=', None]
+            ['owner_uuid', '=', project['uuid']], ['requesting_container_uuid', '=', None]
         ]
 
         projCost = 0.0
