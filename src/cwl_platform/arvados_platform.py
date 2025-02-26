@@ -28,6 +28,21 @@ def open_file_with_inferred_encoding(filename, mode='r'):
         raise ValueError("Failed to detect file encoding.")
     return open(filename, mode, encoding=encoding)
 
+def find_collection_file_path(keep_uri):
+    '''
+    This is a helper function that given a keep_uri, return the collection_uuid and file path
+    :param keep_uri: Keep URI (e.g. keep:asdf-asdf-asdf/some/file.txt)
+    return: [collection uuid, file path]
+    '''
+    if keep_uri.startswith('keep:'):
+        keep_uri = keep_uri[5:]
+    keep_components = keep_uri.split('/')
+    keep_uuid = keep_components[0]
+    file_path = ''
+    if len(keep_components) > 1:
+        file_path = '/'.join(keep_components[1:])
+    return keep_uuid, file_path
+
 class ArvadosTask():
     '''
     Arvados Task class to encapsulate task functionality to mimick SevenBridges task class
@@ -58,6 +73,7 @@ class ArvadosTaskEncoder(json.JSONEncoder):
         return super().default(o)
 
 class StreamFileReader(arvados.arvfile.ArvadosFileReader):
+    ''' This class replaces the deprecated StreamFileReader that existed in Arvados prior to 2.7.4 '''
     class _NameAttribute(str):
         # The Python file API provides a plain .name attribute.
         # Older SDK provided a name() method.
@@ -66,12 +82,12 @@ class StreamFileReader(arvados.arvfile.ArvadosFileReader):
             return self
 
     def __init__(self, arvadosfile):
-        super(StreamFileReader, self).__init__(arvadosfile)
+        super().__init__(arvadosfile)
         self.name = self._NameAttribute(arvadosfile.name)
 
     def stream_name(self):
         return super().stream_name().lstrip("./")
-    
+
 # custom JSON decoder
 def arvados_task_decoder(obj):
     ''' Arvados Task Decoder class '''
@@ -203,6 +219,25 @@ class ArvadosPlatform(Platform):
 
         self.logger.debug("Done copying folder.")
         return destination_collection
+
+    def download_file(self, file, dest_folder):
+        """
+        Download a file to a local directory
+        :param file: File to download e.g. keep:asdf-asdf-asdf/some/file.txt
+        :param dest_folder: Destination folder to download file to
+        :return: Name of local file downloaded or None
+        """
+        dest_file = os.path.join(dest_folder, os.path.basename(file))
+        collection_uuid, file_path = find_collection_file_path(file)
+
+        c = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid, api_client=self.api)
+        with c.open(file_path, "rb") as reader:
+            with open(dest_file, "wb") as writer:
+                content = reader.read(128*1024)
+                while content:
+                    writer.write(content)
+                    content = reader.read(128*1024)
+        return dest_file
 
     def get_file_id(self, project, file_path):
         '''
@@ -769,10 +804,10 @@ class ArvadosPlatform(Platform):
         :param project: platform project
         :param permission: permission (permission="read|write|execute|admin")
         """
-        aPermission = 'can_manage' if permission=="admin" else 'can_write' if permission=="write" else 'can_read'
+        a_permission = 'can_manage' if permission=="admin" else 'can_write' if permission=="write" else 'can_read'
         self.api.links().create(body={"link": {
                                             "link_class": "permission",
-                                            "name": aPermission,
+                                            "name": a_permission,
                                             "tail_uuid": platform_user['uuid'],
                                             "head_uuid": project['uuid']
                                        }

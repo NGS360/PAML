@@ -15,6 +15,15 @@ class Platform(ABC):
         ''' Copy source folder to destination project '''
 
     @abstractmethod
+    def download_file(self, file, dest_folder):
+        """
+        Download a file to a local directory
+        :param fileid: File to download
+        :param dest_folder: Destination folder to download file to
+        :return: Name of local file downloaded or None
+        """
+
+    @abstractmethod
     def get_file_id(self, project, file_path):
         ''' Get a file id by its full path name '''
 
