@@ -397,7 +397,10 @@ class SevenBridgesPlatform(Platform):
         return list(task.outputs.keys())
 
     def get_task_output_filename(self, task: sevenbridges.Task, output_name):
-        ''' Retrieve the output field of the task and return filename'''
+        '''
+        Retrieve the output field of the task and return filename
+        NOTE: This method is deprecated as of v0.2.5 of PAML.  Will be removed in v1.0.
+        '''
         task = self.api.tasks.get(id=task.id)
         if output_name in task.outputs:
             if isinstance(task.outputs[output_name], list):
