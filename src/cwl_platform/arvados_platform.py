@@ -638,7 +638,11 @@ class ArvadosPlatform(Platform):
         return list(cwl_output.keys())
 
     def get_task_output_filename(self, task: ArvadosTask, output_name):
-        ''' Retrieve the output field of the task and return filename'''
+        '''
+        Retrieve the output field of the task and return filename
+        NOTE: This method is deprecated as of v0.2.5 of PAML.  Will be removed in v1.0.
+        '''
+        self.logger.warning("get_task_output_filename to be DEPRECATED (as of v0.2.5), use get_task_output instead.")
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
                                                               keep_client=self.keep_client)
