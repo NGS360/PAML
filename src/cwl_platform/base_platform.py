@@ -127,7 +127,10 @@ class Platform(ABC):
 
     @abstractmethod
     def get_task_output_filename(self, task, output_name):
-        ''' Retrieve the output field of the task and return filename'''
+        '''
+        Retrieve the output field of the task and return filename
+        NOTE: This method is deprecated as of v0.2.5 of PAML.  Will be removed in v1.0.
+        '''
 
     @abstractmethod
     def get_tasks_by_name(self, project, task_name):
