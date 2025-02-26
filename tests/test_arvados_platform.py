@@ -44,6 +44,39 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
+    def test_get_files(self):
+        '''
+        Test get_files method returns a single file matching filter criteria given there are 3 files in the project.
+        '''
+        # Set up test parameters
+        project = {"uuid": "project_uuid"}
+        filters = {
+            'name': 'file1.txt',
+            'prefix': 'file',
+            'suffix': '.txt',
+            'folder': 'folder1',
+            'recursive': False
+        }
+
+        # Set up mocks
+        self.platform.api.collections().list().execute.return_value = {
+            'items': [
+                MagicMock(name="collection1"),
+            ]
+        }
+        file1 = MagicMock()
+        file1.name = 'file1.txt'
+        file1.parent = MagicMock()
+        file1.parent.name = 'folder1'
+        # Test
+        with mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection") as mock_gflic:
+            mock_gflic.return_value = [file1]
+            results = self.platform.get_files(project, filters)
+
+        # Check results
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].name, 'file1.txt')
+
     @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
     def test_get_task_output(self, mock__load_cwl_output):
         ''' Test that get_task_output can handle cases when the cwl_output is {} '''
