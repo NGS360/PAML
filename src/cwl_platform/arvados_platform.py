@@ -73,6 +73,7 @@ class ArvadosTaskEncoder(json.JSONEncoder):
         return super().default(o)
 
 class StreamFileReader(arvados.arvfile.ArvadosFileReader):
+    ''' This class replaces the deprecated StreamFileReader that existed in Arvados prior to 2.7.4 '''
     class _NameAttribute(str):
         # The Python file API provides a plain .name attribute.
         # Older SDK provided a name() method.
@@ -81,12 +82,12 @@ class StreamFileReader(arvados.arvfile.ArvadosFileReader):
             return self
 
     def __init__(self, arvadosfile):
-        super(StreamFileReader, self).__init__(arvadosfile)
+        super().__init__(arvadosfile)
         self.name = self._NameAttribute(arvadosfile.name)
 
     def stream_name(self):
         return super().stream_name().lstrip("./")
-    
+
 # custom JSON decoder
 def arvados_task_decoder(obj):
     ''' Arvados Task Decoder class '''
@@ -229,7 +230,7 @@ class ArvadosPlatform(Platform):
         dest_file = os.path.join(dest_folder, os.path.basename(file))
         collection_uuid, file_path = find_collection_file_path(file)
 
-        c = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid, api_client=self.arv)
+        c = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid, api_client=self.api)
         with c.open(file_path, "rb") as reader:
             with open(dest_file, "wb") as writer:
                 content = reader.read(128*1024)
@@ -803,10 +804,10 @@ class ArvadosPlatform(Platform):
         :param project: platform project
         :param permission: permission (permission="read|write|execute|admin")
         """
-        aPermission = 'can_manage' if permission=="admin" else 'can_write' if permission=="write" else 'can_read'
+        a_permission = 'can_manage' if permission=="admin" else 'can_write' if permission=="write" else 'can_read'
         self.api.links().create(body={"link": {
                                             "link_class": "permission",
-                                            "name": aPermission,
+                                            "name": a_permission,
                                             "tail_uuid": platform_user['uuid'],
                                             "head_uuid": project['uuid']
                                        }
