@@ -21,14 +21,15 @@ class TestArvadosPlaform(unittest.TestCase):
         return super().setUp()
 
     def test_add_user_to_project(self):
+        ''' Test that we can add a user to a project '''
         # Set up test parameters
         platform_user = {'uuid': 'auser'}
         project = {'uuid': 'aproject'}
         permission = 'admin'
         # Test
         self.platform.add_user_to_project(platform_user, project, permission)
-        # Check results 
-        self.platform.api.links().create().execute.assert_called_once
+        # Check results
+        self.platform.api.links().create().execute.assert_called_once()
 
     @mock.patch("arvados.api_from_config")
     @mock.patch("arvados.KeepClient")
@@ -334,7 +335,8 @@ class TestArvadosPlaform(unittest.TestCase):
         # Set up supporting mocks
         self.platform.api.collections().create().execute.return_value = {'uuid': 'a_destination_collection'}
         # Test
-        actual_result = self.platform.upload_file(filename, project, dest_folder, destination_filename=None, overwrite=False)
+        actual_result = self.platform.upload_file(
+            filename, project, dest_folder, destination_filename=None, overwrite=False)
         # Check results
         self.assertEqual(actual_result, "keep:a_destination_collection/file.txt")
 

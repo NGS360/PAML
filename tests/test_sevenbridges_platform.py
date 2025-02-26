@@ -20,14 +20,15 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         return super().setUp()
 
     def test_add_user_to_project(self):
+        ''' Test that we can add a user to a project '''
         # Set up test parameters
         platform_user = 'auser'
         project = MagicMock()
         permission = 'admin'
         # Test
         self.platform.add_user_to_project(platform_user, project, permission)
-        # Check results 
-        project.add_member.assert_called_once
+        # Check results
+        project.add_member.assert_called_once()
 
     @mock.patch('sevenbridges.Api')
     def test_connect(self, mock_api_client):
@@ -198,7 +199,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         dest_folder = '/inputs'
         # Set up supporting mocks
         self.platform.api = MagicMock()
-        
+
         upload_state = MagicMock()
         upload_state.result().id = 1
         self.platform.api.files.upload.return_value = upload_state
