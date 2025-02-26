@@ -14,7 +14,7 @@ class Platform(ABC):
     def copy_folder(self, source_project, source_folder, destination_project):
         ''' Copy source folder to destination project '''
 
-   @abstractmethod
+    @abstractmethod
     def download_file(self, file, dest_folder):
         """
         Download a file to a local directory
