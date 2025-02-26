@@ -219,6 +219,20 @@ class SevenBridgesPlatform(Platform):
                 reference_file.copy_to_folder(parent=sbg_destination_folder)
         return sbg_destination_folder
 
+    def download_file(self, file, dest_folder):
+         """
+         Download a file to a local directory
+         :param file: SevenBridges file id (or object) to download
+         :param dest_folder: Destination folder to download file to
+         :return: Name of local file downloaded or None
+         """
+         # If file is a str, assume its a file id, else is a file object
+         if isinstance(file, str):
+             file = self.api.files.get(id=file)
+         dest_file = os.path.join(dest_folder, os.path.basename(file.name))
+         file.download(dest_file)
+         return dest_file
+
     def get_file_id(self, project, file_path):
         '''
         Get the file id for a file in a project
