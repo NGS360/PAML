@@ -233,6 +233,36 @@ class SevenBridgesPlatform(Platform):
         file.download(dest_file)
         return dest_file
 
+    def export_file(self, file, bucket_name, prefix):
+        """
+        Use platform specific functionality to copy a file from a platform to an S3 bucket.
+        :param file: File to export
+        :param bucket_name: S3 bucket name
+        :param prefix: Destination S3 folder to export file to, path/to/folder
+        :return: Export job of file
+        For SevenBridges, there are two differences from the expected base implementation:
+        1. the bucket name is translated to a volume name, replacing all dashes with underscores.
+        2. the return value is the export job object, not the S3 file path.
+        """
+        # If file is a str, assume its a file id, else is a file object
+        if isinstance(file, str):
+            file = self.api.files.get(id=file)
+
+        volume = None
+        volume_name = bucket_name.replace("-", "_")
+        for v in self.api.volumes.query().all():
+            if v.name == volume_name:
+                volume = v
+                break
+        if not volume:
+            self.logger.error("Volume %s not found", volume_name)
+            return None
+
+        export = self.api.exports.submit_export(
+            file=file, volume=volume, location=f"{prefix}/{file.name}", copy_only=True
+        )
+        return export
+
     def get_file_id(self, project, file_path):
         '''
         Get the file id for a file in a project

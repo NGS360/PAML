@@ -13,6 +13,7 @@ import tempfile
 import chardet
 
 import googleapiclient
+import smart_open
 
 import arvados
 
@@ -238,6 +239,29 @@ class ArvadosPlatform(Platform):
                     writer.write(content)
                     content = reader.read(128*1024)
         return dest_file
+
+    def export_file(self, file, bucket_name, prefix):
+        """
+        Use platform specific functionality to copy a file from a platform to an S3 bucket.
+        :param file: File to export, keep:<collection_uuid>/<file_path>
+        :param bucket_name: S3 bucket name
+        :param prefix: Destination S3 folder to export file to, path/to/folder
+        :return: s3 file path or None
+        """
+        collection_uuid, key = self._find_collection_key(file)
+        c = arvados.collection.CollectionReader(
+            manifest_locator_or_text=collection_uuid, api_client=self.api
+        )
+        # If the file is in the keep collection
+        if key in c:
+            with c.open(key, "rb") as reader:
+                with smart_open.smart_open(
+                    f"s3://{bucket_name}/{prefix}/{key}", "wb"
+                ) as writer:
+                    content = reader.read(128 * 1024)
+                    while content:
+                        writer.write(content)
+                        content = reader.read(128 * 1024)
 
     def get_file_id(self, project, file_path):
         '''
