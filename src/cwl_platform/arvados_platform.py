@@ -243,30 +243,25 @@ class ArvadosPlatform(Platform):
         if filters and "folder" in filters:
             folder = filters['folder'].lstrip('/')
             collection_filter.append(["name", "=", folder])
-        self.logger.debug(
-            "Fetching list of collections matching filter, %s, in project %s",
-            collection_filter,
-            project["uuid"],
-        )
         matching_collections = []
         search_result = self.api.collections().list(filters=collection_filter).execute()
         if len(search_result['items']) > 0:
             matching_collections = search_result['items']
 
         # Iterate over the collections an find files matching filter criteria
-        files = []
+        matching_files = []
         for num, collection in enumerate(matching_collections):
-            self.logger.debug(
-                "[%d/%d] Fetching list of files in collection %s",
-                num + 1,
-                len(matching_collections),
-                collection["uuid"],
-            )
-            files += self._get_files_list_in_collection(
+            files = self._get_files_list_in_collection(
                 collection["uuid"]
             )
-        self.logger.debug("Return list of %d files", len(files))
-        return files
+            for f in files:
+                if filters and 'name' in filters:
+                    if filters['name'] == f.name:
+                        matching_files.append((f'/{f.name}', f))
+                else:
+                    matching_files.append((f'/{f.name}', f))
+        self.logger.debug("Return list of %d files", len(matching_files))
+        return matching_files
 
     def download_file(self, file, dest_folder):
         """
@@ -438,7 +433,7 @@ class ArvadosPlatform(Platform):
         except googleapiclient.errors.HttpError as exc:
             self.logger.error("Failed to save output files: %s", exc)
 
-    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.

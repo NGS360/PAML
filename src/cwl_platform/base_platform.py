@@ -86,7 +86,7 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False):
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False):
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.

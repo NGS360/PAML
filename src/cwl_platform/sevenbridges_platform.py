@@ -220,6 +220,12 @@ class SevenBridgesPlatform(Platform):
                 if filters and 'name' in filters:
                     if filters['name'] == f.name:
                         matching_files.append((f'/{f.name}', f))
+                if filters and 'prefix' in filters:
+                    if f.name.startswith(filters['prefix']):
+                        matching_files.append((f'/{f.name}', f))
+                if filters and 'suffix' in filters:
+                    if f.name.endswith(filters['suffix']):
+                        matching_files.append((f'/{f.name}', f))
                 else:
                     matching_files.append((f'/{f.name}', f))
         return matching_files
@@ -315,7 +321,7 @@ class SevenBridgesPlatform(Platform):
                         elif file.type == "folder":
                             self._add_tag_to_folder(file, "OUTPUT")
 
-    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
