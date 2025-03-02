@@ -267,6 +267,7 @@ class ArvadosPlatform(Platform):
             )
         self.logger.debug("Return list of %d files", len(files))
         return files
+
     def download_file(self, file, dest_folder):
         """
         Download a file to a local directory

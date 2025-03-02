@@ -214,7 +214,9 @@ class SevenBridgesPlatform(Platform):
             if f.type == 'folder':
                     matching_files += self._get_folder_contents(f, f'/{f.name}')
             else:
-                matching_files.append(f"/{f.name}")
+                if filters and 'name' in filters:
+                    if filters['name'] == f.name:
+                        matching_files.append(f)
         return matching_files
 
     def get_folder_id(self, project, folder_path):
