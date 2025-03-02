@@ -50,7 +50,7 @@ class Platform(ABC):
                  'folder': 'folder_name',
                  'recursive': True/False
              }
-         :return: List of file objects matching filter criteria
+        :return: List of tuples (file path, file object) matching filter criteria
          """
 
     @abstractmethod

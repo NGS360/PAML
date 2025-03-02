@@ -177,21 +177,24 @@ class SevenBridgesPlatform(Platform):
 
         raise ValueError(f"File not found in specified folder: {file_path}")
 
-    def _get_folder_contents(self, folder, path):
+    def _get_folder_contents(self, path, folder, filters):
         '''
         Recusivelly returns all the files in a directory and subdirectories in a SevenBridges project.
 
-        :param folder: SB Project reference
-        :param tag: tag to filter by
         :param path: path of file
-        :return: List of files and paths
+        :param folder: SBG Folder reference
+        :return: List of tuples (file path, file object) matching filter criteria
         '''
         files = []
         for f in folder.list_files().all():
             if f.type == 'folder':
-                files += self._get_folder_contents(f, f"{path}/{f.name}")
+                files += self._get_folder_contents(f"{path}/{f.name}", f, filters)
             else:
-                files.append(f"{path}/{f.name}")
+                if filters and 'name' in filters:
+                    if filters['name'] == f.name:
+                        files.append((f"{path}/{f.name}", f))
+                else:
+                    files.append((f"{path}/{f.name}", f))
         return files
 
     def get_files(self, project, filters=None):
@@ -207,16 +210,18 @@ class SevenBridgesPlatform(Platform):
                 'folder': 'folder_name',
                 'recursive': True/False
             }
-        :return: List of file objects matching filter criteria
+        :return: List of tuples (file path, file object) matching filter criteria
         """
         matching_files = []
         for f in self.api.files.query(project, limit=1000).all():
             if f.type == 'folder':
-                    matching_files += self._get_folder_contents(f, f'/{f.name}')
+                    matching_files += self._get_folder_contents(f'/{f.name}', f, filters)
             else:
                 if filters and 'name' in filters:
                     if filters['name'] == f.name:
-                        matching_files.append(f)
+                        matching_files.append((f'/{f.name}', f))
+                else:
+                    matching_files.append((f'/{f.name}', f))
         return matching_files
 
     def get_folder_id(self, project, folder_path):

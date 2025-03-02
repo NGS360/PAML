@@ -236,7 +236,7 @@ class ArvadosPlatform(Platform):
                 'folder': 'folder_name',  # Here, a root folder is the name of the collection.
                 'recursive': True/False
             }
-        :return: List of file objects matching filter criteria
+        :return: List of tuples (file path, file object) matching filter criteria
         """
         # Iterate over all collections and find collections matching filter criteria.
         collection_filter = [["owner_uuid", "=", project["uuid"]]]
