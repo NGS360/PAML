@@ -352,7 +352,8 @@ class SevenBridgesPlatform(Platform):
             update_state = self.api.files.upload(filename, overwrite=overwrite,
                                                  parent=parent_folder_id,
                                                  file_name=destination_filename,
-                                                 project=None if parent_folder_id else project)
+                                                 project=None if parent_folder_id else project,
+                                                 wait=True)
             return None if update_state.status == 'FAILED' else update_state.result().id
 
         # return file id if file already exists

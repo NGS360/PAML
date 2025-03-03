@@ -251,15 +251,16 @@ class ArvadosPlatform(Platform):
         # Iterate over the collections an find files matching filter criteria
         matching_files = []
         for num, collection in enumerate(matching_collections):
+            collection_name = collection['name']
             files = self._get_files_list_in_collection(
                 collection["uuid"]
             )
             for f in files:
                 if filters and 'name' in filters:
                     if filters['name'] == f.name:
-                        matching_files.append((f'/{f.name}', f))
+                        matching_files.append((f'/{collection_name}/{f.name}', f))
                 else:
-                    matching_files.append((f'/{f.name}', f))
+                    matching_files.append((f'/{collection_name}/{f.name}', f))
         self.logger.debug("Return list of %d files", len(matching_files))
         return matching_files
 
