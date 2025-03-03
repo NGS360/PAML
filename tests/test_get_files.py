@@ -1,8 +1,21 @@
 import unittest
 
 from datetime import datetime
+import random
+import string
+import os
 
 from cwl_platform import SUPPORTED_PLATFORMS, PlatformFactory
+
+def generate_random_file():
+    # Random file name
+    file_name = ''.join(random.choices(string.ascii_letters + string.digits, k=8)) + ".txt"
+    # Write random data
+    length = 100
+    with open(file_name, 'w') as f:
+        random_data = ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+        f.write(random_data)
+    return file_name
 
 class TestGetFiles(unittest.TestCase):
     def setUp(self):
@@ -15,11 +28,14 @@ class TestGetFiles(unittest.TestCase):
             platform.connect()
             self.platforms[platform_name] = platform
         self.project_name = f"TestGetFiles-{datetime.now().strftime('%Y-%m-%d-%H-%M')}"
+        self.random_file = None
 
     def tearDown(self):
         # Remove the test project from the platform
         for _, platform in self.platforms.items():
             platform.delete_project_by_name(self.project_name)
+        if self.random_file:
+            os.remove(self.random_file)
         return super().tearDown()
 
     def test_get_files_returns_zero_files(self):
@@ -35,28 +51,21 @@ class TestGetFiles(unittest.TestCase):
             # Check results
             self.assertEqual(files, [])
 
-    def Xtest_get_files_returns_files_in_root_folder(self):
+    def test_get_files_returns_files_in_root_folder(self):
         '''
-        Test that PAML.get_files works correctly on all platforms
-
-        Arvados does not have a "root" folder collection
+        Test that PAML.get_files returns all files in root folder of project.
+        Arvados does not have a "root" folder collection.
         '''
+        self.random_file = generate_random_file()
 
         for platform_name, platform in self.platforms.items():
             # create project
-            project = platform.create_project(
-                f'{self.project_id}-{self.assay}',
-                'Project for export_results unit test'
-            )
-            # assert the project does exist on the platform
-            self.assertIsNotNone(
-                project,
-                f'{self.project_id}-{self.assay} should exist on {platform_name} before test is run.'
-            )
+            project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
+            self.assertIsNotNone(project, "Expected an empty project")
 
             # Add files to root folder
-            file = platform.upload_file("test_data/sample_sheet.txt", project)
-            
+            file = platform.upload_file(self.random_file, project)
+
             # Handle Arvados case of no root folder
             if platform_name == 'Arvados':
                 self.assertIsNone(file)
@@ -72,8 +81,8 @@ class TestGetFiles(unittest.TestCase):
                 # Assert file is /sample_sheet.txt
                 actual_name, _ = files[0]
                 self.assertEqual(
-                    actual_name, "/sample_sheet.txt",
-                    "Expected to find /sample_sheet.txt")
+                    actual_name, f"/{self.random_file}",
+                    f"Expected to find /{self.random_file}")
 
     def Xtest_get_files_returns_files_in_subfolder(self):
         '''
