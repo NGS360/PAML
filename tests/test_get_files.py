@@ -88,6 +88,7 @@ class TestGetFiles(unittest.TestCase):
         '''
         Test that PAML.get_files returns all files in a sub folder of project.
         '''
+        self.random_file = generate_random_file()
 
         for platform_name, platform in self.platforms.items():
             # create project
@@ -98,12 +99,12 @@ class TestGetFiles(unittest.TestCase):
             file = platform.upload_file(self.random_file, project, dest_folder='/inputs')
 
             # Test
-            files = platform.get_files(project)
+            files = platform.get_files(project, filters={'folder': '/inputs'})
 
             # Assert 1 file was returned
             self.assertEqual(
                 len(files), 1,
-                f"Expected 1 file but found {len(files)}")
+                f"Expected 1 file but found {len(files)} on {platform_name}")
 
             # Assert file is /sample_sheet.txt
             actual_name, _ = files[0]
