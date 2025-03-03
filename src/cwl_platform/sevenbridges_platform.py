@@ -193,8 +193,12 @@ class SevenBridgesPlatform(Platform):
                 if filters and 'name' in filters:
                     if filters['name'] == f.name:
                         files.append((f"{path}/{f.name}", f))
-                else:
-                    files.append((f"{path}/{f.name}", f))
+                if filters and 'prefix' in filters:
+                    if f.name.startswith(filters['prefix']):
+                        files.append((f"{path}/{f.name}", f))
+                if filters and 'suffix' in filters:
+                    if f.name.endswith(filters['suffix']):
+                        files.append((f"{path}/{f.name}", f))
         return files
 
     def get_files(self, project, filters=None):
@@ -213,7 +217,7 @@ class SevenBridgesPlatform(Platform):
         :return: List of tuples (file path, file object) matching filter criteria
         """
         matching_files = []
-        for f in self.api.files.query(project, limit=1000).all():
+        for f in self.api.files.query(project, limit=1000, cont_token='init').all():
             if f.type == 'folder':
                     matching_files += self._get_folder_contents(f'/{f.name}', f, filters)
             else:
