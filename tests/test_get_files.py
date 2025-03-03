@@ -84,25 +84,18 @@ class TestGetFiles(unittest.TestCase):
                     actual_name, f"/{self.random_file}",
                     f"Expected to find /{self.random_file}")
 
-    def Xtest_get_files_returns_files_in_subfolder(self):
+    def test_get_files_returns_files_in_subfolder(self):
         '''
-        Test that PAML.get_files works correctly on all platforms
+        Test that PAML.get_files returns all files in a sub folder of project.
         '''
 
         for platform_name, platform in self.platforms.items():
             # create project
-            project = platform.create_project(
-                f'{self.project_id}-{self.assay}',
-                'Project for export_results unit test'
-            )
-            # assert the project does exist on the platform
-            self.assertIsNotNone(
-                project,
-                f'{self.project_id}-{self.assay} should exist on {platform_name} before test is run.'
-            )
+            project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
+            self.assertIsNotNone(project, "Expected an empty project")
 
-            # Add files to root folder
-            file = platform.upload_file("test_data/sample_sheet.txt", project, dest_folder='/inputs')
+            # Add files to subfolder
+            file = platform.upload_file(self.random_file, project, dest_folder='/inputs')
 
             # Test
             files = platform.get_files(project)
@@ -115,8 +108,8 @@ class TestGetFiles(unittest.TestCase):
             # Assert file is /sample_sheet.txt
             actual_name, _ = files[0]
             self.assertEqual(
-                actual_name, "/inputs/sample_sheet.txt",
-                f"Expected to find /inputs/sample_sheet.txt on {platform_name} but found {actual_name} instead")
+                actual_name, f"/inputs/{self.random_file}",
+                f"Expected to find /inputs/{self.random_file} on {platform_name} but found {actual_name} instead")
 
     def Xtest_handle_mulitple_output_file_matches(self):
         '''
