@@ -27,8 +27,8 @@ class TestGetFiles(unittest.TestCase):
         if 'INTEGRATION_TEST' not in os.environ:
             self.skipTest("Skipping live test")
 
-        self.platforms = dict()
-        for platform_name in SUPPORTED_PLATFORMS.keys():
+        self.platforms = {}
+        for platform_name in SUPPORTED_PLATFORMS:
             platform = PlatformFactory().get_platform(platform_name)
             platform.connect()
             self.platforms[platform_name] = platform
@@ -45,7 +45,7 @@ class TestGetFiles(unittest.TestCase):
 
     def test_get_files_returns_zero_files(self):
         ''' Test that PAML.get_files an empty list for an empty project, on all platforms '''
-        for platform_name, platform in self.platforms.items():
+        for _, platform in self.platforms.items():
             # create project
             project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
             self.assertIsNotNone(project, "Expected an empty project")
@@ -101,7 +101,7 @@ class TestGetFiles(unittest.TestCase):
             self.assertIsNotNone(project, "Expected an empty project")
 
             # Add files to subfolder
-            file = platform.upload_file(self.random_file, project, dest_folder='/inputs')
+            platform.upload_file(self.random_file, project, dest_folder='/inputs')
 
             # Test
             files = platform.get_files(project, filters={'folder': '/inputs'})
