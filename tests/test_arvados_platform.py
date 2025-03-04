@@ -48,6 +48,7 @@ class TestArvadosPlaform(unittest.TestCase):
         '''
         Test get_files method returns a single file matching filter criteria given there are 3 files in the project.
         '''
+        self.skipTest('Deprecating in favor of using test_get_files.py')
         # Set up test parameters
         project = {"uuid": "project_uuid"}
         filters = {

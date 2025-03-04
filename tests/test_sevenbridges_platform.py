@@ -54,6 +54,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
     def test_get_files(self):
         ''' Test get_files method '''
+        self.skipTest('Deprecating in favor of using test_get_files.py')
         # Set up test parameters
         project = {"uuid": "project_uuid"}
         filters = {
