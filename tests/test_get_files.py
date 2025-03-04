@@ -19,6 +19,9 @@ def generate_random_file():
 
 class TestGetFiles(unittest.TestCase):
     def setUp(self):
+        if 'INTEGRATION_TEST' not in os.environ:
+            self.skipTest("Skipping live test")
+
         self.platforms = dict()
         for platform_name in SUPPORTED_PLATFORMS.keys():
             platform = PlatformFactory().get_platform(platform_name)
