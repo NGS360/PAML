@@ -190,15 +190,40 @@ class SevenBridgesPlatform(Platform):
             if f.type == 'folder':
                 files += self._get_folder_contents(f"{path}/{f.name}", f, filters)
             else:
-                if filters and 'name' in filters:
-                    if filters['name'] == f.name:
+                if filters and 'folder' in filters:
+                    if filters['folder'] == path:
+                        if 'name' in filters:
+                            if filters['name'] == f.name:
+                                files.append((f"{path}/{f.name}", f))
+                                continue
+                        if 'prefix' in filters:
+                            if f.name.startswith(filters['prefix']):
+                                files.append((f"{path}/{f.name}", f))
+                                continue
+                        if 'suffix' in filters:
+                            if f.name.endswith(filters['suffix']):
+                                files.append((f"{path}/{f.name}", f))
+                                continue
+                        # If no other filters were specified except folder, add the file
                         files.append((f"{path}/{f.name}", f))
-                if filters and 'prefix' in filters:
-                    if f.name.startswith(filters['prefix']):
-                        files.append((f"{path}/{f.name}", f))
-                if filters and 'suffix' in filters:
-                    if f.name.endswith(filters['suffix']):
-                        files.append((f"{path}/{f.name}", f))
+                        continue
+
+                if filters:
+                    if 'name' in filters:
+                        if filters['name'] == f.name:
+                            files.append((f"{path}/{f.name}", f))
+                            continue
+                    if 'prefix' in filters:
+                        if f.name.startswith(filters['prefix']):
+                            files.append((f"{path}/{f.name}", f))
+                            continue
+                    if 'suffix' in filters:
+                        if f.name.endswith(filters['suffix']):
+                            files.append((f"{path}/{f.name}", f))
+                            continue
+
+                # If no filters were specified, add the file
+                files.append((f"{path}/{f.name}", f))
         return files
 
     def get_files(self, project, filters=None):

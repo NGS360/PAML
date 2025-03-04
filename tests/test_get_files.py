@@ -19,11 +19,8 @@ def generate_random_file():
 
 class TestGetFiles(unittest.TestCase):
     def setUp(self):
-        self.platforms = {
-            'Arvados': None,
-            'SevenBridges': None
-        }
-        for platform_name in self.platforms.keys():
+        self.platforms = dict()
+        for platform_name in SUPPORTED_PLATFORMS.keys():
             platform = PlatformFactory().get_platform(platform_name)
             platform.connect()
             self.platforms[platform_name] = platform
