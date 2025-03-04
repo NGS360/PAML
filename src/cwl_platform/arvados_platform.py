@@ -250,7 +250,7 @@ class ArvadosPlatform(Platform):
 
         # Iterate over the collections an find files matching filter criteria
         matching_files = []
-        for num, collection in enumerate(matching_collections):
+        for _, collection in enumerate(matching_collections):
             collection_name = collection['name']
             files = self._get_files_list_in_collection(
                 collection["uuid"]
@@ -291,7 +291,7 @@ class ArvadosPlatform(Platform):
         :param prefix: Destination S3 folder to export file to, path/to/folder
         :return: s3 file path or None
         """
-        collection_uuid, key = self._find_collection_key(file)
+        collection_uuid, key = find_collection_file_path(file)
         c = arvados.collection.CollectionReader(
             manifest_locator_or_text=collection_uuid, api_client=self.api
         )

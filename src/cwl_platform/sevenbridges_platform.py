@@ -72,6 +72,55 @@ class SevenBridgesPlatform(Platform):
                             f"File with name {parent.name} already exists!")
         return parent
 
+    def _list_all_files(self, files=None, project=None):
+        """
+        Returns a list of files (files within folders are included).
+        Provide a list of file objects OR a project object/id
+        :param files: List of file (and folder) objects
+        :param project: Project object or id
+        :return: Flattened list of files (no folder objects)
+        """
+        if not files and not project:
+            self.logger.error("Provide either a list of files OR a project object/id")
+            return []
+
+        if project and not files:
+            self.logger.info("Recursively listing all files in project %s", project)
+            files = self.api.files.query(project=project, limit=100).all()
+        file_list = []
+        for file in files:
+            if not file.is_folder():
+                file_list.append(file)
+            elif file.is_folder():
+                child_nodes = self.api.files.get(id=file.id).list_files().all()
+                file_list.extend(self._list_all_files(files=child_nodes))
+        return file_list
+
+    def _list_files_in_folder(self, project=None, folder=None, recursive=False):
+        """
+        List all file contents of a folder.
+        
+        Project object and folder path both required
+        Folder path format "folder_1/folder_2"
+        
+        Option to list recursively, eg. return file objects only
+        :param project: `sevenbridges.Project` entity
+        :param folder: Folder string name
+        :param recursive: Boolean
+        :return: List of file objects
+        """
+        parent = self._find_or_create_path(
+            path=folder,
+            project=project
+        )
+        if recursive:
+            file_list = self._list_all_files(
+                files=[parent]
+            )
+        else:
+            file_list = self.api.files.get(id=parent.id).list_files().all()
+        return file_list
+
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy reference folder to destination project
@@ -244,7 +293,7 @@ class SevenBridgesPlatform(Platform):
         matching_files = []
         for f in self.api.files.query(project, limit=1000, cont_token='init').all():
             if f.type == 'folder':
-                    matching_files += self._get_folder_contents(f'/{f.name}', f, filters)
+                matching_files += self._get_folder_contents(f'/{f.name}', f, filters)
             else:
                 if filters and 'name' in filters:
                     if filters['name'] == f.name:
@@ -326,6 +375,30 @@ class SevenBridgesPlatform(Platform):
         # 3. Rename the file
         self.rename_file(sbg_file.id, new_filename)
 
+    def _add_tag_to_file(self, target_file, newtag):
+        ''' Add a tag to a file '''
+        if newtag not in target_file.tags:
+            target_file.tags += [newtag]
+            target_file.save()
+        if hasattr(target_file,'secondary_files') and target_file.secondary_files is not None:
+            secondary_files = target_file.secondary_files
+            for secfile in secondary_files:
+                if isinstance(secfile,sevenbridges.models.file.File) and secfile.tags and newtag not in secfile.tags:
+                    secfile.tags += [newtag]
+                    secfile.save()
+
+    def _add_tag_to_folder(self,target_folder, newtag):
+        ''' Add a tag to all files in a folder '''
+        folder = self.api.files.get(id=target_folder.id)
+        allfiles = folder.list_files()
+        for file in allfiles:
+            if not isinstance(file,sevenbridges.models.file.File):
+                continue
+            if file.type == "file":
+                self._add_tag_to_file(file, newtag)
+            elif file.type == "folder":
+                self._add_tag_to_folder(file, newtag)
+
     def stage_output_files(self, project, output_files):
         '''
         Stage output files to a project
@@ -334,6 +407,7 @@ class SevenBridgesPlatform(Platform):
         :param output_files: A list of output files to stage
         :return: None
         '''
+        self.logger.warning("stage_output_files to be deprecated in future release.")
         for output_file in output_files:
             self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
             outfile = self.api.files.get(id=output_file['source'])

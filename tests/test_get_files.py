@@ -1,3 +1,6 @@
+'''
+Integration Test for PAML.get_files() to ensure all platforms work in the same way.
+'''
 import unittest
 
 from datetime import datetime
@@ -8,16 +11,18 @@ import os
 from cwl_platform import SUPPORTED_PLATFORMS, PlatformFactory
 
 def generate_random_file():
+    ''' Generate a temp file for testing '''
     # Random file name
     file_name = ''.join(random.choices(string.ascii_letters + string.digits, k=8)) + ".txt"
     # Write random data
     length = 100
-    with open(file_name, 'w') as f:
+    with open(file_name, 'w', encoding='us-ascii') as f:
         random_data = ''.join(random.choices(string.ascii_letters + string.digits, k=length))
         f.write(random_data)
     return file_name
 
 class TestGetFiles(unittest.TestCase):
+    ''' TestGetFiles '''
     def setUp(self):
         if 'INTEGRATION_TEST' not in os.environ:
             self.skipTest("Skipping live test")
