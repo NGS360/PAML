@@ -259,6 +259,12 @@ class ArvadosPlatform(Platform):
                 if filters and 'name' in filters:
                     if filters['name'] == f.name:
                         matching_files.append((f'/{collection_name}/{f.name}', f))
+                if filters and 'prefix' in filters:
+                    if f.name.startswith(filters['prefix']):
+                        matching_files.append((f'/{collection_name}/{f.name}', f))
+                if filters and 'suffix' in filters:
+                    if f.name.endswith(filters['suffix']):
+                        matching_files.append((f'/{collection_name}/{f.name}', f))
                 else:
                     matching_files.append((f'/{collection_name}/{f.name}', f))
         self.logger.debug("Return list of %d files", len(matching_files))
