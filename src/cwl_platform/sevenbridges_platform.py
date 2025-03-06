@@ -239,39 +239,6 @@ class SevenBridgesPlatform(Platform):
             if f.type == 'folder':
                 files += self._get_folder_contents(f"{path}/{f.name}", f, filters)
             else:
-                if filters and 'folder' in filters:
-                    if filters['folder'] == path:
-                        if 'name' in filters:
-                            if filters['name'] == f.name:
-                                files.append((f"{path}/{f.name}", f))
-                                continue
-                        if 'prefix' in filters:
-                            if f.name.startswith(filters['prefix']):
-                                files.append((f"{path}/{f.name}", f))
-                                continue
-                        if 'suffix' in filters:
-                            if f.name.endswith(filters['suffix']):
-                                files.append((f"{path}/{f.name}", f))
-                                continue
-                        # If no other filters were specified except folder, add the file
-                        files.append((f"{path}/{f.name}", f))
-                        continue
-
-                if filters:
-                    if 'name' in filters:
-                        if filters['name'] == f.name:
-                            files.append((f"{path}/{f.name}", f))
-                            continue
-                    if 'prefix' in filters:
-                        if f.name.startswith(filters['prefix']):
-                            files.append((f"{path}/{f.name}", f))
-                            continue
-                    if 'suffix' in filters:
-                        if f.name.endswith(filters['suffix']):
-                            files.append((f"{path}/{f.name}", f))
-                            continue
-
-                # If no filters were specified, add the file
                 files.append((f"{path}/{f.name}", f))
         return files
 
@@ -290,22 +257,30 @@ class SevenBridgesPlatform(Platform):
             }
         :return: List of tuples (file path, file object) matching filter criteria
         """
-        matching_files = []
+        files = []
         for f in self.api.files.query(project, limit=1000, cont_token='init').all():
             if f.type == 'folder':
-                matching_files += self._get_folder_contents(f'/{f.name}', f, filters)
+                files += self._get_folder_contents(f'/{f.name}', f, filters)
             else:
-                if filters and 'name' in filters:
-                    if filters['name'] == f.name:
-                        matching_files.append((f'/{f.name}', f))
-                if filters and 'prefix' in filters:
-                    if f.name.startswith(filters['prefix']):
-                        matching_files.append((f'/{f.name}', f))
-                if filters and 'suffix' in filters:
-                    if f.name.endswith(filters['suffix']):
-                        matching_files.append((f'/{f.name}', f))
-                else:
-                    matching_files.append((f'/{f.name}', f))
+                files.append((f'/{f.name}', f))
+
+        if filters:
+            matching_files = []
+            # Now that we have all the files, let's apply the filters
+            for filepath, file in files:
+                filename = os.path.basename(filepath)
+                if 'name' in filters and filters['name'] != filename:
+                    continue
+                if 'prefix' in filters and not filename.startswith(filters['prefix']):
+                    continue
+                if 'suffix' in filters and not filename.endswith(filters['suffix']):
+                    continue
+                if 'folder' in filters and filters['folder'] != os.path.dirname(filepath):
+                    continue
+                matching_files.append((filepath, file))
+        else:
+            matching_files = files
+
         return matching_files
 
     def get_folder_id(self, project, folder_path):
