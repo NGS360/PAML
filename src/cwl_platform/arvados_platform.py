@@ -255,18 +255,20 @@ class ArvadosPlatform(Platform):
             files = self._get_files_list_in_collection(
                 collection["uuid"]
             )
+            # files is a list of StreamReaders, but get_files is suppose to return file objects.
             for f in files:
+                file_id = f"keep:{collection['uuid']}/{f.name}"
                 if filters and 'name' in filters:
                     if filters['name'] == f.name:
-                        matching_files.append((f'/{collection_name}/{f.name}', f))
+                        matching_files.append((f'/{collection_name}/{f.name}', file_id))
                 if filters and 'prefix' in filters:
                     if f.name.startswith(filters['prefix']):
-                        matching_files.append((f'/{collection_name}/{f.name}', f))
+                        matching_files.append((f'/{collection_name}/{f.name}', file_id))
                 if filters and 'suffix' in filters:
                     if f.name.endswith(filters['suffix']):
-                        matching_files.append((f'/{collection_name}/{f.name}', f))
+                        matching_files.append((f'/{collection_name}/{f.name}', file_id))
                 else:
-                    matching_files.append((f'/{collection_name}/{f.name}', f))
+                    matching_files.append((f'/{collection_name}/{f.name}', file_id))
         self.logger.debug("Return list of %d files", len(matching_files))
         return matching_files
 
