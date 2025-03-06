@@ -25,7 +25,7 @@ class TestGetFiles(unittest.TestCase):
     ''' TestGetFiles '''
     def setUp(self):
         if 'INTEGRATION_TEST' not in os.environ:
-            self.skipTest("Skipping live test")
+            self.skipTest("Skipping live test. Set INTEGRATION_TEST=1 to run live tests")
 
         self.platforms = {}
         for platform_name in SUPPORTED_PLATFORMS:
