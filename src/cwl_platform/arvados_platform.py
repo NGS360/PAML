@@ -492,9 +492,9 @@ class ArvadosPlatform(Platform):
             target_filepath = destination_filename
 
         if overwrite or target_collection.find(target_filepath) is None:
-            with open_file_with_inferred_encoding(filename) as local_file:
+            with open(filename, "rb") as local_file:
                 local_content = local_file.read()
-            with target_collection.open(target_filepath, 'w') as arv_file:
+            with target_collection.open(target_filepath, 'wb') as arv_file:
                 arv_file.write(local_content) # pylint: disable=no-member
             target_collection.save()
         return f"keep:{destination_collection['uuid']}/{target_filepath}"
