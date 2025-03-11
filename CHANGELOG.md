@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.2.5](https://github.com/NGS360/PAML.git/releases/tag/v0.2.5) - 2025-03-11
+
+### Added
+
+- Added get_files() method along with associated integration tests
+- Added various other method to support project loading/exporting including:
+    add_user_to_project()
+    delete_project_by_name()
+    get_workflows()
+    get_project_users()
+
+### Changed
+
+- Remove support for Python 3.8 and Python 3.13, so only supporting 3.9 - 3.12
+- Rename upload_file_to_project to upload_file
+
+### Fixed
+
+- Fixed get_user method to ignore case sensitivity
+
 ## [v0.2.4](https://github.com/NGS360/PAML.git/releases/tag/v0.2.4) - 2025-02-14
 
 - Fix get_task_output for optional fields when queried in Arvados
