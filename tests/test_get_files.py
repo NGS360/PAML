@@ -117,13 +117,14 @@ class TestGetFiles(unittest.TestCase):
                 actual_name, f"/inputs/{self.random_file}",
                 f"Expected to find /inputs/{self.random_file} on {platform_name} but found {actual_name} instead")
 
-    def Xtest_handle_mulitple_output_file_matches(self):
+    def test_handle_multiple_output_file_matches(self):
         '''
         Test that export_results can handle the case when multiple
         WES_output_files.txt exist:
         /WES_output_files.txt
         /_1_WES_output_files.txt
         '''
+        self.skipTest("Not yet implemented")
 
 if __name__ == '__main__':
     unittest.main()

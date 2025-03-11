@@ -52,38 +52,6 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         ''' Test detect_platform method '''
         self.assertTrue(SevenBridgesPlatform.detect())
 
-    def test_get_files(self):
-        ''' Test get_files method '''
-        self.skipTest('Deprecating in favor of using test_get_files.py')
-        # Set up test parameters
-        project = {"uuid": "project_uuid"}
-        filters = {
-            'name': 'file1.txt',
-            'prefix': 'file',
-            'suffix': '.txt',
-            'folder': 'folder1',
-            'recursive': False
-        }
-
-        # Set up mocks
-        mock_files_query = self.platform.api.files.query.return_value
-        file1 = MagicMock()
-        file1.name = 'file1.txt'
-        file1.parent = MagicMock()
-        file1.parent.name = 'folder1'
-        mock_files_query.all.return_value = [
-            file1,
-            MagicMock(name='file2', type='file', parent=MagicMock(name='folder1')),
-            MagicMock(name='file3', type='folder', parent=MagicMock(name='folder1'))
-        ]
-
-        # Test
-        results = self.platform.get_files(project, filters)
-
-        # Check results
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].name, 'file1.txt')
-
     def test_get_project(self):
         ''' Test that get_project returns None when we do not have a TASK_ID '''
         self.platform.api = MagicMock()
@@ -194,6 +162,9 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
     @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
     def test_upload_file(self, mock_find_or_create_path):
+        '''
+        Test that we can upload a file
+        '''
         # Set up test parameters
         filename = "file.txt"
         project = {'uuid': 'aproject'}
@@ -210,7 +181,8 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         mock_find_or_create_path.return_value = parentfolder
 
         # Test
-        actual_result = self.platform.upload_file(filename, project, dest_folder, destination_filename=None, overwrite=False)
+        actual_result = self.platform.upload_file(
+            filename, project, dest_folder, destination_filename=None, overwrite=False)
         # Check results
         self.platform.api.files.upload.assert_called()
         self.assertEqual(actual_result, 1)

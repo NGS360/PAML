@@ -44,40 +44,6 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
-    def test_get_files(self):
-        '''
-        Test get_files method returns a single file matching filter criteria given there are 3 files in the project.
-        '''
-        self.skipTest('Deprecating in favor of using test_get_files.py')
-        # Set up test parameters
-        project = {"uuid": "project_uuid"}
-        filters = {
-            'name': 'file1.txt',
-            'prefix': 'file',
-            'suffix': '.txt',
-            'folder': 'folder1',
-            'recursive': False
-        }
-
-        # Set up mocks
-        self.platform.api.collections().list().execute.return_value = {
-            'items': [
-                MagicMock(name="collection1"),
-            ]
-        }
-        file1 = MagicMock()
-        file1.name = 'file1.txt'
-        file1.parent = MagicMock()
-        file1.parent.name = 'folder1'
-        # Test
-        with mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection") as mock_gflic:
-            mock_gflic.return_value = [file1]
-            results = self.platform.get_files(project, filters)
-
-        # Check results
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].name, 'file1.txt')
-
     @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
     def test_get_task_output(self, mock__load_cwl_output):
         ''' Test that get_task_output can handle cases when the cwl_output is {} '''
@@ -239,7 +205,7 @@ class TestArvadosPlaform(unittest.TestCase):
             [file2_reader]                      # This is for the destination collection
         ]
 
-        with mock.patch('arvados.collection.Collection') as mock_source_collection_object:
+        with mock.patch('arvados.collection.Collection') as _:
             with mock.patch('arvados.collection.Collection') as mock_destination_collection_object:
                 # Test
                 result = self.platform.copy_folder(source_project, source_folder, destination_project)
@@ -316,7 +282,7 @@ class TestArvadosPlaform(unittest.TestCase):
             []                                  # This is for the destination collection
         ]
 
-        with mock.patch('arvados.collection.Collection') as mock_source_collection_object:
+        with mock.patch('arvados.collection.Collection') as _:
             with mock.patch('arvados.collection.Collection') as mock_destination_collection_object:
                 # Test
                 result = self.platform.copy_folder(source_project, source_folder, destination_project)
@@ -328,7 +294,10 @@ class TestArvadosPlaform(unittest.TestCase):
                 self.assertEqual(mock_destination_collection_object().save.call_count, 1)
 
     @mock.patch('arvados.collection.Collection')
-    def test_upload_file(self, mock_collection):
+    def test_upload_file(self, _):
+        '''
+        Test that upload_file returns a keep id
+        '''
         # Set up test parameters
         filename = "file.txt"
         project = {'uuid': 'aproject'}
