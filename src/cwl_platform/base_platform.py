@@ -38,6 +38,22 @@ class Platform(ABC):
         ''' Get a file id by its full path name '''
 
     @abstractmethod
+    def get_files(self, project, filters=None):
+        """
+        Retrieve files in a project matching the filter criteria
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of tuples (file path, file object) matching filter criteria
+        """
+
+    @abstractmethod
     def get_folder_id(self, project, folder_path):
         ''' Get a folder id by its full path name '''
 
@@ -70,7 +86,7 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False):
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False):
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.

@@ -12,7 +12,7 @@ install: build
 	python3 -m pip install --upgrade dist/*.whl
 
 test:
-	PYTHONPATH=src coverage run --source=src -m pytest
+	PYTHONPATH=src coverage run --source=src -m pytest -v
 	coverage report
 	coverage html
 

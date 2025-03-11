@@ -16,6 +16,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
     def setUp(self) -> None:
         os.environ['SESSION_ID'] = 'dummy'
         self.platform = SevenBridgesPlatform('SevenBridges')
+        self.platform.api = MagicMock()
         return super().setUp()
 
     def test_add_user_to_project(self):
@@ -161,6 +162,9 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
     @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
     def test_upload_file(self, mock_find_or_create_path):
+        '''
+        Test that we can upload a file
+        '''
         # Set up test parameters
         filename = "file.txt"
         project = {'uuid': 'aproject'}
@@ -177,7 +181,8 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         mock_find_or_create_path.return_value = parentfolder
 
         # Test
-        actual_result = self.platform.upload_file(filename, project, dest_folder, destination_filename=None, overwrite=False)
+        actual_result = self.platform.upload_file(
+            filename, project, dest_folder, destination_filename=None, overwrite=False)
         # Check results
         self.platform.api.files.upload.assert_called()
         self.assertEqual(actual_result, 1)

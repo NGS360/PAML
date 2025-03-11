@@ -205,7 +205,7 @@ class TestArvadosPlaform(unittest.TestCase):
             [file2_reader]                      # This is for the destination collection
         ]
 
-        with mock.patch('arvados.collection.Collection') as mock_source_collection_object:
+        with mock.patch('arvados.collection.Collection') as _:
             with mock.patch('arvados.collection.Collection') as mock_destination_collection_object:
                 # Test
                 result = self.platform.copy_folder(source_project, source_folder, destination_project)
@@ -282,7 +282,7 @@ class TestArvadosPlaform(unittest.TestCase):
             []                                  # This is for the destination collection
         ]
 
-        with mock.patch('arvados.collection.Collection') as mock_source_collection_object:
+        with mock.patch('arvados.collection.Collection') as _:
             with mock.patch('arvados.collection.Collection') as mock_destination_collection_object:
                 # Test
                 result = self.platform.copy_folder(source_project, source_folder, destination_project)
@@ -294,7 +294,10 @@ class TestArvadosPlaform(unittest.TestCase):
                 self.assertEqual(mock_destination_collection_object().save.call_count, 1)
 
     @mock.patch('arvados.collection.Collection')
-    def test_upload_file(self, mock_collection):
+    def test_upload_file(self, _):
+        '''
+        Test that upload_file returns a keep id
+        '''
         # Set up test parameters
         filename = "file.txt"
         project = {'uuid': 'aproject'}

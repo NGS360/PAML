@@ -177,6 +177,7 @@ class ArvadosPlatform(Platform):
         self.logger.error("Source collection %s not found in project %s", collection_name, project["uuid"])
         return None
 
+    # File methods
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy folder to destination project
@@ -221,6 +222,56 @@ class ArvadosPlatform(Platform):
         self.logger.debug("Done copying folder.")
         return destination_collection
 
+    # @override
+    def get_files(self, project, filters=None):
+        """
+        Retrieve files in a project matching the filter criteria.
+
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',  # Here, a root folder is the name of the collection.
+                'recursive': True/False
+            }
+        :return: List of tuples (file path, file object) matching filter criteria
+        """
+        # Iterate over all collections and find collections matching filter criteria.
+        collection_filter = [["owner_uuid", "=", project["uuid"]]]
+        if filters and "folder" in filters:
+            folder = filters['folder'].lstrip('/')
+            collection_filter.append(["name", "=", folder])
+        matching_collections = []
+        search_result = self.api.collections().list(filters=collection_filter).execute()
+        if len(search_result['items']) > 0:
+            matching_collections = search_result['items']
+
+        # Iterate over the collections an find files matching filter criteria
+        matching_files = []
+        for _, collection in enumerate(matching_collections):
+            collection_name = collection['name']
+            files = self._get_files_list_in_collection(
+                collection["uuid"]
+            )
+            # files is a list of StreamReaders, but get_files is suppose to return file objects.
+            for f in files:
+                file_id = f"keep:{collection['uuid']}/{f.name}"
+                if filters and 'name' in filters:
+                    if filters['name'] == f.name:
+                        matching_files.append((f'/{collection_name}/{f.name}', file_id))
+                if filters and 'prefix' in filters:
+                    if f.name.startswith(filters['prefix']):
+                        matching_files.append((f'/{collection_name}/{f.name}', file_id))
+                if filters and 'suffix' in filters:
+                    if f.name.endswith(filters['suffix']):
+                        matching_files.append((f'/{collection_name}/{f.name}', file_id))
+                else:
+                    matching_files.append((f'/{collection_name}/{f.name}', file_id))
+        self.logger.debug("Return list of %d files", len(matching_files))
+        return matching_files
+
     def download_file(self, file, dest_folder):
         """
         Download a file to a local directory
@@ -248,7 +299,7 @@ class ArvadosPlatform(Platform):
         :param prefix: Destination S3 folder to export file to, path/to/folder
         :return: s3 file path or None
         """
-        collection_uuid, key = self._find_collection_key(file)
+        collection_uuid, key = find_collection_file_path(file)
         c = arvados.collection.CollectionReader(
             manifest_locator_or_text=collection_uuid, api_client=self.api
         )
@@ -316,6 +367,137 @@ class ArvadosPlatform(Platform):
         else:
             return None
         return f"keep:{collection['uuid']}/{folder_path}"
+
+    def rename_file(self, fileid, new_filename):
+        '''
+        Rename a file to new_filename.
+
+        :param file: File ID to rename
+        :param new_filename: str of new filename
+        '''
+        collection_uuid = fileid.split('keep:')[1].split('/')[0]
+        filepath = fileid.split(collection_uuid+'/')[1]
+        if len(filepath.split('/'))>1:
+            newpath = '/'.join(filepath.split('/')[:-1]+[new_filename])
+        else:
+            newpath = new_filename
+        collection = arvados.collection.Collection(collection_uuid, api_client=self.api)
+        collection.copy(filepath, newpath)
+        collection.remove(filepath, recursive=True)
+        collection.save()
+
+    def roll_file(self, project, file_name):
+        '''
+        Roll (find and rename) a file in a project.
+
+        :param project: The project the file is located in
+        :param file_name: The filename that needs to be rolled
+        '''
+        # Each run of a workflow will have a unique output collection, hence there will be no
+        # name conflicts.
+
+    def stage_output_files(self, project, output_files):
+        '''
+        Stage output files to a project
+
+        :param project: The project to stage files to
+        :param output_files: A list of output files to stage
+        :return: None
+        '''
+        # Get the output collection with name of output_directory_name
+        output_collection_name = 'results'
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", output_collection_name]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            outputs_collection = search_result['items'][0]
+        else:
+            outputs_collection = self.api.collections().create(body={
+                "owner_uuid": project["uuid"],
+                "name": output_collection_name}).execute()
+        outputs_collection = arvados.collection.Collection(outputs_collection['uuid'], api_client=self.api)
+
+        with outputs_collection.open("sources.txt", "a+") as sources:
+            copied_outputs = [n.strip() for n in sources.readlines()]
+
+            for output_file in output_files:
+                self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
+                if output_file['source'] in copied_outputs:
+                    continue
+
+                # Get the source collection
+                #keep:asdf-asdf-asdf/some/file.txt
+                source_collection_uuid = output_file['source'].split(':')[1].split('/')[0]
+                source_file = '/'.join(output_file['source'].split(':')[1].split('/')[1:])
+                source_collection = arvados.collection.Collection(source_collection_uuid, api_client=self.api)
+
+                # Copy the file
+                outputs_collection.copy(source_file, target_path=output_file['destination'],
+                            source_collection=source_collection, overwrite=True)
+                sources.write(output_file['source'] + "\n") # pylint: disable=E1101
+
+        try:
+            outputs_collection.save()
+        except googleapiclient.errors.HttpError as exc:
+            self.logger.error("Failed to save output files: %s", exc)
+
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+        '''
+        Upload a local file to project 
+        :param filename: filename of local file to be uploaded.
+        :param project: project that the file is uploaded to.
+        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param destination_filename: File name after uploaded to destination folder.
+        :param overwrite: Overwrite the file if it already exists.
+        :return: ID of uploaded file.
+        '''
+
+        if dest_folder is None:
+            self.logger.error("Must provide a collection name for Arvados file upload.")
+            return None
+
+        # trim slash at beginning and end
+        folder_tree = dest_folder.split('/')
+        try:
+            if not folder_tree[0]:
+                folder_tree = folder_tree[1:]
+            if not folder_tree[-1]:
+                folder_tree = folder_tree[:-1]
+            collection_name = folder_tree[0]
+        except IndexError:
+            self.logger.error("Must provide a collection name for Arvados file upload.")
+            return None
+
+        # Get the destination collection
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ["name", "=", collection_name]
+            ]).execute()
+        if len(search_result['items']) > 0:
+            destination_collection = search_result['items'][0]
+        else:
+            destination_collection = self.api.collections().create(body={
+                "owner_uuid": project["uuid"],
+                "name": collection_name}).execute()
+
+        target_collection = arvados.collection.Collection(destination_collection['uuid'])
+
+        if destination_filename is None:
+            destination_filename = filename.split('/')[-1]
+
+        if len(folder_tree) > 1:
+            target_filepath = '/'.join(folder_tree[1:]) + '/' + destination_filename
+        else:
+            target_filepath = destination_filename
+
+        if overwrite or target_collection.find(target_filepath) is None:
+            with open(filename, "rb") as local_file:
+                local_content = local_file.read()
+            with target_collection.open(target_filepath, 'wb') as arv_file:
+                arv_file.write(local_content) # pylint: disable=no-member
+            target_collection.save()
+        return f"keep:{destination_collection['uuid']}/{target_filepath}"
 
     # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
@@ -526,80 +708,6 @@ class ArvadosPlatform(Platform):
             tasks.append(ArvadosTask(container_request, container))
         return tasks
 
-    def rename_file(self, fileid, new_filename):
-        '''
-        Rename a file to new_filename.
-
-        :param file: File ID to rename
-        :param new_filename: str of new filename
-        '''
-        collection_uuid = fileid.split('keep:')[1].split('/')[0]
-        filepath = fileid.split(collection_uuid+'/')[1]
-        if len(filepath.split('/'))>1:
-            newpath = '/'.join(filepath.split('/')[:-1]+[new_filename])
-        else:
-            newpath = new_filename
-        collection = arvados.collection.Collection(collection_uuid, api_client=self.api)
-        collection.copy(filepath, newpath)
-        collection.remove(filepath, recursive=True)
-        collection.save()
-
-    def roll_file(self, project, file_name):
-        '''
-        Roll (find and rename) a file in a project.
-
-        :param project: The project the file is located in
-        :param file_name: The filename that needs to be rolled
-        '''
-        # Each run of a workflow will have a unique output collection, hence there will be no
-        # name conflicts.
-
-    def stage_output_files(self, project, output_files):
-        '''
-        Stage output files to a project
-
-        :param project: The project to stage files to
-        :param output_files: A list of output files to stage
-        :return: None
-        '''
-        # Get the output collection with name of output_directory_name
-        output_collection_name = 'results'
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", project["uuid"]],
-            ["name", "=", output_collection_name]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            outputs_collection = search_result['items'][0]
-        else:
-            outputs_collection = self.api.collections().create(body={
-                "owner_uuid": project["uuid"],
-                "name": output_collection_name}).execute()
-        outputs_collection = arvados.collection.Collection(outputs_collection['uuid'], api_client=self.api)
-
-        with outputs_collection.open("sources.txt", "a+") as sources:
-            copied_outputs = [n.strip() for n in sources.readlines()]
-
-            for output_file in output_files:
-                self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
-                if output_file['source'] in copied_outputs:
-                    continue
-
-                # Get the source collection
-                #keep:asdf-asdf-asdf/some/file.txt
-                source_collection_uuid = output_file['source'].split(':')[1].split('/')[0]
-                source_file = '/'.join(output_file['source'].split(':')[1].split('/')[1:])
-                source_collection = arvados.collection.Collection(source_collection_uuid, api_client=self.api)
-
-                # Copy the file
-                outputs_collection.copy(source_file, target_path=output_file['destination'],
-                            source_collection=source_collection, overwrite=True)
-                sources.write(output_file['source'] + "\n") # pylint: disable=E1101
-
-        try:
-            outputs_collection.save()
-        except googleapiclient.errors.HttpError as exc:
-            self.logger.error("Failed to save output files: %s", exc)
-
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
         Prepare/Copy output files of a task for export.
@@ -694,63 +802,6 @@ class ArvadosPlatform(Platform):
             except IOError as err:
                 self.logger.error("ERROR LOG: %s", str(err))
         return None
-
-    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
-        '''
-        Upload a local file to project 
-        :param filename: filename of local file to be uploaded.
-        :param project: project that the file is uploaded to.
-        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
-        :param destination_filename: File name after uploaded to destination folder.
-        :param overwrite: Overwrite the file if it already exists.
-        :return: ID of uploaded file.
-        '''
-
-        if dest_folder is None:
-            self.logger.error("Must provide a collection name for Arvados file upload.")
-            return None
-
-        # trim slash at beginning and end
-        folder_tree = dest_folder.split('/')
-        try:
-            if not folder_tree[0]:
-                folder_tree = folder_tree[1:]
-            if not folder_tree[-1]:
-                folder_tree = folder_tree[:-1]
-            collection_name = folder_tree[0]
-        except IndexError:
-            self.logger.error("Must provide a collection name for Arvados file upload.")
-            return None
-
-        # Get the destination collection
-        search_result = self.api.collections().list(filters=[
-            ["owner_uuid", "=", project["uuid"]],
-            ["name", "=", collection_name]
-            ]).execute()
-        if len(search_result['items']) > 0:
-            destination_collection = search_result['items'][0]
-        else:
-            destination_collection = self.api.collections().create(body={
-                "owner_uuid": project["uuid"],
-                "name": collection_name}).execute()
-
-        target_collection = arvados.collection.Collection(destination_collection['uuid'])
-
-        if destination_filename is None:
-            destination_filename = filename.split('/')[-1]
-
-        if len(folder_tree) > 1:
-            target_filepath = '/'.join(folder_tree[1:]) + '/' + destination_filename
-        else:
-            target_filepath = destination_filename
-
-        if overwrite or target_collection.find(target_filepath) is None:
-            with open_file_with_inferred_encoding(filename) as local_file:
-                local_content = local_file.read()
-            with target_collection.open(target_filepath, 'w') as arv_file:
-                arv_file.write(local_content) # pylint: disable=no-member
-            target_collection.save()
-        return f"keep:{destination_collection['uuid']}/{target_filepath}"
 
     ### Project methods
     def create_project(self, project_name, project_description, **kwargs):
