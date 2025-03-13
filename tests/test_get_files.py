@@ -32,7 +32,7 @@ class TestGetFiles(unittest.TestCase):
             platform = PlatformFactory().get_platform(platform_name)
             platform.connect()
             self.platforms[platform_name] = platform
-        self.project_name = f"TestGetFiles-{datetime.now().strftime('%Y-%m-%d-%H-%M')}"
+        self.project_name = f"TestGetFiles-{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
         self.random_file = None
 
     def tearDown(self):
