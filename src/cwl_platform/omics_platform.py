@@ -242,6 +242,6 @@ class OmicsPlatform(Platform):
             logger.error('Could not start run for %s: %s', name, err)
             return None
 
-    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         self.logger.info("TBD: Uploading file %s to project %s", filename, project)
         return None
