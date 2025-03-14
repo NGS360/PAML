@@ -1,8 +1,8 @@
 [project]
 name = "cwl_platform"
-version = "0.3-rc3"
+version = "0.2.5"
 authors = [
-  { name="Ryan Golhar", email="ryan.golhar@bms.com" }
+  { name="Ryan Golhar", email="ngsbioinformatics@gmail.com" }
 ]
 description = "Multi-Platform Launcher Template"
 readme = "README.md"

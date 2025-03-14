@@ -8,7 +8,7 @@ import unittest
 import mock
 from mock import MagicMock
 
-from cwl_platform.arvados_platform import ArvadosPlatform, ArvadosTask
+from cwl_platform.arvados_platform import ArvadosPlatform, ArvadosTask, StreamFileReader
 
 class TestArvadosPlaform(unittest.TestCase):
     '''
@@ -19,6 +19,17 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform.api = MagicMock()
         self.platform.keep_client = MagicMock()
         return super().setUp()
+
+    def test_add_user_to_project(self):
+        ''' Test that we can add a user to a project '''
+        # Set up test parameters
+        platform_user = {'uuid': 'auser'}
+        project = {'uuid': 'aproject'}
+        permission = 'admin'
+        # Test
+        self.platform.add_user_to_project(platform_user, project, permission)
+        # Check results
+        self.platform.api.links().create().execute.assert_called_once()
 
     @mock.patch("arvados.api_from_config")
     @mock.patch("arvados.KeepClient")
@@ -32,6 +43,41 @@ class TestArvadosPlaform(unittest.TestCase):
         }
         self.platform.connect()
         self.assertTrue(self.platform.connected)
+
+    @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
+    def test_get_task_output(self, mock__load_cwl_output):
+        ''' Test that get_task_output can handle cases when the cwl_output is {} '''
+        # Set up test parameters
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        # Set up supporting mocks
+        mock__load_cwl_output.return_value = {}
+        # Test
+        actual_value = self.platform.get_task_output(task, 'some_output_field')
+        # Check results
+        self.assertIsNone(actual_value)
+
+    @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
+    def test_get_task_output_optional_step_file_missing(self, mock__load_cwl_output):
+        ''' Test that get_task_output can handle cases when an optional step file is missing in cwl_output '''
+        # Set up test parameters
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        # Set up supporting mocks
+        mock__load_cwl_output.return_value = {'some_output_field': None}
+        # Test
+        actual_value = self.platform.get_task_output(task, 'some_output_field')
+        # Check results
+        self.assertIsNone(actual_value)
+    @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
+    def test_get_task_output_nonexistent_output(self, mock__load_cwl_output):
+        ''' Test that get_task_output can handle cases when the output is non-existent in cwl_output '''
+        # Set up test parameters
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        # Set up supporting mocks
+        mock__load_cwl_output.return_value = {'other_output_field': None}
+        # Test
+        actual_value = self.platform.get_task_output(task, 'some_output_field')
+        # Check results
+        self.assertIsNone(actual_value)
 
     @mock.patch("arvados.collection.Collection")
     def test_get_task_output_filename_single_file(self, mock_collection):
@@ -106,6 +152,163 @@ class TestArvadosPlaform(unittest.TestCase):
         ''' Test detect_platform method '''
         os.environ['ARVADOS_API_HOST'] = 'some host'
         self.assertTrue(ArvadosPlatform.detect())
+
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    def test_copy_folder_success(self, mock_get_files_list, mock_lookup_folder_name):
+        ''' Test copy_folder method with file streaming'''
+        # Set up test parameters
+        source_project = {"uuid": "source-project-uuid"}
+        source_folder = "/folder-to-be-copied"
+        destination_project = {"uuid": "destination-project-uuid"}
+
+        # Set up mocks
+        # Mocking the source collection
+        source_collection = {
+            'uuid': 'source-uuid', 
+            'name': 'source-folder', 
+            'description': 'source collection'
+        }
+
+        # Mocking the destination collection empty
+        destination_collection = {
+            'uuid': 'destination-uuid', 
+            'name': 'source-folder', 
+            'description': 'destination collection',
+            "preserve_version": True
+        }
+
+        mock_lookup_folder_name.side_effect = [
+            source_collection, destination_collection
+        ]
+
+        # Mock the source files
+        # Simulate the files being streamed using StreamFileReader
+        file1_stream = MagicMock()
+        file1_stream.name = "file1.txt"
+        file1_stream.stream_name.return_value = "stream1"
+        file1_stream.read.return_value = b'file1 contents'
+
+        file2_stream = MagicMock()
+        file2_stream.name = "file2.txt"
+        file2_stream.stream_name.return_value = "stream2"
+        file2_stream.read.return_value = b'file2 contents'
+
+        # Wrap the mock streams with StreamFileReader
+        file1_reader = StreamFileReader(file1_stream)
+        file2_reader = StreamFileReader(file2_stream)
+
+        # Mock _get_files_list_in_collection to return the file readers (file-like objects)
+        # Assume file2 already exists in the destination and we only need to copy file1
+        mock_get_files_list.side_effect = [
+            [file1_reader, file2_reader],       # This is for the source collection
+            [file2_reader]                      # This is for the destination collection
+        ]
+
+        with mock.patch('arvados.collection.Collection') as _:
+            with mock.patch('arvados.collection.Collection') as mock_destination_collection_object:
+                # Test
+                result = self.platform.copy_folder(source_project, source_folder, destination_project)
+
+                # Assertions
+                self.assertIsNotNone(result)  # Ensure the result is not None
+                self.assertEqual(result['uuid'], 'destination-uuid')  # Ensure we got the correct destination UUID
+                # Ensure a file is copied to the destination collection
+                self.assertEqual(mock_destination_collection_object().copy.call_count, 1)
+                self.assertEqual(mock_destination_collection_object().save.call_count, 1)
+
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
+    def test_copy_folder_source_collection_notfound(self, mock_lookup_folder_name):
+        ''' Test copy_folder method with file streaming when the source collection is NOT found'''
+        # Set up test parameters
+        source_project = {"uuid": "source-project-uuid"}
+        source_folder = "/folder-to-be-copied"
+        destination_project = {"uuid": "destination-project-uuid"}
+
+        # Set up mocks
+        # Mocking an empty source collection
+        source_collection = None
+
+        mock_lookup_folder_name.side_effect = [source_collection]
+
+        result = self.platform.copy_folder(source_project, source_folder, destination_project)
+
+        # Assertions
+        self.assertIsNone(result)
+
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    def test_copy_folder_create_destination_collection(self, mock_get_files_list, mock_lookup_folder_name):
+        ''' Test copy_folder method with file streaming to CREATE the destination collection'''
+        # Set up test parameters
+        source_project = {"uuid": "source-project-uuid"}
+        source_folder = "/folder-to-be-copied"
+        destination_project = {"uuid": "destination-project-uuid"}
+
+        # Set up mocks
+        # Mocking the source collection
+        source_collection = {
+            'uuid': 'source-uuid', 
+            'name': 'source-folder', 
+            'description': 'source collection'
+        }
+
+        destination_collection = None
+
+        mock_lookup_folder_name.side_effect = [
+            source_collection, destination_collection
+        ]
+
+        # Mock the source files
+        # Simulate the files being streamed using StreamFileReader
+        file1_stream = MagicMock()
+        file1_stream.name = "file1.txt"
+        file1_stream.stream_name.return_value = "stream1"
+        file1_stream.read.return_value = b'file1 contents'
+
+        file2_stream = MagicMock()
+        file2_stream.name = "file2.txt"
+        file2_stream.stream_name.return_value = "stream2"
+        file2_stream.read.return_value = b'file2 contents'
+
+        # Wrap the mock streams with StreamFileReader
+        file1_reader = StreamFileReader(file1_stream)
+        file2_reader = StreamFileReader(file2_stream)
+
+        # Mock _get_files_list_in_collection to return the file readers (file-like objects)
+        # Assume file2 already exists in the destination and we only need to copy file1
+        mock_get_files_list.side_effect = [
+            [file1_reader, file2_reader],       # This is for the source collection
+            []                                  # This is for the destination collection
+        ]
+
+        with mock.patch('arvados.collection.Collection') as _:
+            with mock.patch('arvados.collection.Collection') as mock_destination_collection_object:
+                # Test
+                result = self.platform.copy_folder(source_project, source_folder, destination_project)
+
+                # Assertions
+                self.assertIsNotNone(result)  # Ensure the result is not None
+                # Ensure both files are copied to the destination collection
+                self.assertEqual(mock_destination_collection_object().copy.call_count, 2)
+                self.assertEqual(mock_destination_collection_object().save.call_count, 1)
+
+    @mock.patch('arvados.collection.Collection')
+    def test_upload_file(self, _):
+        '''
+        Test that upload_file returns a keep id
+        '''
+        # Set up test parameters
+        filename = "file.txt"
+        project = {'uuid': 'aproject'}
+        dest_folder = '/inputs'
+        # Set up supporting mocks
+        self.platform.api.collections().create().execute.return_value = {'uuid': 'a_destination_collection'}
+        # Test
+        actual_result = self.platform.upload_file(
+            filename, project, dest_folder, destination_filename=None, overwrite=False)
+        # Check results
+        self.assertEqual(actual_result, "keep:a_destination_collection/file.txt")
 
 if __name__ == '__main__':
     unittest.main()

@@ -12,9 +12,10 @@ install: build
 	python3 -m pip install --upgrade dist/*.whl
 
 test:
-	PYTHONPATH=src coverage run --source=src -m pytest
+	PYTHONPATH=src coverage run --source=src -m pytest -v
 	coverage report
 	coverage html
 
 lint:
-	pylint --max-line-length=120 --ignore-imports=y --exit-zero $$(git ls-files '*.py')
+	find . -name "*.py" | xargs pylint --max-line-length=120 --ignore-imports=y
+
