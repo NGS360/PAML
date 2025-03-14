@@ -19,7 +19,6 @@ class OmicsPlatform(Platform):
         self.api = None
         self.output_bucket = None
         self.role_arn = None
-        self.s3_client = None
 
     def _list_file_in_s3(self, s3path):
         '''
@@ -45,10 +44,12 @@ class OmicsPlatform(Platform):
 
         If ~/.aws/credentials or ~/.aws/config does not provide a region, region should be specified in the AWS_DEFAULT_REGION environment variable.
         '''
-        self.api = boto3.client('omics', region_name='us-east-1')
-        self.output_bucket = kwargs.get('output_bucket', "bmsrd-ngs-omics/Outputs")
+        self.api = boto3.client('omics',
+            region_name='us-east-1')
+        self.output_bucket = kwargs.get('output_bucket', "bmsrd-ngs-omics")
         self.role_arn = kwargs.get('role_arn', "arn:aws:iam::483421617021:role/ngs360-servicerole")
-        self.s3_client = boto3.client('s3', region_name='us-east-1')
+        self.s3_client = boto3.client('s3',
+            region_name='us-east-1')
 
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
@@ -59,6 +60,30 @@ class OmicsPlatform(Platform):
         '''
         return source_folder
 
+    def download_file(self, file, dest_folder):
+        """
+        Download a file to a local directory
+        :param file: SevenBridges file id (or object) to download
+        :param dest_folder: Destination folder to download file to
+        :return: Name of local file downloaded or None
+        """
+        ''' TODO '''
+        return
+
+    def export_file(self, file, bucket_name, prefix):
+        """
+        Use platform specific functionality to copy a file from a platform to an S3 bucket.
+        :param file: File to export
+        :param bucket_name: S3 bucket name
+        :param prefix: Destination S3 folder to export file to, path/to/folder
+        :return: Export job of file
+        For SevenBridges, there are two differences from the expected base implementation:
+        1. the bucket name is translated to a volume name, replacing all dashes with underscores.
+        2. the return value is the export job object, not the S3 file path.
+        """
+        ''' TODO '''
+        return
+
     def copy_workflow(self, src_workflow, destination_project):
         '''Do nothing and return workflow id'''
         return src_workflow
@@ -67,9 +92,26 @@ class OmicsPlatform(Platform):
         '''Do nothing. This function seems not used in launcher?'''
         pass
 
+    def get_workflows(self, project):
+        '''
+        Get workflows in a project
+
+        :param: Platform Project
+        :return: List of workflows
+        '''
+        ''' TODO '''
+        return
+
     def create_project(self, project_name, project_description, **kwargs):
         ''' Do nothing'''
         pass
+
+    def delete_project_by_name(self, project_name):
+        '''
+        Delete a project on the platform 
+        '''
+        ''' TODO '''
+        return
 
     def delete_task(self, task):
         ''' Delete a task/workflow/process '''
@@ -87,6 +129,24 @@ class OmicsPlatform(Platform):
         '''Return file s3 path for Omics job input'''
         return file_path
 
+    def get_files(self, project, filters=None):
+        """
+        Retrieve files in a project matching the filter criteria
+
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of tuples (file path, file object) matching filter criteria
+        """
+        ''' TODO '''
+        return
+
     def get_folder_id(self, project, folder_path):
         '''
         There is not unique ID for a folder in s3, so just return the folder_path
@@ -102,7 +162,8 @@ class OmicsPlatform(Platform):
         return None
 
     def get_task_outputs(self, task):
-        raise ValueError("Not yet implemented")
+        self.logger.info('TBD: Getting task outputs %s', task)
+        return []
 
     def get_task_state(self, task, refresh=False):
         ''' 
@@ -158,7 +219,12 @@ class OmicsPlatform(Platform):
     def get_task_output_filename(self, task, output_name):
         ''' Retrieve the output field of the task and return filename'''
         self.logger.info("TBD: Getting output filename for task %s", task)
-        return None
+        task_output_url = self.get_task_output(task, output_name)
+        if isinstance(task_output_url, list):
+            task_output_name = [fileurl.split('/')[-1] for fileurl in task_output_url]
+        else:
+            task_output_name = task_output_url.split('/')[-1]
+        return task_output_name
 
     def get_tasks_by_name(self, project, task_name):
         ''' Get a tasks by its name '''
@@ -189,6 +255,21 @@ class OmicsPlatform(Platform):
         }
         return project
 
+    def get_project_users(self, project):
+        ''' Return a list of user objects associated with a project '''
+        ''' TODO '''
+        return None
+
+    def add_user_to_project(self, platform_user, project, permission):
+        """ 
+        Add a user to a project on the platform
+        :param platform_user: platform user (from get_user)
+        :param project: platform project
+        :param permission: permission (permission="read|write|execute|admin")
+        """
+        ''' TODO '''
+        return
+
     def get_user(self, user):
         '''Get a user object from their (platform) user id or email address'''
         raise ValueError("Not yet implemented")
@@ -218,7 +299,7 @@ class OmicsPlatform(Platform):
 
         return omics response for start_run.
         '''
-        base_output_path = f"s3://{self.output_bucket}/"
+        base_output_path = f"s3://{self.output_bucket}/Outputs"
         if 'ProjectName' in project:
             base_output_path += f"{project['ProjectName']}/{workflow}/{name}/"
         else:
@@ -234,7 +315,7 @@ class OmicsPlatform(Platform):
                                      parameters=parameters,
                                      name=name,
                                      runGroupId=project["ProjectId"],
-                                     tags={"ProjectId": project["ProjectId"]},
+                                     tags={"Project": project["ProjectId"]},
                                      outputUri=base_output_path)
             logger.info('Started run for %s, RunID: %s',name,job['id'])
             return job
@@ -243,5 +324,17 @@ class OmicsPlatform(Platform):
             return None
 
     def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
-        self.logger.info("TBD: Uploading file %s to project %s", filename, project)
-        return None
+        self.logger.info("Uploading file %s to project %s", filename, project)
+        target_bucket = self.output_bucket
+        target_filepath = f"Outputs/{project['ProjectId']}" + dest_folder
+        if destination_filename:
+            target_filepath += destination_filename
+        else:
+            target_filepath += filename.split('/')[-1]
+        try:
+            self.s3_client.upload_file(filename, target_bucket, target_filepath)
+            file_id = f"s3://{self.output_bucket}/"+target_filepath
+            return file_id
+        except Exception as e:
+            self.logger.error('Could not upload file %s', filename)
+            return None
