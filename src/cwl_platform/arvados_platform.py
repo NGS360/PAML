@@ -17,7 +17,8 @@ import smart_open
 
 import arvados
 
-from .base_platform import Platform
+
+from .base_platform import Platform, WorkflowState
 
 def open_file_with_inferred_encoding(filename, mode='r'):
     ''' Try to auto-detecting file encoding and open file with that encoding '''
@@ -620,15 +621,15 @@ class ArvadosPlatform(Platform):
             task.container = arvados.api().containers().get(uuid = task.container_request['container_uuid']).execute() # pylint: disable=not-callable
 
         if task.container['exit_code'] == 0:
-            return 'Complete'
+            return WorkflowState.COMPLETE
         if task.container['exit_code'] == 1:
-            return 'Failed'
+            return WorkflowState.FAILED
         if task.container['state'] == 'Running':
-            return 'Running'
+            return WorkflowState.RUNNING
         if task.container['state'] == 'Cancelled':
-            return 'Cancelled'
+            return WorkflowState.CANCELLED
         if task.container['state'] in ['Locked', 'Queued']:
-            return 'Queued'
+            return WorkflowState.QUEUED
         raise ValueError(f"TODO: Unknown task state: {task.container['state']}")
 
     def get_task_output(self, task: ArvadosTask, output_name):

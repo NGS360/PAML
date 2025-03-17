@@ -6,7 +6,7 @@ import logging
 import sevenbridges
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
-from .base_platform import Platform
+from .base_platform import Platform, WorkflowState
 
 class SevenBridgesPlatform(Platform):
     ''' SevenBridges Platform class '''
@@ -508,12 +508,12 @@ class SevenBridgesPlatform(Platform):
     def get_task_state(self, task: sevenbridges.Task, refresh=False):
         ''' Get workflow/task state '''
         sbg_state = {
-            'COMPLETED': 'Complete',
-            'FAILED': 'Failed',
-            'QUEUED': 'Queued',
-            'RUNNING': 'Running',
-            'ABORTED': 'Cancelled',
-            'DRAFT': 'Cancelled'
+            'COMPLETED': WorkflowState.COMPLETE,
+            'FAILED': WorkflowState.FAILED,
+            'QUEUED': WorkflowState.QUEUED,
+            'RUNNING': WorkflowState.RUNNING,
+            'ABORTED': WorkflowState.CANCELLED,
+            'DRAFT': WorkflowState.CANCELLED
         }
         if refresh:
             task = self.api.tasks.get(id=task.id)

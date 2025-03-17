@@ -1,6 +1,15 @@
 ''' Base Platform class '''
 from abc import ABC, abstractmethod
+from enum import Enum
 import logging
+
+class WorkflowState(Enum):
+    COMPLETE = "Complete"
+    FAILED = "Failed"
+    RUNNING = "Running"
+    CANCELLED = "Cancelled"
+    QUEUED = "Queued"
+    LOCKED = "Locked"
 
 class Platform(ABC):
     ''' abstract Platform class '''
@@ -149,7 +158,7 @@ class Platform(ABC):
         :param task: The task to search for. Task is a dictionary containing a
             container_request_uuid and container dictionary.
         :param refresh: Refresh task state before returning (Default: False)
-        :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
+        :return: The state of the task from WorkflowState (Queued, Running, Complete, Failed, Cancelled)
         '''
 
     @abstractmethod
