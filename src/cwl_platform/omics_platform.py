@@ -301,9 +301,9 @@ class OmicsPlatform(Platform):
         '''
         base_output_path = f"s3://{self.output_bucket}/Outputs"
         if 'ProjectName' in project:
-            base_output_path += f"{project['ProjectName']}/{workflow}/{name}/"
+            base_output_path += f"{project['ProjectName']}/{workflow}/{name.replace(' ','')}/"
         else:
-            base_output_path += f"{project['ProjectId']}/{workflow}/{name}/"
+            base_output_path += f"{project['ProjectId']}/{workflow}/{name.replace(' ','')}/"
 
         try:
             logger.debug("Starting run for %s", name)
