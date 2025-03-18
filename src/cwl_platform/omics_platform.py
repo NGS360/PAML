@@ -46,7 +46,9 @@ class OmicsPlatform(Platform):
         '''
         self.api = boto3.client('omics',
             region_name='us-east-1')
+        # TODO: Remove hard-coded bucket
         self.output_bucket = kwargs.get('output_bucket', "bmsrd-ngs-omics")
+        # TODO: Remove hard-coded arn
         self.role_arn = kwargs.get('role_arn', "arn:aws:iam::483421617021:role/ngs360-servicerole")
         self.s3_client = boto3.client('s3',
             region_name='us-east-1')
