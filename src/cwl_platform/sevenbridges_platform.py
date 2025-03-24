@@ -703,9 +703,9 @@ class SevenBridgesPlatform(Platform):
         try:
             projects = list(self.api.projects.query().all())
         except SbgError as err:
-            logger.error(err)
+            self.logger.error(err)
         return projects
-    
+
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):
         """
