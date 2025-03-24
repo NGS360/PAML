@@ -875,6 +875,12 @@ class ArvadosPlatform(Platform):
             )
         return users
 
+    def get_projects(self):
+        ''' Get list of all projects '''
+        search_result = self.api.groups().list().execute()
+        if len(search_result['items']) > 0:
+            return search_result['items'][0]
+
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):
         """
