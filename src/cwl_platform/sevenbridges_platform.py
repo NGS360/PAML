@@ -701,7 +701,7 @@ class SevenBridgesPlatform(Platform):
         ''' Get list of all projects '''
         projects = None
         try:
-            projects = self.api.projects.query().all()
+            projects = list(self.api.projects.query().all())
         except SbgError as err:
             logger.error(err)
         return projects
