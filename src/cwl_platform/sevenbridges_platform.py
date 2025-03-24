@@ -4,6 +4,7 @@ SevenBridges Platform class
 import os
 import logging
 import sevenbridges
+from sevenbridges.errors import SbgError
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
 from .base_platform import Platform
@@ -695,6 +696,15 @@ class SevenBridgesPlatform(Platform):
     def get_project_users(self, project):
         ''' Return a list of user objects associated with a project '''
         return list(project.get_members())
+
+    def get_projects(self):
+        ''' Get list of all projects '''
+        projects = None
+        try:
+            projects = list(self.api.projects.query().all())
+        except SbgError as err:
+            self.logger.error(err)
+        return projects
 
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):

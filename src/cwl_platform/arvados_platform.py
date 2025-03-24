@@ -875,6 +875,41 @@ class ArvadosPlatform(Platform):
             )
         return users
 
+    def get_projects(self):
+        '''
+        Get list of all projects
+        
+        search_result = platform.api.groups().list().execute() returns
+        {
+            'items': [ ... ]
+            'items_available': N
+            'limit': Y
+            'offset': X
+        }
+        all_projects = []
+        limit = 100
+        while True:
+            offset = 0
+            search_result = self.api.groups().list().execute()
+            all_projects.extend(search_result['items'])
+            if len(all_projects) >= search_result['items_available']:
+                break
+            offset += len(search_result['items'])
+        '''
+        all_projects = arvados.util.keyset_list_all(
+            self.api.groups().contents,
+            filters=[
+                    ['uuid', 'is_a', 'arvados#group'],
+                    ['group_class', '=', 'project'],
+                ],
+            # Pass recursive=True to include results from subprojects in the listing.
+            recursive=False,
+            # Pass include_trash=True to include objects in the listing whose
+            # trashed_at time is passed.
+            include_trash=False
+        )
+        return list(all_projects)
+
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):
         """
