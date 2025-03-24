@@ -168,8 +168,13 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def get_tasks_by_name(self, project, task_name):
-        ''' Get a tasks by its name '''
+    def get_tasks_by_name(self, project, task_name=None):
+        '''
+        Get all processes/tasks in a project with a specified name
+        :param project: The project to search
+        :param task_name: The name of the process to search for (if None return all tasks)
+        :return: List of tasks
+        '''
 
     @abstractmethod
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
