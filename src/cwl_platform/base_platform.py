@@ -229,10 +229,6 @@ class Platform(ABC):
         ''' Determine what project we are running in '''
 
     @abstractmethod
-    def get_projects(self):
-        ''' Get list of all projects '''
-
-    @abstractmethod
     def get_project_by_name(self, project_name):
         ''' Get a project by its name '''
 
@@ -243,6 +239,10 @@ class Platform(ABC):
     @abstractmethod
     def get_project_users(self, project):
         ''' Return a list of user objects associated with a project '''
+
+    @abstractmethod
+    def get_projects(self):
+        ''' Get list of all projects '''
 
     # User methods
     @abstractmethod
