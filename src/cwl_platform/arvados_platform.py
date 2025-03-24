@@ -879,7 +879,13 @@ class ArvadosPlatform(Platform):
         '''
         Get list of all projects
         
-        search_result = platform.api.groups().list().execute()
+        search_result = platform.api.groups().list().execute() returns
+        {
+            'items': [ ... ]
+            'items_available': N
+            'limit': Y
+            'offset': X
+        }
         '''
         all_projects = []
         limit = 100
