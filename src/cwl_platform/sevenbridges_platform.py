@@ -504,8 +504,8 @@ class SevenBridgesPlatform(Platform):
         task_cost = 0.0
         try:
             task_cost = task.price.amount
-        except Exception as e:
-            self.logger.error("Error getting cost for task: " + str(e))
+        except:
+            pass
         return task_cost
 
     def get_task_input(self, task: sevenbridges.Task, input_name):
