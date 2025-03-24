@@ -876,10 +876,21 @@ class ArvadosPlatform(Platform):
         return users
 
     def get_projects(self):
-        ''' Get list of all projects '''
-        search_result = self.api.groups().list().execute()
-        if len(search_result['items']) > 0:
-            return search_result['items'][0]
+        '''
+        Get list of all projects
+        
+        search_result = platform.api.groups().list().execute()
+        '''
+        all_projects = []
+        limit = 100
+        while True:
+            offset = 0
+            search_result = self.api.groups().list().execute()
+            all_projects.extend(search_result['items'])
+            if len(all_projects) >= search_result['items_available']:
+                break
+            offset += len(search_result['items'])
+        return all_projects
 
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):
