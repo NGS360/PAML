@@ -704,7 +704,7 @@ class ArvadosPlatform(Platform):
 
         tasks = []
         for container_request in arvados.util.keyset_list_all(
-            self.api.container_requests(),
+            self.api.container_requests().list,
             filters=filters
         ):
             # Get the container
@@ -882,23 +882,6 @@ class ArvadosPlatform(Platform):
     def get_projects(self):
         '''
         Get list of all projects
-        
-        search_result = platform.api.groups().list().execute() returns
-        {
-            'items': [ ... ]
-            'items_available': N
-            'limit': Y
-            'offset': X
-        }
-        all_projects = []
-        limit = 100
-        while True:
-            offset = 0
-            search_result = self.api.groups().list().execute()
-            all_projects.extend(search_result['items'])
-            if len(all_projects) >= search_result['items_available']:
-                break
-            offset += len(search_result['items'])
         '''
         all_projects = arvados.util.keyset_list_all(
             self.api.groups().contents,

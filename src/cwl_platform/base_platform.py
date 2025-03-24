@@ -229,6 +229,10 @@ class Platform(ABC):
         ''' Determine what project we are running in '''
 
     @abstractmethod
+    def get_projects(self):
+        ''' Get list of all projects '''
+
+    @abstractmethod
     def get_project_by_name(self, project_name):
         ''' Get a project by its name '''
 
