@@ -896,21 +896,19 @@ class ArvadosPlatform(Platform):
                 break
             offset += len(search_result['items'])
         '''
-        all_projects = [
-            item for item in arvados.util.keyset_list_all(
-                self.api.groups().contents,
-                filters=[
-                        ['uuid', 'is_a', 'arvados#group'],
-                        ['group_class', '=', 'project'],
-                    ],
-                # Pass recursive=True to include results from subprojects in the listing.
-                recursive=False,
-                # Pass include_trash=True to include objects in the listing whose
-                # trashed_at time is passed.
-                include_trash=False
-            )
-        ]
-        return all_projects
+        all_projects = arvados.util.keyset_list_all(
+            self.api.groups().contents,
+            filters=[
+                    ['uuid', 'is_a', 'arvados#group'],
+                    ['group_class', '=', 'project'],
+                ],
+            # Pass recursive=True to include results from subprojects in the listing.
+            recursive=False,
+            # Pass include_trash=True to include objects in the listing whose
+            # trashed_at time is passed.
+            include_trash=False
+        )
+        return list(all_projects)
 
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):
