@@ -886,7 +886,6 @@ class ArvadosPlatform(Platform):
             'limit': Y
             'offset': X
         }
-        '''
         all_projects = []
         limit = 100
         while True:
@@ -896,8 +895,23 @@ class ArvadosPlatform(Platform):
             if len(all_projects) >= search_result['items_available']:
                 break
             offset += len(search_result['items'])
-        return all_projects
+        '''
+        all_projects = []
+        for item in arvados.util.keyset_list_all(
+            self.api.groups().contents,
+            filters=[
+                    ['uuid', 'is_a', 'arvados#group'],
+                    ['group_class', '=', 'project'],
+                ],
+            # Pass recursive=True to include results from subprojects in the listing.
+            recursive=False,
+            # Pass include_trash=True to include objects in the listing whose
+            # trashed_at time is passed.
+            include_trash=False
+        ):
+            all_projects.append(item)
 
+        return all_projects
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):
         """
