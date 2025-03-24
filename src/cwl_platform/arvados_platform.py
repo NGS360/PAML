@@ -684,24 +684,28 @@ class ArvadosPlatform(Platform):
                 return cwl_output[output_name]['basename']
         raise ValueError(f"Output {output_name} does not exist for task {task.container_request['uuid']}.")
 
-    def get_tasks_by_name(self, project, task_name): # -> list(ArvadosTask):
+    def get_tasks_by_name(self, project, task_name=None): # -> list(ArvadosTask):
         '''
-        Get all processes (jobs) in a project with a specified name
-
+        Get all processes/tasks in a project with a specified name
         :param project: The project to search
-        :param process_name: The name of the process to search for
-        :return: List of container request uuids and associated containers
+        :param task_name: The name of the process to search for (if None return all tasks)
+        :return: List of tasks
         '''
         # We must add priority>0 filter so we do not capture Cancelled jobs as Queued jobs.
         # According to Curii, 'Cancelled' on the UI = 'Queued' with priority=0, we are not interested in Cancelled
         # jobs here anyway, we will submit the job again
+        filters = [
+            ['owner_uuid', '=', project['uuid']], ['priority', '>', 0]
+        ]
+        if task_name:
+            filters.append(
+                ["name", '=', task_name]
+            )
+
         tasks = []
         for container_request in arvados.util.keyset_list_all(
-            self.api.container_requests().list,
-            filters=[
-                ["name", '=', task_name],
-                ['owner_uuid', '=', project['uuid']], ['priority', '>', 0]
-            ]
+            self.api.container_requests(),
+            filters=filters
         ):
             # Get the container
             container = self.api.containers().get(uuid=container_request['container_uuid']).execute()
