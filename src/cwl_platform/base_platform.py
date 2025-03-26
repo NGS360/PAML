@@ -138,6 +138,10 @@ class Platform(ABC):
         ''' Get the current task '''
 
     @abstractmethod
+    def get_task_cost(self, task):
+        ''' Return task cost '''
+
+    @abstractmethod
     def get_task_input(self, task, input_name):
         ''' Retrieve the input field of the task '''
 
@@ -235,6 +239,10 @@ class Platform(ABC):
     @abstractmethod
     def get_project_by_id(self, project_id):
         ''' Get a project by its id '''
+
+    @abstractmethod
+    def get_project_cost(self, project):
+        ''' Return project cost '''
 
     @abstractmethod
     def get_project_users(self, project):

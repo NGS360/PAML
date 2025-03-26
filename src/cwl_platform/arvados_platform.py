@@ -593,6 +593,10 @@ class ArvadosPlatform(Platform):
             return ArvadosTask(request['items'][0], current_container)
         raise ValueError("Current task not associated with a container")
 
+    def get_task_cost(self, task):
+        ''' Return task cost '''
+        return task.container["cost"]
+
     def get_task_input(self, task, input_name):
         ''' Retrieve the input field of the task '''
         if input_name in task.container_request['properties']['cwl_input']:
@@ -863,6 +867,21 @@ class ArvadosPlatform(Platform):
         if len(search_result['items']) > 0:
             return search_result['items'][0]
         return None
+
+    def get_project_cost(self, project):
+        setup_filters=[
+            ['owner_uuid', '=', project['uuid']],
+            ['requesting_container_uuid', '=', None]
+        ]
+
+        cost = 0.0
+        for container_request in arvados.util.keyset_list_all(
+            self.api.container_requests().list,
+            filters=setup_filters,
+            select=["cumulative_cost"]
+        ):
+            cost += container_request["cumulative_cost"]
+        return cost
 
     def get_project_users(self, project):
         ''' Return a list of user objects associated with a project '''

@@ -500,6 +500,14 @@ class SevenBridgesPlatform(Platform):
         task = self.api.tasks.get(id=task_id)
         return task
 
+    def get_task_cost(self, task):
+        task_cost = 0.0
+        try:
+            task_cost = task.price.amount
+        except:
+            pass
+        return task_cost
+
     def get_task_input(self, task: sevenbridges.Task, input_name):
         ''' Retrieve the input field of the task '''
         if isinstance(task.inputs[input_name], sevenbridges.File):
@@ -686,6 +694,16 @@ class SevenBridgesPlatform(Platform):
             return self.api.projects.get(id=task.project)
         except sevenbridges.errors.SbgError:
             return None
+
+    def get_project_cost(self, project):
+        # 1.  Get a list of tasks from the project
+        tasks = self.get_tasks_by_name(project)
+
+        # 2.  Iterate over tasks and sum up total cost
+        total_cost = 0.0
+        for task in tasks:
+            total_cost += self.get_task_cost(task)
+        return total_cost
 
     def get_project_by_name(self, project_name):
         ''' Get a project by its name '''
