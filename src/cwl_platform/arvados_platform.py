@@ -595,7 +595,7 @@ class ArvadosPlatform(Platform):
 
     def get_task_cost(self, task):
         ''' Return task cost '''
-        return(task.container["cost"])
+        return task.container["cost"]
 
     def get_task_input(self, task, input_name):
         ''' Retrieve the input field of the task '''
@@ -882,7 +882,7 @@ class ArvadosPlatform(Platform):
         ):
             cost += container_request["cumulative_cost"]
         return cost
-    
+
     def get_project_users(self, project):
         ''' Return a list of user objects associated with a project '''
         users = []
