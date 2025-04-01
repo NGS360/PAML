@@ -318,7 +318,8 @@ class OmicsPlatform(Platform):
                                      name=name,
                                      runGroupId=project["ProjectId"],
                                      tags={"Project": project["ProjectId"]},
-                                     outputUri=base_output_path)
+                                     outputUri=base_output_path,
+                                     storageType="DYNAMIC")
             logger.info('Started run for %s, RunID: %s',name,job['id'])
             return job
         except botocore.exceptions.ClientError as err:
