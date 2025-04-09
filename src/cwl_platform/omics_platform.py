@@ -251,12 +251,8 @@ class OmicsPlatform(Platform):
 
     def get_project_by_name(self, project_name):
         ''' Return a dictionary of project to provide project_name tag info for omics jobs '''
-        response = self.api.list_run_groups(name=project_name)
-        run_group_id = response['items'][0]['id']
-
         project = {
-            'ProjectName': project_name,
-            'ProjectId': run_group_id
+            'ProjectName': project_name
         }
         return project
 
