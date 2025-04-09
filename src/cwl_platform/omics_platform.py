@@ -129,6 +129,10 @@ class OmicsPlatform(Platform):
         ''' Get the current task '''
         return None
 
+    def get_task_cost(self, task):
+        ''' Return task cost '''
+        return 0
+
     def get_file_id(self, project, file_path):
         '''Return file s3 path for Omics job input'''
         return file_path
@@ -271,6 +275,11 @@ class OmicsPlatform(Platform):
     def get_project_users(self, project):
         ''' Return a list of user objects associated with a project '''
         ''' TODO '''
+        return None
+
+    def get_projects(self):
+        ''' Get list of all projects '''
+        # TODO: I think this should return a list of project names using run group id
         return None
 
     def add_user_to_project(self, platform_user, project, permission):
