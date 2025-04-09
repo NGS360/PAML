@@ -138,6 +138,10 @@ class Platform(ABC):
         ''' Get the current task '''
 
     @abstractmethod
+    def get_task_cost(self, task):
+        ''' Return task cost '''
+
+    @abstractmethod
     def get_task_input(self, task, input_name):
         ''' Retrieve the input field of the task '''
 
@@ -168,8 +172,13 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def get_tasks_by_name(self, project, task_name):
-        ''' Get a tasks by its name '''
+    def get_tasks_by_name(self, project, task_name=None):
+        '''
+        Get all processes/tasks in a project with a specified name
+        :param project: The project to search
+        :param task_name: The name of the process to search for (if None return all tasks)
+        :return: List of tasks
+        '''
 
     @abstractmethod
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
@@ -232,8 +241,16 @@ class Platform(ABC):
         ''' Get a project by its id '''
 
     @abstractmethod
+    def get_project_cost(self, project):
+        ''' Return project cost '''
+
+    @abstractmethod
     def get_project_users(self, project):
         ''' Return a list of user objects associated with a project '''
+
+    @abstractmethod
+    def get_projects(self):
+        ''' Get list of all projects '''
 
     # User methods
     @abstractmethod

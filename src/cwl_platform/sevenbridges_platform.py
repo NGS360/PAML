@@ -4,6 +4,7 @@ SevenBridges Platform class
 import os
 import logging
 import sevenbridges
+from sevenbridges.errors import SbgError
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
 from .base_platform import Platform
@@ -499,6 +500,14 @@ class SevenBridgesPlatform(Platform):
         task = self.api.tasks.get(id=task_id)
         return task
 
+    def get_task_cost(self, task):
+        task_cost = 0.0
+        try:
+            task_cost = task.price.amount
+        except:
+            pass
+        return task_cost
+
     def get_task_input(self, task: sevenbridges.Task, input_name):
         ''' Retrieve the input field of the task '''
         if isinstance(task.inputs[input_name], sevenbridges.File):
@@ -553,11 +562,16 @@ class SevenBridgesPlatform(Platform):
                 return task.outputs[output_name].name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def get_tasks_by_name(self, project, task_name): # -> list(sevenbridges.Task):
-        ''' Get a process by its name '''
+    def get_tasks_by_name(self, project, task_name=None): # -> list(sevenbridges.Task):
+        '''
+        Get all processes/tasks in a project with a specified name
+        :param project: The project to search
+        :param task_name: The name of the process to search for (if None return all tasks)
+        :return: List of tasks
+        '''
         tasks = []
         for task in self.api.tasks.query(project=project).all():
-            if task.name == task_name:
+            if task_name is None or task.name == task_name:
                 tasks.append(task)
         return tasks
 
@@ -681,6 +695,16 @@ class SevenBridgesPlatform(Platform):
         except sevenbridges.errors.SbgError:
             return None
 
+    def get_project_cost(self, project):
+        # 1.  Get a list of tasks from the project
+        tasks = self.get_tasks_by_name(project)
+
+        # 2.  Iterate over tasks and sum up total cost
+        total_cost = 0.0
+        for task in tasks:
+            total_cost += self.get_task_cost(task)
+        return total_cost
+
     def get_project_by_name(self, project_name):
         ''' Get a project by its name '''
         projects = self.api.projects.query(name=project_name)
@@ -695,6 +719,15 @@ class SevenBridgesPlatform(Platform):
     def get_project_users(self, project):
         ''' Return a list of user objects associated with a project '''
         return list(project.get_members())
+
+    def get_projects(self):
+        ''' Get list of all projects '''
+        projects = None
+        try:
+            projects = list(self.api.projects.query().all())
+        except SbgError as err:
+            self.logger.error(err)
+        return projects
 
     ### User Methods
     def add_user_to_project(self, platform_user, project, permission):
