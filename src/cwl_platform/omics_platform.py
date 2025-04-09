@@ -105,8 +105,10 @@ class OmicsPlatform(Platform):
         return
 
     def create_project(self, project_name, project_description, **kwargs):
-        ''' Do nothing'''
-        pass
+        '''
+        Create project
+        '''
+        self.api.create_run_group(name=project_name)
 
     def delete_project_by_name(self, project_name):
         '''
