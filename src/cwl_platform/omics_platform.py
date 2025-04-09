@@ -263,6 +263,11 @@ class OmicsPlatform(Platform):
         }
         return project
 
+    def get_project_cost(self, project):
+        ''' Return project cost '''
+        # TODO: Return total cost from run_group_id
+        return 0
+
     def get_project_users(self, project):
         ''' Return a list of user objects associated with a project '''
         ''' TODO '''
