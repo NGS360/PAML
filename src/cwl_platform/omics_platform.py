@@ -45,8 +45,8 @@ class OmicsPlatform(Platform):
         If ~/.aws/credentials or ~/.aws/config does not provide a region, region should be specified in the AWS_DEFAULT_REGION environment variable.
         '''
         self.api = boto3.client('omics')
-        self.output_bucket = kwargs.get('output_bucket', None)
-        self.role_arn = kwargs.get('role_arn', None)
+        self.output_bucket = kwargs['output_bucket']
+        self.role_arn = kwargs['role_arn']
         self.s3_client = boto3.client('s3')
 
     def copy_folder(self, source_project, source_folder, destination_project):
