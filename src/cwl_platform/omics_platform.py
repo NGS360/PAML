@@ -313,7 +313,7 @@ class OmicsPlatform(Platform):
 
         return omics response for start_run.
         '''
-        base_output_path = f"s3://{self.output_bucket}/Outputs"
+        base_output_path = f"s3://{self.output_bucket}/outputs/"
         if 'ProjectName' in project:
             base_output_path += f"{project['ProjectName']}/{workflow}/{name.replace(' ','')}/"
         else:
