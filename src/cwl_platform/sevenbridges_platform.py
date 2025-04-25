@@ -510,9 +510,13 @@ class SevenBridgesPlatform(Platform):
 
     def get_task_input(self, task: sevenbridges.Task, input_name):
         ''' Retrieve the input field of the task '''
-        if isinstance(task.inputs[input_name], sevenbridges.File):
-            return task.inputs[input_name].id
-        return task.inputs[input_name]
+        input_value = task.inputs[input_name]
+        if isinstance(input_value, sevenbridges.File):
+            return input_value.id
+        if (isinstance(input_value, list) and
+            all(isinstance(element, sevenbridges.File) for element in input_value)):
+            return [element.id for element in input_value]
+        return input_value
 
     def get_task_state(self, task: sevenbridges.Task, refresh=False):
         ''' Get workflow/task state '''
