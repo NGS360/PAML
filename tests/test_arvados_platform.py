@@ -84,6 +84,29 @@ class TestArvadosPlaform(unittest.TestCase):
 
         self.assertEqual(actual_result, test_location)
 
+    def test_get_task_input_list_of_file_obj(self):
+        '''
+        Test get_task_input method with a single File object
+        '''
+        test_location1 = "keep:a1ed2cf316addc5e751f1560ac6cc260+238884/somefile1.txt"
+        test_location2 = "keep:a1ed2cf316addc5e751f1560ac6cc260+238884/somefile2.txt"
+
+        mock_task = MagicMock()
+        mock_task.container_request = {
+            'properties': {
+                'cwl_input': {
+                    'input1': [
+                        {'location': test_location1},
+                        {'location': test_location2}
+                    ]
+                }
+            }
+        }
+
+        actual_result = self.platform.get_task_input(mock_task, 'input1')
+
+        self.assertEqual(actual_result, [test_location1, test_location2])
+
     @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
     def test_get_task_output(self, mock__load_cwl_output):
         ''' Test that get_task_output can handle cases when the cwl_output is {} '''
