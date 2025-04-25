@@ -44,6 +44,25 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
+    def test_get_task_input_non_file_object(self):
+        '''
+        Test get_task_input method where the input is not a File object (e.g. string)
+        '''
+        test_value = "test_value"
+
+        mock_task = MagicMock()
+        mock_task.container_request = {
+            'properties': {
+                'cwl_input': {
+                    'input1': test_value
+                }
+            }
+        }
+
+        actual_result = self.platform.get_task_input(mock_task, 'input1')
+
+        self.assertEqual(actual_result, test_value)
+
     @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
     def test_get_task_output(self, mock__load_cwl_output):
         ''' Test that get_task_output can handle cases when the cwl_output is {} '''
