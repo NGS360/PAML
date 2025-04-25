@@ -160,24 +160,9 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Assert
         task.run.assert_called_once_with()
 
-    def test_get_task_input_file_obj(self):
-        '''
-        Test get_task_input method with a single File object
-        '''
-        test_file_id = 'a1234'
-
-        mock_file = MagicMock(spec=sevenbridges.File)
-        mock_file.id = test_file_id
-        mock_task = MagicMock(spec=sevenbridges.Task)
-        mock_task.inputs = {'input1': mock_file}
-
-        actual_result = self.platform.get_task_input(mock_task, 'input1')
-
-        self.assertEqual(actual_result, test_file_id)
-
     def test_get_task_input_non_file_obj(self):
         '''
-        Test get_task_input method with a single File object
+        Test get_task_input method where the input is not a File object (e.g. string)
         '''
         test_value = "test_value"
 
@@ -187,6 +172,36 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         actual_result = self.platform.get_task_input(mock_task, 'input1')
 
         self.assertEqual(actual_result, test_value)
+
+    def test_get_task_input_file_obj(self):
+        '''
+        Test get_task_input method with a single File object
+        '''
+        test_file_id = 'a1234'
+
+        mock_file = MagicMock(spec=sevenbridges.File, id = test_file_id)
+        mock_task = MagicMock(spec=sevenbridges.Task)
+        mock_task.inputs = {'input1': mock_file}
+
+        actual_result = self.platform.get_task_input(mock_task, 'input1')
+
+        self.assertEqual(actual_result, test_file_id)
+
+    def test_get_task_input_list_of_file_obj(self):
+        '''
+        Test get_task_input method with a list of File objects
+        '''
+        test_file1_id = 'a1234'
+        test_file2_id = 'b2345'
+
+        mock_file1 = MagicMock(spec=sevenbridges.File, id = test_file1_id)
+        mock_file2 = MagicMock(spec=sevenbridges.File, id = test_file2_id)
+        mock_task = MagicMock(spec=sevenbridges.Task)
+        mock_task.inputs = {'input1': [mock_file1, mock_file2]}
+
+        actual_result = self.platform.get_task_input(mock_task, 'input1')
+
+        self.assertEqual(actual_result, [test_file1_id, test_file2_id])
 
     @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
     def test_upload_file(self, mock_find_or_create_path):
