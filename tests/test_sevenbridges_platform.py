@@ -160,6 +160,21 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Assert
         task.run.assert_called_once_with()
 
+    def test_get_task_input(self):
+        '''
+        Test get_task_input method with a single File object
+        '''
+        test_file_id = 'a1234'
+
+        mock_file = MagicMock(spec=sevenbridges.File)
+        mock_file.id = test_file_id
+        mock_task = MagicMock(spec=sevenbridges.Task)
+        mock_task.inputs = {'input1': mock_file}
+
+        actual_result = self.platform.get_task_input(mock_task, 'input1')
+
+        self.assertEqual(actual_result, test_file_id)
+
     @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
     def test_upload_file(self, mock_find_or_create_path):
         '''
