@@ -4,6 +4,7 @@ SevenBridges Platform class
 import os
 import logging
 import sevenbridges
+from typing import Any
 from sevenbridges.errors import SbgError
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
@@ -566,17 +567,32 @@ class SevenBridgesPlatform(Platform):
                 return task.outputs[output_name].name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def _compare_file_dict(self, file_obj, file_dict):
+    def _compare_platform_object(self,
+                       platform_object:Any,
+                       input_to_compare:Any) -> bool:
         """
-        Compare a SevenBridges File object to a CWL object of class File
-        :param input_obj:  Object to attempt to simplify
-        :return: File object id, or the input object unchanged
+        Compare a platform object to a CWL representation of the object
+        For example, a SevenBridges File object to a CWL File object
+        :param platform_object: Object to compare to, such as an input or output
+        :param input_to_compare: CWL representation of the object
+        :return: True if the object is equivalent, False otherwise
         """
-        if not isinstance(file_obj, sevenbridges.File):
-            raise ValueError(f"Object {file_obj} is not a file object")
-        if file_dict.get("class") != "File":
-            raise ValueError(f"Object {file_dict} is not of class File")
-        return file_dict.get("path") == file_obj.id
+        if isinstance(platform_object, sevenbridges.File):
+            if not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "File":
+                return False
+            else:
+                return platform_object.id == input_to_compare.get("path")
+        elif isinstance(platform_object, list):
+            if not isinstance(input_to_compare, list):
+                return False
+            if len(platform_object) != len(input_to_compare):
+                return False
+            for task_input in platform_object:
+                if not self._compare_platform_object(task_input, input_to_compare):
+                    return False
+                return True
+        else:
+            return platform_object == input_to_compare
 
     def get_tasks_by_name(self, project:str, task_name:str=None, inputs_to_compare:dict=None): # -> list(sevenbridges.Task):
         '''
