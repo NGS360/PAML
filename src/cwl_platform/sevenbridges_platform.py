@@ -566,11 +566,24 @@ class SevenBridgesPlatform(Platform):
                 return task.outputs[output_name].name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def get_tasks_by_name(self, project, task_name=None): # -> list(sevenbridges.Task):
+    def _compare_file_dict(self, file_obj, file_dict):
+        """
+        Compare a SevenBridges File object to a CWL object of class File
+        :param input_obj:  Object to attempt to simplify
+        :return: File object id, or the input object unchanged
+        """
+        if not isinstance(file_obj, sevenbridges.File):
+            raise ValueError(f"Object {file_obj} is not a file object")
+        if file_dict.get("class") != "File":
+            raise ValueError(f"Object {file_dict} is not of class File")
+        return file_dict.get("path") == file_obj.id
+
+    def get_tasks_by_name(self, project:str, task_name:str=None, inputs_to_compare:dict=None): # -> list(sevenbridges.Task):
         '''
         Get all processes/tasks in a project with a specified name
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
+        :param inputs_to_compare: Inputs as well to ensure equivalency (eg for reuse)
         :return: List of tasks
         '''
         tasks = []
