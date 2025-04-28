@@ -38,6 +38,89 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.connect()
         self.assertTrue(self.platform.connected)
 
+    def test__compare_platform_object_string(self):
+        '''
+        Test that we can compare two non-list, non File inputs: string edition
+        '''
+        test_value = "test_string"
+        test_platform_input = test_value
+        test_cwl_input = test_value
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+
+        self.assertTrue(result)
+
+    def test__compare_platform_object_int(self):
+        '''
+        Test that we can compare two non-list, non File inputs: int edition
+        '''
+        test_value = 123
+        test_platform_input = test_value
+        test_cwl_input = test_value
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+
+        self.assertTrue(result)
+
+    def test__compare_platform_object_simple_unequal(self):
+        '''
+        Test that we can compare two non-list, non File inputs: not equal, string vs int
+        '''
+        test_value = 123
+        test_platform_input = test_value
+        test_cwl_input = "123"
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+
+        self.assertFalse(result)
+
+    def test__compare_platform_object_File_equal(self):
+        '''
+        Test that we can compare two equivalent File-type objects
+        '''
+        test_file_id = 'a1234'
+        mock_file = MagicMock(spec=sevenbridges.File, id = test_file_id)
+        test_platform_input = mock_file
+
+        test_cwl_input = {
+            'class': 'File',
+            'path': test_file_id
+        }
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+        self.assertTrue(result)
+
+    def test__compare_platform_object_File_not_equal(self):
+        '''
+        Test that we can correctly return false when comparing differing File-type objects
+        '''
+        test_file_id = 'a1234'
+        mock_file = MagicMock(spec=sevenbridges.File, id = test_file_id)
+        test_platform_input = mock_file
+
+        test_cwl_input = {
+            'class': 'File',
+            'path': "not the same id"
+        }
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+        self.assertFalse(result)
+
+    def test__compare_platform_object_File_not_file(self):
+        '''
+        Test that we can correctly return false when comparing a File and a non-file dict
+        '''
+        test_file_id = 'a1234'
+        mock_file = MagicMock(spec=sevenbridges.File, id = test_file_id)
+        test_platform_input = mock_file
+
+        test_cwl_input = {
+            'class': 'NotAFile'
+        }
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+        self.assertFalse(result)
+
     def test_delete_task(self):
         ''' Test delete_task method '''
         # Set up mocks
