@@ -375,6 +375,89 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.assertFalse(result)
 
+    def test__compare_platform_directory_different_inner_elements(self):
+        '''
+        Test that we can compare two Directories with identical contents
+        The only difference in inputs is that the second file inside the nested folder is different
+
+        Project root
+        |- file_in_root
+        |- folder
+            |- file_inside_folder
+            |- nested_folder
+                |- file1_inside_nested_folder
+                |- file2_inside_nested_folder [present in test_platform_input, differing file in test_cwl_input]
+        '''
+        file_in_root_id = 'file_in_root'
+        folder_id = 'folder'
+        file_inside_folder_id = 'file_inside_folder'
+        nested_folder_id = 'nested_folder'
+        file1_inside_nested_folder_id = 'file1_inside_nested_folder'
+        file2_inside_nested_folder_id = 'file2_inside_nested_folder'
+
+        mock_file_in_root = MagicMock(spec=sevenbridges.File, id = file_in_root_id)
+        mock_file_in_root.is_folder.return_value = False
+        mock_folder = MagicMock(spec=sevenbridges.File, id = folder_id)
+        mock_folder.is_folder.return_value = True
+        mock_file_inside_folder = MagicMock(spec=sevenbridges.File, id = file_inside_folder_id)
+        mock_file_inside_folder.is_folder.return_value = False
+        mock_nested_folder = MagicMock(spec=sevenbridges.File, id = nested_folder_id)
+        mock_nested_folder.is_folder.return_value = True
+        mock_file1_inside_nested_folder = MagicMock(spec=sevenbridges.File, id = file1_inside_nested_folder_id)
+        mock_file1_inside_nested_folder.is_folder.return_value = False
+        mock_file2_inside_nested_folder = MagicMock(spec=sevenbridges.File, id = file2_inside_nested_folder_id)
+        mock_file2_inside_nested_folder.is_folder.return_value = False
+
+        # nested folder mocks
+        nested_folder_all_mock = MagicMock()
+        nested_folder_all_mock.return_value = [mock_file1_inside_nested_folder, mock_file2_inside_nested_folder]
+        nested_list_files_mock = MagicMock()
+        nested_list_files_mock.all = nested_folder_all_mock
+        mock_nested_folder.list_files.return_value = nested_list_files_mock
+
+        # first level folder mocks
+        folder_all_mock = MagicMock()
+        folder_all_mock.return_value = [mock_file_inside_folder, mock_nested_folder]
+        folder_list_files_mock = MagicMock()
+        folder_list_files_mock.all = folder_all_mock
+        mock_folder.list_files.return_value = folder_list_files_mock
+
+        test_platform_input = [mock_file_in_root, mock_folder]
+        test_cwl_input = [
+            {
+                'class': 'File',
+                'path': file_in_root_id
+            },
+            {
+                'class': 'Directory',
+                'path': folder_id,
+                'listing': [
+                    {
+                        'class': 'File',
+                        'path': file_inside_folder_id
+                    },
+                    {
+                        'class': 'Directory',
+                        'path': nested_folder_id,
+                        'listing': [
+                            {
+                                'class': 'File',
+                                'path': file1_inside_nested_folder_id
+                            },
+                            {
+                                'class': 'File',
+                                'path': "different file id"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+
+        self.assertFalse(result)
+
     def test_delete_task(self):
         ''' Test delete_task method '''
         # Set up mocks
