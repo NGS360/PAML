@@ -121,6 +121,40 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
         self.assertFalse(result)
 
+    def test__compare_platform_object_array(self):
+        '''
+        Test that we can compare two simple arrays
+        '''
+        test_value = ["thing1", "thing2"]
+        test_platform_input = test_value
+        test_cwl_input = test_value
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+
+        self.assertTrue(result)
+
+    def test__compare_platform_file_array(self):
+        '''
+        Test that we can compare two File arrays
+        '''
+
+        test_file_id1 = 'a1234'
+        test_file_id2 = 'b2345'
+        mock_file1 = MagicMock(spec=sevenbridges.File, id = test_file_id1)
+        mock_file2 = MagicMock(spec=sevenbridges.File, id = test_file_id2)
+        test_platform_input = [mock_file1, mock_file2]
+        test_cwl_input = [{
+            'class': 'File',
+            'path': test_file_id1
+        },
+            {
+            'class': 'File',
+            'path': test_file_id2
+        }]
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+
+        self.assertTrue(result)
+
     def test_delete_task(self):
         ''' Test delete_task method '''
         # Set up mocks
