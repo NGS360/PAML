@@ -298,7 +298,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
     def test__compare_platform_directory_unequal_length(self):
         '''
-        Test that we can compare two Directories with identical contents
+        Test that we can compare two Directories with differing number of files inside
         The only difference in inputs is a missing file2 in inside the nested folder
 
         Project root
@@ -377,7 +377,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
     def test__compare_platform_directory_different_inner_elements(self):
         '''
-        Test that we can compare two Directories with identical contents
+        Test that we can compare two Directories which have different inner files
         The only difference in inputs is that the second file inside the nested folder is different
 
         Project root
