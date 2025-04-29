@@ -590,7 +590,7 @@ class SevenBridgesPlatform(Platform):
                     folder_contents,
                     input_to_compare['listing']):
                     # this is intentionally sensitive to order
-                    if not _compare_platform_object(platform_element, input_element):
+                    if not self._compare_platform_object(platform_element, input_element):
                         self.logger.info("Platform object and input to compare were not the same: %s != %s",
                                          platform_element, input_element)
                         return False
