@@ -3,6 +3,7 @@ Test Module for SevenBridges Platform
 '''
 import unittest
 import os
+import logging
 import mock
 from mock import MagicMock
 import sevenbridges
@@ -17,6 +18,10 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         os.environ['SESSION_ID'] = 'dummy'
         self.platform = SevenBridgesPlatform('SevenBridges')
         self.platform.api = MagicMock()
+
+        self.maxDiff = None
+        logging.basicConfig(level=logging.INFO)
+
         return super().setUp()
 
     def test_add_user_to_project(self):
@@ -74,12 +79,13 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.assertFalse(result)
 
-    def test__compare_platform_object_File_equal(self):
+    def test__compare_platform_object_file(self):
         '''
         Test that we can compare two equivalent File-type objects
         '''
         test_file_id = 'a1234'
         mock_file = MagicMock(spec=sevenbridges.File, id = test_file_id)
+        mock_file.is_folder.return_value = False
         test_platform_input = mock_file
 
         test_cwl_input = {
@@ -90,12 +96,13 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
         self.assertTrue(result)
 
-    def test__compare_platform_object_File_not_equal(self):
+    def test__compare_platform_object_file_not_equal(self):
         '''
         Test that we can correctly return false when comparing differing File-type objects
         '''
         test_file_id = 'a1234'
         mock_file = MagicMock(spec=sevenbridges.File, id = test_file_id)
+        mock_file.is_folder.return_value = False
         test_platform_input = mock_file
 
         test_cwl_input = {
@@ -106,12 +113,13 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
         self.assertFalse(result)
 
-    def test__compare_platform_object_File_not_file(self):
+    def test__compare_platform_object_file_not_file(self):
         '''
         Test that we can correctly return false when comparing a File and a non-file dict
         '''
         test_file_id = 'a1234'
         mock_file = MagicMock(spec=sevenbridges.File, id = test_file_id)
+        mock_file.is_folder.return_value = False
         test_platform_input = mock_file
 
         test_cwl_input = {
@@ -121,9 +129,9 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
         self.assertFalse(result)
 
-    def test__compare_platform_object_array(self):
+    def test__compare_platform_simple_array(self):
         '''
-        Test that we can compare two simple arrays
+        Test that we can compare two arrays with simple objects
         '''
         test_value = ["thing1", "thing2"]
         test_platform_input = test_value
@@ -141,7 +149,9 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         test_file_id1 = 'a1234'
         test_file_id2 = 'b2345'
         mock_file1 = MagicMock(spec=sevenbridges.File, id = test_file_id1)
+        mock_file1.is_folder.return_value = False
         mock_file2 = MagicMock(spec=sevenbridges.File, id = test_file_id2)
+        mock_file2.is_folder.return_value = False
         test_platform_input = [mock_file1, mock_file2]
         test_cwl_input = [{
             'class': 'File',
