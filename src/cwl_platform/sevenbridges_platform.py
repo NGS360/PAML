@@ -589,7 +589,8 @@ class SevenBridgesPlatform(Platform):
                 for platform_element, input_element in zip(
                     folder_contents,
                     input_to_compare['listing']):
-                    # this is intentionally sensitive to order
+                    # Directory inputs are sorted alphabetically, so while this check is order-
+                    # dependent, this is unlikely to differ in reality if elements are the same
                     if not self._compare_platform_object(platform_element, input_element):
                         self.logger.info("Platform object and input to compare were not the same: %s != %s",
                                          platform_element, input_element)
@@ -608,6 +609,7 @@ class SevenBridgesPlatform(Platform):
                 self.logger.info("Platform object and input to compare are not the same length")
                 return False
             for task_input, input_element in zip(platform_object, input_to_compare):
+                # this is intentionally sensitive to order
                 if not self._compare_platform_object(task_input, input_element):
                     self.logger.info("Platform object and input to compare were not the same: %s != %s",
                                      task_input, input_element)
