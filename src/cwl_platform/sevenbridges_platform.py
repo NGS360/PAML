@@ -582,7 +582,7 @@ class SevenBridgesPlatform(Platform):
                 if not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "Directory":
                     self.logger.info("Platform object is a Directory, but input to compare is not")
                     return False
-                folder_contents = list(platform_object['input'].list_files().all())
+                folder_contents = list(platform_object.list_files().all())
                 if not len(folder_contents) == len(input_to_compare['listing']):
                     self.logger.info("Platform object and input to compare are not the same length")
                     return False
