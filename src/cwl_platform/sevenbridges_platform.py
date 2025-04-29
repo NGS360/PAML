@@ -599,8 +599,6 @@ class SevenBridgesPlatform(Platform):
                 self.logger.info("Platform object is a File, but input to compare is not")
                 return False
             else:
-                self.logger.info("Platform object is %s, input to compare is %s", platform_object.id,
-                                 input_to_compare.get("path"))
                 return platform_object.id == input_to_compare.get("path")
         elif isinstance(platform_object, list):
             if not isinstance(input_to_compare, list):
