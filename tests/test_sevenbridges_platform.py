@@ -165,6 +165,30 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.assertTrue(result)
 
+    def test__compare_platform_simple_array_differing_length(self):
+        '''
+        Test that we can compare two arrays with simple objects
+        '''
+        test_value = ["thing1", "thing2"]
+        test_platform_input = test_value
+        test_cwl_input = ["thing1"]
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+
+        self.assertFalse(result)
+
+    def test__compare_platform_simple_array_not_equal(self):
+        '''
+        Test that we can compare two arrays with simple objects
+        '''
+        test_value = ["thing1", "thing2"]
+        test_platform_input = test_value
+        test_cwl_input = [1,2]
+
+        result = self.platform._compare_platform_object(test_platform_input, test_cwl_input)
+
+        self.assertFalse(result)
+
     def test_delete_task(self):
         ''' Test delete_task method '''
         # Set up mocks
