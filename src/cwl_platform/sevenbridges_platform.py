@@ -578,7 +578,17 @@ class SevenBridgesPlatform(Platform):
         :return: True if the object is equivalent, False otherwise
         """
         if isinstance(platform_object, sevenbridges.File):
-            if not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "File":
+            if platform_object.is_folder():
+                if not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "Directory":
+                    return False
+                for platform_element, input_element in zip(
+                    platform_element['input'].list_files().all(),
+                    input_to_compare['listing']):
+                    # this is intentionally sensitive to order
+                    if not _compare_platform_object(platform_file, input_element):
+                        return False
+                return True
+            elif not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "File":
                 return False
             else:
                 return platform_object.id == input_to_compare.get("path")
