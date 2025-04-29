@@ -3,8 +3,8 @@ SevenBridges Platform class
 '''
 import os
 import logging
-import sevenbridges
 from typing import Any
+import sevenbridges
 from sevenbridges.errors import SbgError
 from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
 
@@ -580,25 +580,39 @@ class SevenBridgesPlatform(Platform):
         if isinstance(platform_object, sevenbridges.File):
             if platform_object.is_folder():
                 if not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "Directory":
+                    self.logger.info("Platform object is a Directory, but input to compare is not")
+                    return False
+                folder_contents = list(platform_object['input'].list_files().all())
+                if not len(folder_contents) == len(input_to_compare['listing']):
+                    self.logger.info("Platform object and input to compare are not the same length")
                     return False
                 for platform_element, input_element in zip(
-                    platform_element['input'].list_files().all(),
+                    folder_contents,
                     input_to_compare['listing']):
                     # this is intentionally sensitive to order
-                    if not _compare_platform_object(platform_file, input_element):
+                    if not _compare_platform_object(platform_element, input_element):
+                        self.logger.info("Platform object and input to compare were not the same: %s != %s",
+                                         platform_element, input_element)
                         return False
                 return True
             elif not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "File":
+                self.logger.info("Platform object is a File, but input to compare is not")
                 return False
             else:
+                self.logger.info("Platform object is %s, input to compare is %s", platform_object.id,
+                                 input_to_compare.get("path"))
                 return platform_object.id == input_to_compare.get("path")
         elif isinstance(platform_object, list):
             if not isinstance(input_to_compare, list):
+                self.logger.info("Platform object is a list, but input to compare is not")
                 return False
             if len(platform_object) != len(input_to_compare):
+                self.logger.info("Platform object and input to compare are not the same length")
                 return False
-            for task_input in platform_object:
-                if not self._compare_platform_object(task_input, input_to_compare):
+            for task_input, input_element in zip(platform_object, input_to_compare):
+                if not self._compare_platform_object(task_input, input_element):
+                    self.logger.info("Platform object and input to compare were not the same: %s != %s",
+                                     task_input, input_element)
                     return False
                 return True
         else:
