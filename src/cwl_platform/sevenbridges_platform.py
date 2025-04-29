@@ -614,7 +614,7 @@ class SevenBridgesPlatform(Platform):
                     self.logger.info("Platform object and input to compare were not the same: %s != %s",
                                      task_input, input_element)
                     return False
-                return True
+            return True
         else:
             return platform_object == input_to_compare
 
