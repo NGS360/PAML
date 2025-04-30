@@ -582,7 +582,6 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
     def test_get_tasks_by_name(self):
         ''' Test get_tasks_by_name method '''
-        project_name = "test_project"
         matching_task_name = "matching_task"
         non_matching_task_name = "non_matching_task"
 
@@ -597,7 +596,7 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.platform.api.tasks.query.return_value.all = mock_all
 
-        result = self.platform.get_tasks_by_name(project_name, matching_task_name)
+        result = self.platform.get_tasks_by_name("test_project", matching_task_name)
 
         self.platform.api.tasks.query.assert_called_once()
         self.assertIn(mock_task_match, result,
@@ -608,7 +607,6 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
     def test_get_tasks_by_name_match_all(self):
         ''' Test get_tasks_by_name method '''
-        project_name = "test_project"
         task1_name = "task1"
         task2_name = "task2"
 
@@ -623,9 +621,64 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.platform.api.tasks.query.return_value.all = mock_all
 
-        result = self.platform.get_tasks_by_name(project_name)
+        result = self.platform.get_tasks_by_name("test_project")
 
         self.assertEqual(result, [mock_task1, mock_task2])
+
+    def test_get_tasks_by_name_match_name_and_inputs(self):
+        '''
+        Query on name as well as inputs eg to see if a task is equivalent for reuse
+        '''
+        task_name = "sampleA_task"
+        query_input = {
+            'input1':{
+                'class': 'File',
+                'path': 'file1.txt'
+            },
+            'input2': [
+                {
+                    'class': 'File',
+                    'path': 'file2.txt'
+                },
+                {
+                    'class': 'File',
+                    'path': 'file3.txt'
+                }
+            ]
+        }
+        
+        # 2 total task present, both match names but task2 has a different input
+        file1 = MagicMock(spec=sevenbridges.File, id='file1')
+        file2 = MagicMock(spec=sevenbridges.File, id='file2')
+        file3 = MagicMock(spec=sevenbridges.File, id='file3')
+        different_file3 = MagicMock(spec=sevenbridges.File, id='different_file3')
+        
+        task1 = MagicMock(spec=sevenbridges.Task)
+        task1.name = task_name
+        task1.inputs = {
+            'input1': [file1],
+            'input2': [file2, file3],
+        }
+
+        task2 = MagicMock(spec=sevenbridges.Task)
+        task2.name = task_name
+        task2.inputs = {
+            'input1': [file1],
+            'input2': [file2, different_file3],
+        }
+
+        mock_all = MagicMock()
+        mock_all.return_value = [task1, task2]
+        self.platform.api.tasks.query.return_value.all = mock_all
+
+        result = self.platform.get_tasks_by_name(project = "test_project",
+                                                 task_name = task_name,
+                                                 inputs_to_compare = query_input)
+        self.assertIn(task1, result,
+                      "Expected task1 with matching name and inputs to be returned, but it wasn't.")
+        self.assertNotIn(task2, result,
+                        "Expected task2 with non-matching inputs to not be returned, but it was.")
+        self.assertEqual(len(result), 1, "Expected only a single task to be returned")
 
     def test_get_task_input_non_file_obj(self):
         '''
