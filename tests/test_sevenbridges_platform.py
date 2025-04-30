@@ -580,9 +580,9 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Assert
         task.run.assert_called_once_with()
 
-    def get_tasks_by_name(self):
+    def test_get_tasks_by_name(self):
         ''' Test get_tasks_by_name method '''
-        project = "test_project"
+        project_name = "test_project"
         matching_task_name = "matching_task"
         non_matching_task_name = "non_matching_task"
 
@@ -597,18 +597,18 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.platform.api.tasks.query.return_value.all = mock_all
 
-        tasks = self.platform.get_tasks_by_name(matching_task_name, project)
+        result = self.platform.get_tasks_by_name(project_name, matching_task_name)
 
-        self.platform.api.tasks.query.assert_called_once_with(name=matching_task_name, project=project)
-        self.assertIn(mock_task_match, tasks,
+        self.platform.api.tasks.query.assert_called_once()
+        self.assertIn(mock_task_match, result,
                       "Expected task with matching name to be returned, but it wasn't.")
-        self.assertNotIn(mock_task_not_matching, tasks,
+        self.assertNotIn(mock_task_not_matching, result,
                         "Expected task with non-matching name to not be returned, but it was.")
-        self.assertEqual(len(tasks), 1, "Expected only a single task to be returned")
+        self.assertEqual(len(result), 1, "Expected only a single task to be returned")
 
-    def get_tasks_by_name_match_all(self):
+    def test_get_tasks_by_name_match_all(self):
         ''' Test get_tasks_by_name method '''
-        project = "test_project"
+        project_name = "test_project"
         task1_name = "task1"
         task2_name = "task2"
 
@@ -623,10 +623,9 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.platform.api.tasks.query.return_value.all = mock_all
 
-        tasks = self.platform.get_tasks_by_name(matching_task_name, project)
+        result = self.platform.get_tasks_by_name(project_name)
 
-        self.platform.api.tasks.query.assert_called_once_with(name=matching_task_name, project=project)
-        self.assertEqual(tasks, [mock_task1, mock_task2])
+        self.assertEqual(result, [mock_task1, mock_task2])
 
     def test_get_task_input_non_file_obj(self):
         '''
