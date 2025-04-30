@@ -582,14 +582,15 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
     def get_tasks_by_name(self):
         ''' Test get_tasks_by_name method '''
+        project = "test_project"
         matching_task_name = "matching_task"
         non_matching_task_name = "non_matching_task"
-        project = "test_project"
 
         # 2 total task present, only the one with a matching name should be returned
         mock_all = MagicMock()
         mock_task_match = MagicMock(spec=sevenbridges.Task)
         mock_task_match.name = matching_task_name
+
         mock_task_not_matching = MagicMock(spec=sevenbridges.Task)
         mock_task_not_matching.name = non_matching_task_name
         mock_all.return_value = [mock_task_not_matching, mock_task_match]
@@ -604,6 +605,28 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.assertNotIn(mock_task_not_matching, tasks,
                         "Expected task with non-matching name to not be returned, but it was.")
         self.assertEqual(len(tasks), 1, "Expected only a single task to be returned")
+
+    def get_tasks_by_name_match_all(self):
+        ''' Test get_tasks_by_name method '''
+        project = "test_project"
+        task1_name = "task1"
+        task2_name = "task2"
+
+        # 2 total task present, no name provided so we should return all
+        mock_all = MagicMock()
+        mock_task1 = MagicMock(spec=sevenbridges.Task)
+        mock_task1.name = task1_name
+
+        mock_task2 = MagicMock(spec=sevenbridges.Task)
+        mock_task2.name = task2_name
+        mock_all.return_value = [mock_task1, mock_task2]
+
+        self.platform.api.tasks.query.return_value.all = mock_all
+
+        tasks = self.platform.get_tasks_by_name(matching_task_name, project)
+
+        self.platform.api.tasks.query.assert_called_once_with(name=matching_task_name, project=project)
+        self.assertEqual(tasks, [mock_task1, mock_task2])
 
     def test_get_task_input_non_file_obj(self):
         '''
