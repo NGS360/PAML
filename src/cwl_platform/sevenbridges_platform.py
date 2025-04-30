@@ -628,8 +628,23 @@ class SevenBridgesPlatform(Platform):
         '''
         tasks = []
         for task in self.api.tasks.query(project=project).all():
-            if task_name is None or task.name == task_name:
-                tasks.append(task)
+            if inputs_to_compare is None:
+                if task_name is None or task.name == task_name:
+                    tasks.append(task)
+            else:
+                if task.name == task_name:
+                    for input_name, input_value in inputs_to_compare.items():
+                        if input_name not in task.inputs:
+                            self.logger.info("Input %s not found in task %s", input_name, task.name)
+                            break
+                        if not self._compare_platform_object(task.inputs[input_name], input_value):
+                            self.logger.info("Task %s input %s does not match: %s vs query %s",
+                                             task.name, input_name, task.inputs[input_name], input_value)
+                            break
+                    else:
+                        # If we didn't break, then the task matches the inputs
+                        self.logger.info("Task %s matches inputs", task.name)
+                        tasks.append(task)
         return tasks
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
