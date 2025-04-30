@@ -580,6 +580,31 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Assert
         task.run.assert_called_once_with()
 
+    def get_tasks_by_name(self):
+        ''' Test get_tasks_by_name method '''
+        matching_task_name = "matching_task"
+        non_matching_task_name = "non_matching_task"
+        project = "test_project"
+
+        # 2 total task present, only the one with a matching name should be returned
+        mock_all = MagicMock()
+        mock_task_match = MagicMock(spec=sevenbridges.Task)
+        mock_task_match.name = matching_task_name
+        mock_task_not_matching = MagicMock(spec=sevenbridges.Task)
+        mock_task_not_matching.name = non_matching_task_name
+        mock_all.return_value = [mock_task_not_matching, mock_task_match]
+
+        self.platform.api.tasks.query.return_value.all = mock_all
+
+        tasks = self.platform.get_tasks_by_name(matching_task_name, project)
+
+        self.platform.api.tasks.query.assert_called_once_with(name=matching_task_name, project=project)
+        self.assertIn(mock_task_match, tasks,
+                      "Expected task with matching name to be returned, but it wasn't.")
+        self.assertNotIn(mock_task_not_matching, tasks,
+                        "Expected task with non-matching name to not be returned, but it was.")
+        self.assertEqual(len(tasks), 1, "Expected only a single task to be returned")
+
     def test_get_task_input_non_file_obj(self):
         '''
         Test get_task_input method where the input is not a File object (e.g. string)
