@@ -3,6 +3,9 @@ AWS HealthOmics class
 '''
 
 import logging
+import json
+import tempfile
+import hashlib
 import boto3
 import botocore
 
@@ -319,11 +322,32 @@ class OmicsPlatform(Platform):
         else:
             base_output_path += f"{project['ProjectId']}/{workflow}/{name.replace(' ','')}/"
 
-        try:
-            logger.debug("Starting run for %s", name)
-            # TODO: The roleArn should be a parameter to this function, and not hard-coded.
-            # Put this in the pipeline_config.py.
-            job = self.api.start_run(workflowId=workflow,
+        # Define the md5hash function
+        def md5_hash_file(filepath, block_size=65536):
+            md5 = hashlib.md5()
+            with open(filepath, 'rb') as f:
+                for chunk in iter(lambda: f.read(block_size), b''):
+                    md5.update(chunk)
+            return md5.hexdigest()
+
+        # Create the parameters file
+        with tempfile.NamedTemporaryFile() as parameter_file:
+            with open(parameter_file.name, mode='w', encoding="utf-8") as fout:
+                json.dump(parameters, fout)
+            # Calculate md5hash
+            md5hash = md5_hash_file(parameter_file.name)
+            # Upload file to s3
+            s3_parameter_file = self.upload_file(
+                parameter_file.name,
+                project,
+                "/inputs/",
+                md5hash,
+                overwrite=True,
+            )
+            # Provide s3 file as input parameter
+            try:
+                logger.debug("Starting run for %s", name)
+                job = self.api.start_run(workflowId=workflow,
                                      workflowType='PRIVATE',
                                      roleArn=self.role_arn,
                                      parameters=parameters,
@@ -332,11 +356,11 @@ class OmicsPlatform(Platform):
                                      tags={"Project": project["ProjectId"]},
                                      outputUri=base_output_path,
                                      storageType="DYNAMIC")
-            logger.info('Started run for %s, RunID: %s',name,job['id'])
-            return job
-        except botocore.exceptions.ClientError as err:
-            logger.error('Could not start run for %s: %s', name, err)
-            return None
+                logger.info('Started run for %s, RunID: %s',name,job['id'])
+                return job
+            except botocore.exceptions.ClientError as err:
+                logger.error('Could not start run for %s: %s', name, err)
+                return None
 
     def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         self.logger.info("Uploading file %s to project %s", filename, project)
