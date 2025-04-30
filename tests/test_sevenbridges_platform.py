@@ -633,37 +633,41 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         query_input = {
             'input1':{
                 'class': 'File',
-                'path': 'file1.txt'
+                'path': 'file1'
             },
             'input2': [
                 {
                     'class': 'File',
-                    'path': 'file2.txt'
+                    'path': 'file2'
                 },
                 {
                     'class': 'File',
-                    'path': 'file3.txt'
+                    'path': 'file3'
                 }
             ]
         }
-        
+
         # 2 total task present, both match names but task2 has a different input
-        file1 = MagicMock(spec=sevenbridges.File, id='file1')
-        file2 = MagicMock(spec=sevenbridges.File, id='file2')
-        file3 = MagicMock(spec=sevenbridges.File, id='file3')
-        different_file3 = MagicMock(spec=sevenbridges.File, id='different_file3')
-        
+        file1 = MagicMock(spec=sevenbridges.File, id = 'file1')
+        file1.is_folder.return_value = False
+        file2 = MagicMock(spec=sevenbridges.File, id = 'file2')
+        file2.is_folder.return_value = False
+        file3 = MagicMock(spec=sevenbridges.File, id = 'file3')
+        file3.is_folder.return_value = False
+        different_file3 = MagicMock(spec=sevenbridges.File, id = 'different_file3')
+        different_file3.is_folder.return_value = False
+
         task1 = MagicMock(spec=sevenbridges.Task)
         task1.name = task_name
         task1.inputs = {
-            'input1': [file1],
+            'input1': file1,
             'input2': [file2, file3],
         }
 
         task2 = MagicMock(spec=sevenbridges.Task)
         task2.name = task_name
         task2.inputs = {
-            'input1': [file1],
+            'input1': file1,
             'input2': [file2, different_file3],
         }
 
