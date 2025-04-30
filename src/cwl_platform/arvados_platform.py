@@ -691,11 +691,17 @@ class ArvadosPlatform(Platform):
                 return cwl_output[output_name]['basename']
         raise ValueError(f"Output {output_name} does not exist for task {task.container_request['uuid']}.")
 
-    def get_tasks_by_name(self, project, task_name=None): # -> list(ArvadosTask):
+    def get_tasks_by_name(self,
+                          project:str,
+                          task_name:str=None,
+                          inputs_to_compare:dict=None): # -> list(ArvadosTask):
         '''
-        Get all processes/tasks in a project with a specified name
+        Get all processes/tasks in a project with a specified name, or all tasks
+        if no name is specified. Optionally, compare task inputs to ensure
+        equivalency (eg for reuse).
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
+        :param inputs_to_compare: Inputs to compare to ensure task equivalency
         :return: List of tasks
         '''
         # We must add priority>0 filter so we do not capture Cancelled jobs as Queued jobs.
