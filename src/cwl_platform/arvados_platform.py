@@ -722,8 +722,95 @@ class ArvadosPlatform(Platform):
         ):
             # Get the container
             container = self.api.containers().get(uuid=container_request['container_uuid']).execute()
-            tasks.append(ArvadosTask(container_request, container))
+            task = ArvadosTask(container_request, container)
+            
+            if inputs_to_compare is None:
+                if task_name is None or container_request['name'] == task_name:
+                    tasks.append(task)
+            else:
+                if container_request['name'] == task_name:
+                    # Check if the task inputs match the inputs_to_compare
+                    if 'properties' in container_request and 'cwl_input' in container_request['properties']:
+                        task_inputs = container_request['properties']['cwl_input']
+                        
+                        # Check if all inputs_to_compare are in task_inputs and have the same values
+                        inputs_match = True
+                        for input_name, input_value in inputs_to_compare.items():
+                            if input_name not in task_inputs:
+                                self.logger.info("Input %s not found in task %s", input_name, container_request['name'])
+                                inputs_match = False
+                                break
+                            
+                            # Compare the input values
+                            if not self._compare_inputs(task_inputs[input_name], input_value):
+                                self.logger.info("Task %s input %s does not match: %s vs query %s",
+                                                container_request['name'], input_name,
+                                                task_inputs[input_name], input_value)
+                                inputs_match = False
+                                break
+                        
+                        if inputs_match:
+                            self.logger.info("Task %s matches inputs", container_request['name'])
+                            tasks.append(task)
+                    else:
+                        self.logger.info("Task %s has no cwl_input property", container_request['name'])
         return tasks
+        
+    def _compare_inputs(self, task_input, input_to_compare):
+        """
+        Compare a task input to an input to compare
+        :param task_input: The task input to compare
+        :param input_to_compare: The input to compare against
+        :return: True if the inputs match, False otherwise
+        """
+        # If the inputs are dictionaries, compare them recursively
+        if isinstance(task_input, dict) and isinstance(input_to_compare, dict):
+            # For File objects, compare the location/path
+            if 'class' in input_to_compare and input_to_compare['class'] == 'File':
+                if 'location' in task_input and 'path' in input_to_compare:
+                    return task_input['location'] == input_to_compare['path']
+                return False
+            
+            # For Directory objects, compare the location/path and listing if available
+            if 'class' in input_to_compare and input_to_compare['class'] == 'Directory':
+                if 'location' in task_input and 'path' in input_to_compare:
+                    if task_input['location'] != input_to_compare['path']:
+                        return False
+                    
+                    # If listing is available, compare it
+                    if 'listing' in task_input and 'listing' in input_to_compare:
+                        if len(task_input['listing']) != len(input_to_compare['listing']):
+                            return False
+                        
+                        # Compare each item in the listing
+                        for task_item, compare_item in zip(task_input['listing'], input_to_compare['listing']):
+                            if not self._compare_inputs(task_item, compare_item):
+                                return False
+                        
+                        return True
+                return False
+            
+            # For other dictionaries, check if all keys in input_to_compare are in task_input
+            # and have the same values
+            for key, value in input_to_compare.items():
+                if key not in task_input or not self._compare_inputs(task_input[key], value):
+                    return False
+            return True
+        
+        # If the inputs are lists, compare them item by item
+        elif isinstance(task_input, list) and isinstance(input_to_compare, list):
+            if len(task_input) != len(input_to_compare):
+                return False
+            
+            # Compare each item in the list
+            for task_item, compare_item in zip(task_input, input_to_compare):
+                if not self._compare_inputs(task_item, compare_item):
+                    return False
+            return True
+        
+        # For simple values, compare them directly
+        else:
+            return task_input == input_to_compare
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
