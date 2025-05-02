@@ -790,10 +790,14 @@ class ArvadosPlatform(Platform):
                         return True
                 return False
             
-            # For other dictionaries, check if all keys in input_to_compare are in task_input
-            # and have the same values
+            # For other dictionaries, check if both dictionaries have the same keys
+            # and the same values for those keys
+            if set(task_input.keys()) != set(input_to_compare.keys()):
+                return False
+                
+            # Now check that all values match
             for key, value in input_to_compare.items():
-                if key not in task_input or not self._compare_inputs(task_input[key], value):
+                if not self._compare_inputs(task_input[key], value):
                     return False
             return True
         

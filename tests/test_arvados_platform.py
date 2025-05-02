@@ -646,8 +646,8 @@ class TestArvadosPlaform(unittest.TestCase):
                 'e': [3, 4]  # Different key
             }
         }
-        # This should still return True because we only check if keys in input_to_compare are in task_input
-        self.assertTrue(self.platform._compare_inputs(nested1, {'a': 1}))
+        # This should now return False because we require dictionaries to have identical keys
+        self.assertFalse(self.platform._compare_inputs(nested1, {'a': 1}))
         
         # Test nested structure with Directory objects
         dir1 = {
