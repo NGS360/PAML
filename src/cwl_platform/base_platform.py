@@ -86,12 +86,14 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False):
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None,
+                    overwrite=False):
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
-        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param dest_folder: The target path to the folder that file will be uploaded to.
+        None will upload to root.
         :param destination_filename: File name after uploaded to destination folder.
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
