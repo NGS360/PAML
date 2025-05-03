@@ -446,7 +446,7 @@ class ArvadosPlatform(Platform):
                 source_collection_uuid = output_file['source'].split(':')[1].split('/')[0]
                 source_file = '/'.join(output_file['source'].split(':')[1].split('/')[1:])
                 source_collection = arvados.collection.Collection(source_collection_uuid,
-                                                                  pi_client=self.api)
+                                                                  api_client=self.api)
 
                 # Copy the file
                 outputs_collection.copy(source_file, target_path=output_file['destination'],
@@ -649,9 +649,9 @@ class ArvadosPlatform(Platform):
             task.container_request = arvados.api().container_requests().get( # pylint: disable=not-callable
                 uuid = task.container_request['uuid']
             ).execute()
-            task.container = arvados.api().containers().get(
+            task.container = arvados.api().containers().get( # pylint: disable=not-callable
                 uuid = task.container_request['container_uuid']
-                ).execute() # pylint: disable=not-callable
+                ).execute()
 
         if task.container['exit_code'] == 0:
             return 'Complete'
