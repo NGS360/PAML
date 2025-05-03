@@ -640,15 +640,15 @@ class SevenBridgesPlatform(Platform):
                 if task.name == task_name:
                     for input_name, input_value in inputs_to_compare.items():
                         if input_name not in task.inputs:
-                            self.logger.info("Input %s not found in task %s", input_name, task.name)
+                            self.logger.info("Input %s not found in task %s", input_name, task.id)
                             break
                         if not self._compare_platform_object(task.inputs[input_name], input_value):
                             self.logger.info("Task %s input %s does not match: %s vs query %s",
-                                             task.name, input_name, task.inputs[input_name], input_value)
+                                             task.id, input_name, task.inputs[input_name], input_value)
                             break
                     else:
                         # If we didn't break, then the task matches the inputs
-                        self.logger.info("Task %s matches inputs", task.name)
+                        self.logger.info("Task %s matches inputs", task.id)
                         tasks.append(task)
         return tasks
 
