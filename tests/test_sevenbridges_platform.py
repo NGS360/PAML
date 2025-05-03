@@ -1,6 +1,7 @@
 '''
 Test Module for SevenBridges Platform
 '''
+# pylint: disable=protected-access
 import unittest
 import os
 import logging
@@ -19,7 +20,6 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform = SevenBridgesPlatform('SevenBridges')
         self.platform.api = MagicMock()
 
-        self.maxDiff = None
         logging.basicConfig(level=logging.INFO)
 
         return super().setUp()
@@ -241,14 +241,18 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         mock_file_inside_folder.is_folder.return_value = False
         mock_nested_folder = MagicMock(spec=sevenbridges.File, id = nested_folder_id)
         mock_nested_folder.is_folder.return_value = True
-        mock_file1_inside_nested_folder = MagicMock(spec=sevenbridges.File, id = file1_inside_nested_folder_id)
+        mock_file1_inside_nested_folder = MagicMock(spec=sevenbridges.File,
+                                                    id = file1_inside_nested_folder_id)
         mock_file1_inside_nested_folder.is_folder.return_value = False
-        mock_file2_inside_nested_folder = MagicMock(spec=sevenbridges.File, id = file2_inside_nested_folder_id)
+        mock_file2_inside_nested_folder = MagicMock(spec=sevenbridges.File,
+                                                    id = file2_inside_nested_folder_id)
         mock_file2_inside_nested_folder.is_folder.return_value = False
 
         # nested folder mocks
         nested_folder_all_mock = MagicMock()
-        nested_folder_all_mock.return_value = [mock_file1_inside_nested_folder, mock_file2_inside_nested_folder]
+        nested_folder_all_mock.return_value = [
+            mock_file1_inside_nested_folder, mock_file2_inside_nested_folder
+        ]
         nested_list_files_mock = MagicMock()
         nested_list_files_mock.all = nested_folder_all_mock
         mock_nested_folder.list_files.return_value = nested_list_files_mock
@@ -307,7 +311,8 @@ class TestSevenBridgesPlaform(unittest.TestCase):
             |- file_inside_folder
             |- nested_folder
                 |- file1_inside_nested_folder
-                |- file2_inside_nested_folder [present in test_platform_input, missing in test_cwl_input]
+                |- file2_inside_nested_folder [present in test_platform_input,
+                                               but missing in test_cwl_input]
         '''
         file_in_root_id = 'file_in_root'
         folder_id = 'folder'
@@ -324,14 +329,18 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         mock_file_inside_folder.is_folder.return_value = False
         mock_nested_folder = MagicMock(spec=sevenbridges.File, id = nested_folder_id)
         mock_nested_folder.is_folder.return_value = True
-        mock_file1_inside_nested_folder = MagicMock(spec=sevenbridges.File, id = file1_inside_nested_folder_id)
+        mock_file1_inside_nested_folder = MagicMock(spec=sevenbridges.File,
+                                                    id = file1_inside_nested_folder_id)
         mock_file1_inside_nested_folder.is_folder.return_value = False
-        mock_file2_inside_nested_folder = MagicMock(spec=sevenbridges.File, id = file2_inside_nested_folder_id)
+        mock_file2_inside_nested_folder = MagicMock(spec=sevenbridges.File,
+                                                    id = file2_inside_nested_folder_id)
         mock_file2_inside_nested_folder.is_folder.return_value = False
 
         # nested folder mocks
         nested_folder_all_mock = MagicMock()
-        nested_folder_all_mock.return_value = [mock_file1_inside_nested_folder, mock_file2_inside_nested_folder]
+        nested_folder_all_mock.return_value = [
+            mock_file1_inside_nested_folder, mock_file2_inside_nested_folder
+        ]
         nested_list_files_mock = MagicMock()
         nested_list_files_mock.all = nested_folder_all_mock
         mock_nested_folder.list_files.return_value = nested_list_files_mock
@@ -386,7 +395,8 @@ class TestSevenBridgesPlaform(unittest.TestCase):
             |- file_inside_folder
             |- nested_folder
                 |- file1_inside_nested_folder
-                |- file2_inside_nested_folder [present in test_platform_input, differing file in test_cwl_input]
+                |- file2_inside_nested_folder [present in test_platform_input,
+                                               but differing file in test_cwl_input]
         '''
         file_in_root_id = 'file_in_root'
         folder_id = 'folder'
@@ -403,14 +413,17 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         mock_file_inside_folder.is_folder.return_value = False
         mock_nested_folder = MagicMock(spec=sevenbridges.File, id = nested_folder_id)
         mock_nested_folder.is_folder.return_value = True
-        mock_file1_inside_nested_folder = MagicMock(spec=sevenbridges.File, id = file1_inside_nested_folder_id)
+        mock_file1_inside_nested_folder = MagicMock(spec=sevenbridges.File,
+                                                    id = file1_inside_nested_folder_id)
         mock_file1_inside_nested_folder.is_folder.return_value = False
-        mock_file2_inside_nested_folder = MagicMock(spec=sevenbridges.File, id = file2_inside_nested_folder_id)
+        mock_file2_inside_nested_folder = MagicMock(spec=sevenbridges.File,
+                                                    id = file2_inside_nested_folder_id)
         mock_file2_inside_nested_folder.is_folder.return_value = False
 
         # nested folder mocks
         nested_folder_all_mock = MagicMock()
-        nested_folder_all_mock.return_value = [mock_file1_inside_nested_folder, mock_file2_inside_nested_folder]
+        nested_folder_all_mock.return_value = [mock_file1_inside_nested_folder,
+                                               mock_file2_inside_nested_folder]
         nested_list_files_mock = MagicMock()
         nested_list_files_mock.all = nested_folder_all_mock
         mock_nested_folder.list_files.return_value = nested_list_files_mock
