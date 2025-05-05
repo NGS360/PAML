@@ -749,10 +749,13 @@ class ArvadosPlatform(Platform):
             )
 
         tasks = []
-        for container_request in arvados.util.keyset_list_all(
+        container_requests = arvados.util.keyset_list_all(
             self.api.container_requests().list,
             filters=filters
-        ):
+        )
+        self.logger.info("Found %d container requests: %s",
+                         len(container_requests), container_requests)
+        for container_request in container_requests:
             # Get the container
             container = self.api.containers().get(
                 uuid=container_request['container_uuid']).execute()
