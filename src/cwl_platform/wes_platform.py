@@ -111,7 +111,16 @@ class WESPlatform(Platform):
         :param params: Query parameters
         :return: Response JSON
         '''
-        url = urljoin(self.api_endpoint, path)
+        # Ensure path doesn't start with a slash to avoid urljoin issues
+        if path.startswith('/'):
+            path = path[1:]
+            
+        # Make sure the API endpoint ends with a slash for proper joining
+        endpoint = self.api_endpoint
+        if not endpoint.endswith('/'):
+            endpoint = endpoint + '/'
+            
+        url = urljoin(endpoint, path)
         headers = {}
         
         if self.auth_token:
