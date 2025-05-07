@@ -6,12 +6,12 @@ import os
 
 from .arvados_platform import ArvadosPlatform
 from .sevenbridges_platform import SevenBridgesPlatform
-#from .omics_platform import OmicsPlatform
+from .omics_platform import OmicsPlatform
 
 # Move this for a config file
 SUPPORTED_PLATFORMS = {
     'Arvados': ArvadosPlatform,
-#    'Omics': OmicsPlatform,
+    'Omics': OmicsPlatform,
     'SevenBridges': SevenBridgesPlatform
 }
 
