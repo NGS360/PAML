@@ -32,7 +32,7 @@ class TestWESPlatform(unittest.TestCase):
         mock_request.return_value = mock_response
 
         # Test GET request
-        result = self.platform._make_request('GET', 'service-info')
+        result = self.platform._make_request('GET', 'service-info') # pylint: disable=protected-access
         mock_request.assert_called_with(
             method='GET',
             url='https://wes.example.com/ga4gh/wes/v1/service-info',
