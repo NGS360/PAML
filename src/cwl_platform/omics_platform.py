@@ -250,13 +250,16 @@ class OmicsPlatform(Platform):
         response = self.api.list_run_groups(
             name=project_name, maxResults=100
         )
-        run_group_id = response['items'][0]['id']
+        if len(response['items'])>0:
+            run_group_id = response['items'][0]['id']
 
-        project = {
-            'ProjectName': project_name,
-            'ProjectId': run_group_id
-        }
-        return project
+            project = {
+                'ProjectId': run_group_id
+            }
+            return project
+        else:
+            logger.error('Could not find project with name: %s', project_name)
+            return {}
 
     def get_project_by_id(self, project_id):
         ''' Return a dictionary of project to provide project_id tag info for omics jobs'''
@@ -319,7 +322,7 @@ class OmicsPlatform(Platform):
 
         return omics response for start_run.
         '''
-        base_output_path = f"s3://{self.output_bucket}/outputs/"
+        base_output_path = f"s3://{self.output_bucket}/Project/"
         if 'ProjectName' in project:
             base_output_path += f"{project['ProjectName']}/{workflow}/{name.replace(' ','')}/"
         else:
@@ -347,7 +350,7 @@ class OmicsPlatform(Platform):
     def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         self.logger.info("Uploading file %s to project %s", filename, project)
         target_bucket = self.output_bucket
-        target_filepath = f"Outputs/{project['ProjectId']}" + dest_folder
+        target_filepath = f"Project/{project['ProjectId']}" + dest_folder
         if destination_filename:
             target_filepath += destination_filename
         else:
