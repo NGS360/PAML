@@ -246,9 +246,15 @@ class OmicsPlatform(Platform):
         raise ValueError("Omics does not support get_project. Use get_project_by_id or get_project_by_name instead.")
 
     def get_project_by_name(self, project_name):
-        ''' Return a dictionary of project to provide project_name tag info for omics jobs '''
+        ''' Return a dictionary of project to provide project_name and project_id tag info for omics jobs '''
+        response = self.api.list_run_groups(
+            name=project_name, maxResults=100
+        )
+        run_group_id = response['items'][0]['id']
+
         project = {
-            'ProjectName': project_name
+            'ProjectName': project_name,
+            'ProjectId': run_group_id
         }
         return project
 
