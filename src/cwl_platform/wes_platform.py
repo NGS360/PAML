@@ -111,7 +111,16 @@ class WESPlatform(Platform):
         :param params: Query parameters
         :return: Response JSON
         '''
-        url = urljoin(self.api_endpoint, path)
+        # Ensure path doesn't start with a slash to avoid urljoin issues
+        if path.startswith('/'):
+            path = path[1:]
+            
+        # Make sure the API endpoint ends with a slash for proper joining
+        endpoint = self.api_endpoint
+        if not endpoint.endswith('/'):
+            endpoint = endpoint + '/'
+            
+        url = urljoin(endpoint, path)
         headers = {}
         
         if self.auth_token:
@@ -604,3 +613,12 @@ class WESPlatform(Platform):
     @classmethod
     def detect(cls):
         ''' 
+        Detect platform we are running on 
+        
+        Note: This method checks if we're running in a WES environment
+        '''
+        # Check if WES API endpoint is set in environment variables
+        wes_api_endpoint = os.environ.get('WES_API_ENDPOINT')
+        if wes_api_endpoint:
+            return True
+        return False
