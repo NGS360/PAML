@@ -2,16 +2,13 @@
 '''
 Example script demonstrating how to use the WES Platform implementation
 '''
-import os
+import json
 import sys
 import time
 import logging
 import argparse
 
-# Add the src directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from src.cwl_platform import PlatformFactory
+from cwl_platform import PlatformFactory
 
 def main():
     '''
@@ -42,7 +39,7 @@ def main():
             api_endpoint=args.api_endpoint,
             auth_token=args.auth_token
         )
-        
+
         if not connected:
             logger.error("Failed to connect to WES API")
             return 1
@@ -54,8 +51,7 @@ def main():
         logger.info("Created virtual project: %s", project['name'])
 
         # Load workflow parameters
-        with open(args.params, 'r') as f:
-            import json
+        with open(args.params, 'r', encoding='utf-8') as f:
             parameters = json.load(f)
 
         # Submit the workflow
@@ -88,11 +84,11 @@ def main():
             logger.info("Workflow completed successfully")
             logger.info("Outputs: %s", outputs)
             return 0
-        else:
-            logger.error("Workflow failed or was cancelled")
-            return 1
 
-    except Exception as e:
+        logger.error("Workflow failed or was cancelled")
+        return 1
+
+    except Exception as e: # pylint: disable=broad-except
         logger.exception("Error: %s", e)
         return 1
 
