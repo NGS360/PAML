@@ -23,7 +23,7 @@ class SevenBridgesPlatform(Platform):
         self._session_id = os.environ.get('SESSION_ID')
         self.logger = logging.getLogger(__name__)
 
-        self.api_endpoint = 'https://bms-api.sbgenomics.com/v2'
+        self.api_endpoint = 'https://api.sbgenomics.com/v2'
         self.token = 'dummy'
 
         if not self._session_id:
