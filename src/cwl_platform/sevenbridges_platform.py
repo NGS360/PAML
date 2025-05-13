@@ -640,7 +640,7 @@ class SevenBridgesPlatform(Platform):
                     set_file_metadata(sbgfile, entry['metadata'])
 
         use_spot_instance = execution_settings.get('use_spot_instance', True) if execution_settings else True
-        sbg_execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
+        sbg_execution_settings = { 'use_memoization': True}
 
         # This metadata code will come out as part of the metadata removal effort.
         for i in parameters:
