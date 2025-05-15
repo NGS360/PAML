@@ -5,6 +5,7 @@ AWS HealthOmics class
 import logging
 import boto3
 import botocore
+import json
 
 from tenacity import retry, wait_fixed, stop_after_attempt
 
@@ -197,28 +198,21 @@ class OmicsPlatform(Platform):
 
     def get_task_output(self, task, output_name):
         ''' Retrieve the output field of the task '''
-        # Get all files in output folder
+        # Get output file mapping from outputs.json
         taskinfo = self.api.get_run(id=task["id"])
-        outputUri = taskinfo['outputUri'] + task["id"] + "/out/"
-        outputUri_files = self._list_file_in_s3(outputUri)
+        output_json = taskinfo['outputUri'].split(self.output_bucket+'/')[1] + task["id"] + "/logs/outputs.json"
+        response = self.s3_client.get_object(Bucket=self.output_bucket, Key=output_json)
+        content = response['Body'].read().decode("utf-8")
+        mapping = json.loads(content)
 
-        # Match output_name with existing files in output folder
-        if "*" not in output_name:
-            output = outputUri + output_name
-            if output in outputUri_files:
-                return output
-            else:
-                return None
+        if output_name not in mapping:
+            raise KeyError(f"Output field '{output_name}' not found in mapping file.")
+        all_outputs = mapping[output_name]
+        if isinstance(all_outputs, list):
+            outputs = [c["location"] for c in all_outputs]
+            return outputs
         else:
-            output = []
-            prefix=output_name.split('*')[0]
-            suffix=output_name.split('*')[-1]
-            for output_file in outputUri_files:
-                filename = output_file.split('/')[-1]
-                if (prefix == "" or filename.startswith(prefix)) and \
-                    (suffix == "" or filename.endswith(suffix)):
-                    output+=[output_file]
-            return output
+            return all_outputs["location"]
 
     def get_task_output_filename(self, task, output_name):
         ''' Retrieve the output field of the task and return filename'''
