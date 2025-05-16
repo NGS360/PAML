@@ -767,10 +767,15 @@ class ArvadosPlatform(Platform):
             else:
                 if container_request['name'] == task_name:
                     # Check if the task inputs match the inputs_to_compare
+                    task_inputs = None
                     if 'properties' in container_request and \
                         'cwl_input' in container_request['properties']:
                         task_inputs = container_request['properties']['cwl_input']
+                    elif 'mounts' in container and \
+                        '/var/lib/cwl/cwl.input.json' in container['mounts']:
+                        task_inputs = container['mounts']['/var/lib/cwl/cwl.input.json']['content']
 
+                    if task_inputs:
                         # Check if all inputs_to_compare are in task_inputs and have the same values
                         inputs_match = True
                         for input_name, input_value in inputs_to_compare.items():
