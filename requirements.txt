@@ -1,4 +1,4 @@
 chardet
 smart_open
-arvados-python-client==3.0.0
+arvados-python-client==2.7.4
 sevenbridges-python
