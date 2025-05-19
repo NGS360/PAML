@@ -1,5 +1,5 @@
 """
-GA4GH WES Platform class
+NGS360 / GA4GH WES Platform class
 
 This module implements the Platform abstract base class using the GA4GH Workflow Execution Service (WES) API.
 The WES API provides a standard way to submit and manage workflows across different workflow execution systems.
@@ -50,7 +50,7 @@ class WESTask:
         )
 
 
-class GA4GHWESPlatform(Platform):
+class NGS360Platform(Platform):
     """GA4GH WES Platform class"""
 
     # WES API state mapping to Platform states
