@@ -50,7 +50,7 @@ class WESTask:
         )
 
 
-class WESPlatform(Platform):
+class GA4GHWESPlatform(Platform):
     """GA4GH WES Platform class"""
 
     # WES API state mapping to Platform states

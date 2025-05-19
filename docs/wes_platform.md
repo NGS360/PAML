@@ -4,9 +4,10 @@ This document describes the GA4GH Workflow Execution Service (WES) platform impl
 
 ## Overview
 
-The GA4GH WES API provides a standard way to submit and manage workflows across different workflow execution systems. This implementation allows you to use the PAML library to submit workflows to any WES-compatible service.
+The GA4GH WES API provides a standard way to submit and manage workflows across different workflow execution systems. 
+This implementation allows you to use the PAML library to submit workflows to any WES-compatible service.
 
-The WES platform implementation (`WESPlatform`) inherits from the `Platform` abstract base class and implements all the required methods to interact with a WES API endpoint.
+The WES platform implementation (`GA4GHWESPlatform`) inherits from the `Platform` abstract base class and implements all the required methods to interact with a WES API endpoint.
 
 ## Features
 
@@ -34,7 +35,7 @@ from src.cwl_platform import PlatformFactory
 factory = PlatformFactory()
 
 # Get the WES platform
-platform = factory.get_platform('WES')
+platform = factory.get_platform('GA4GHWESPlatform')
 
 # Connect to the WES API
 platform.connect(
@@ -46,14 +47,18 @@ platform.connect(
 ### Submitting a Workflow
 
 ```python
+
 # Create a virtual project (not used by WES but required by the API)
-project = platform.create_project('wes-example', 'WES Example Project')
+project = {
+    project_name = 'GA4GH WES Example Project'
+}
+#project = platform.create_project('wes-example', 'WES Example Project')
 
 # Define workflow parameters
-parameters = {
+workflow_parameters = {
     "input_file": {
         "class": "File",
-        "path": "https://example.com/input.txt"
+        "path": "platform-specific id"
     },
     "output_filename": "output.txt"
 }
@@ -62,8 +67,11 @@ parameters = {
 task = platform.submit_task(
     name="My Workflow",
     project=project,
-    workflow="https://example.com/workflow.cwl",  # URL or local file path
-    parameters=parameters
+    workflow="platform://<platform-specific workflow id",  # URL or local file path
+    parameters=workflow_parameters
+    execution_settings={
+        'workflow_engine': 'Arvados'
+    }
 )
 
 # Get the run ID
@@ -116,17 +124,3 @@ The WES platform can be configured using the following environment variables:
 - `WES_API_ENDPOINT`: The URL of the WES API endpoint
 - `WES_AUTH_TOKEN`: Authentication token for the WES API
 
-## Supported WES Implementations
-
-This implementation should work with any WES-compatible service, including:
-
-- [Cromwell](https://github.com/broadinstitute/cromwell)
-- [Toil](https://github.com/DataBiosphere/toil)
-- [WES-ELIXIR](https://github.com/elixir-cloud-aai/cwl-WES)
-- [TESK](https://github.com/EMBL-EBI-TSI/TESK)
-- [DNAstack WES](https://docs.dnastack.com/docs/workflow-execution-service-wes)
-
-## References
-
-- [GA4GH WES API Specification](https://github.com/ga4gh/workflow-execution-service-schemas)
-- [WES API Documentation](https://ga4gh.github.io/workflow-execution-service-schemas/)

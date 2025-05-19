@@ -6,7 +6,7 @@ import os
 
 from .arvados_platform import ArvadosPlatform
 from .sevenbridges_platform import SevenBridgesPlatform
-from .wes_platform import WESPlatform
+from .ga4ghwes_platform import GA4GHWESPlatform
 #from .omics_platform import OmicsPlatform
 
 # Move this for a config file
@@ -14,7 +14,7 @@ SUPPORTED_PLATFORMS = {
     'Arvados': ArvadosPlatform,
 #    'Omics': OmicsPlatform,
     'SevenBridges': SevenBridgesPlatform,
-    'WES': WESPlatform
+    'WES': GA4GHWESPlatform
 }
 
 class PlatformFactory():
