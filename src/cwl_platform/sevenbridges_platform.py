@@ -2,6 +2,8 @@
 SevenBridges Platform class
 '''
 import os
+import re
+import json
 import logging
 import sevenbridges
 from sevenbridges.errors import SbgError
@@ -24,7 +26,7 @@ class SevenBridgesPlatform(Platform):
         self.logger = logging.getLogger(__name__)
 
         if self._session_id:
-            self.api_endpoint = None
+            self.api_endpoint = self._get_api_endpoint()
             self.token = None
         else:
             if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
@@ -92,6 +94,42 @@ class SevenBridgesPlatform(Platform):
                         raise FileExistsError(
                             f"File with name {parent.name} already exists!")
         return parent
+
+    def _get_api_endpoint(self) -> str:
+        """
+        If running on SBG platform, get the API endpoint from the
+        job.json file in the current working directory
+        """
+        default_api_url = "https://api.sbgenomics.com/v2/"
+        try:
+            with open('job.json', 'r', encoding = "utf-8-sig") as file:
+                job_data = json.load(file)
+
+            app_id = job_data['app']['id']
+
+            # Pattern matches: protocol + domain + /v2/
+            match = re.search(r'(https?://[^/]+/v\d+/)', app_id)
+            if match:
+                return match.group(1)
+            self.logger.warning(
+                "job.json does not contain a valid API URL, defaulting to US API URL"
+            )
+            return default_api_url
+
+        except FileNotFoundError:
+            self.logger.warning(
+                "job.json file not found in current directory, defaulting to US API URL"
+            )
+            return default_api_url
+        except KeyError:
+            self.logger.warning(
+                "Error: 'app' or 'id' key not found in job.json, defaulting to US API URL")
+            return default_api_url
+        except json.JSONDecodeError:
+            print(
+                "Error: job.json is not a valid JSON file"
+            )
+            return None
 
     def _list_all_files(self, files=None, project=None):
         """
@@ -814,3 +852,4 @@ class SevenBridgesPlatform(Platform):
         if session_id:
             return True
         return False
+    
