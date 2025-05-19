@@ -14,7 +14,7 @@ SUPPORTED_PLATFORMS = {
     'Arvados': ArvadosPlatform,
 #    'Omics': OmicsPlatform,
     'SevenBridges': SevenBridgesPlatform,
-    'WES': GA4GHWESPlatform
+    'GA4GHWES': GA4GHWESPlatform
 }
 
 class PlatformFactory():
