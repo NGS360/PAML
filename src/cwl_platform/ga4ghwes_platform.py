@@ -497,6 +497,7 @@ class GA4GHWESPlatform(Platform):
             "workflow_type": workflow_type,
             "workflow_type_version": workflow_type_version,
             "workflow_url": workflow_url,
+            "workflow_engine": execution_settings.get("workflow_engine"),
             "tags": {"name": name},
         }
 
