@@ -27,7 +27,7 @@ class SevenBridgesPlatform(Platform):
 
         if self._session_id:
             self.api_endpoint = self._get_api_endpoint()
-            self.token = None
+            self.token = "dummy"
         else:
             if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
                 self.api_config = sevenbridges.Config(profile='default')
@@ -123,13 +123,13 @@ class SevenBridgesPlatform(Platform):
             return default_api_url
         except KeyError:
             self.logger.warning(
-                "Error: 'app' or 'id' key not found in job.json, defaulting to US API URL")
+                "'app' or 'id' key not found in job.json, defaulting to US API URL")
             return default_api_url
         except json.JSONDecodeError:
             print(
-                "Error: job.json is not a valid JSON file"
+                "job.json is not a valid JSON file, defaulting to US API URL"
             )
-            return None
+            return default_api_url
 
     def _list_all_files(self, files=None, project=None):
         """
