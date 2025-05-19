@@ -23,7 +23,10 @@ class SevenBridgesPlatform(Platform):
         self._session_id = os.environ.get('SESSION_ID')
         self.logger = logging.getLogger(__name__)
 
-        if not self._session_id:
+        if self._session_id:
+            self.api_endpoint = None
+            self.token = None
+        else:
             if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
                 self.api_config = sevenbridges.Config(profile='default')
             else:
