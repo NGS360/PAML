@@ -852,4 +852,3 @@ class SevenBridgesPlatform(Platform):
         if session_id:
             return True
         return False
-    
