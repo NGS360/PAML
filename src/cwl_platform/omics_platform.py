@@ -3,9 +3,9 @@ AWS HealthOmics class
 '''
 
 import logging
+import json
 import boto3
 import botocore
-import json
 
 from tenacity import retry, wait_fixed, stop_after_attempt
 
@@ -43,7 +43,8 @@ class OmicsPlatform(Platform):
         ''' 
         Connect to AWS Omics platform
 
-        If ~/.aws/credentials or ~/.aws/config does not provide a region, region should be specified in the AWS_DEFAULT_REGION environment variable.
+        If ~/.aws/credentials or ~/.aws/config does not provide a region, region
+        should be specified in the AWS_DEFAULT_REGION environment variable.
         '''
         self.api = boto3.client('omics')
         self.output_bucket = kwargs['output_bucket']
@@ -206,13 +207,15 @@ class OmicsPlatform(Platform):
         mapping = json.loads(content)
 
         if output_name not in mapping:
-            raise KeyError(f"Output field '{output_name}' not found in mapping file.")
+            raise KeyError(f"Output field '{output_name}' not found in output json file.")
         all_outputs = mapping[output_name]
         if isinstance(all_outputs, list):
-            outputs = [c["location"] for c in all_outputs]
+            outputs = [c["location"] for c in all_outputs if "location" in c]
             return outputs
-        else:
+        try:
             return all_outputs["location"]
+        except KeyError:
+            raise KeyError(f"Could not find path for '{output_name}'")
 
     def get_task_output_filename(self, task, output_name):
         ''' Retrieve the output field of the task and return filename'''
@@ -224,10 +227,10 @@ class OmicsPlatform(Platform):
             task_output_name = task_output_url.split('/')[-1]
         return task_output_name
 
-    def get_tasks_by_name(self, project, task_name):
+    def get_tasks_by_name(self, project, task_name=None):
         ''' Get a tasks by its name '''
         tasks = []
-        runs = self.api.list_runs(name=task_name, runGroupId=project['ProjectId'])
+        runs = self.api.list_runs(name=task_name, runGroupId=project['RunGroupId'])
         for item in runs['items']:
             run = self.api.get_run(id=item['id'])
             tasks.append(run)
@@ -240,7 +243,7 @@ class OmicsPlatform(Platform):
         raise ValueError("Omics does not support get_project. Use get_project_by_id or get_project_by_name instead.")
 
     def get_project_by_name(self, project_name):
-        ''' Return a dictionary of project to provide project_name and project_id tag info for omics jobs '''
+        ''' Return a dictionary of project to provide RunGroupId tag info for omics jobs '''
         response = self.api.list_run_groups(
             name=project_name, maxResults=100
         )
@@ -248,17 +251,17 @@ class OmicsPlatform(Platform):
             run_group_id = response['items'][0]['id']
 
             project = {
-                'ProjectId': run_group_id
+                'RunGroupId': run_group_id
             }
             return project
-        else:
-            logger.error('Could not find project with name: %s', project_name)
-            return {}
+
+        logger.error('Could not find project with name: %s', project_name)
+        return {}
 
     def get_project_by_id(self, project_id):
-        ''' Return a dictionary of project to provide project_id tag info for omics jobs'''
+        ''' Return a dictionary of project to provide RunGroupId tag info for omics jobs'''
         project = {
-            'ProjectId': project_id
+            'RunGroupId': project_id
         }
         return project
 
@@ -310,17 +313,14 @@ class OmicsPlatform(Platform):
         '''
         Submit workflow for one sample.
         name: sample ID.
-        project: dictionary of {'ProjectName': 'string'} or {'ProjectId': 'string'}
+        project: dictionary of {'RunGroupId': 'string'}
         workflow: workflow ID in omics.
         parameters: dictionary of input parameters.
 
         return omics response for start_run.
         '''
         base_output_path = f"s3://{self.output_bucket}/Project/"
-        if 'ProjectName' in project:
-            base_output_path += f"{project['ProjectName']}/{workflow}/{name.replace(' ','')}/"
-        else:
-            base_output_path += f"{project['ProjectId']}/{workflow}/{name.replace(' ','')}/"
+        base_output_path += f"{project['RunGroupId']}/{workflow}/{name.replace(' ','')}/"
 
         try:
             logger.debug("Starting run for %s", name)
@@ -331,8 +331,8 @@ class OmicsPlatform(Platform):
                                      roleArn=self.role_arn,
                                      parameters=parameters,
                                      name=name,
-                                     runGroupId=project["ProjectId"],
-                                     tags={"Project": project["ProjectId"]},
+                                     runGroupId=project["RunGroupId"],
+                                     tags={"Project": project["RunGroupId"]},
                                      outputUri=base_output_path,
                                      storageType="DYNAMIC")
             logger.info('Started run for %s, RunID: %s',name,job['id'])
@@ -341,10 +341,10 @@ class OmicsPlatform(Platform):
             logger.error('Could not start run for %s: %s', name, err)
             return None
 
-    def upload_file(self, filename, project, dest_folder, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         self.logger.info("Uploading file %s to project %s", filename, project)
         target_bucket = self.output_bucket
-        target_filepath = f"Project/{project['ProjectId']}" + dest_folder
+        target_filepath = f"Project/{project['RunGroupId']}" + dest_folder
         if destination_filename:
             target_filepath += destination_filename
         else:
@@ -354,5 +354,5 @@ class OmicsPlatform(Platform):
             file_id = f"s3://{self.output_bucket}/"+target_filepath
             return file_id
         except Exception as e:
-            self.logger.error('Could not upload file %s', filename)
+            logger.error('Could not upload file %s', filename)
             return None
