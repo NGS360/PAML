@@ -212,9 +212,10 @@ class OmicsPlatform(Platform):
         if isinstance(all_outputs, list):
             outputs = [c["location"] for c in all_outputs if "location" in c]
             return outputs
-        try:
+
+        if "location" in all_outputs:
             return all_outputs["location"]
-        except KeyError:
+        else:
             raise KeyError(f"Could not find path for '{output_name}'")
 
     def get_task_output_filename(self, task, output_name):
