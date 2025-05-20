@@ -3,8 +3,7 @@ Test Module for AWS Omics Platform
 '''
 import unittest
 import os
-import mock
-from mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 import json
 
 from cwl_platform.omics_platform import OmicsPlatform
@@ -157,8 +156,8 @@ class TestOmicsPlatform(unittest.TestCase):
         project = {"RunGroupId": "groupid"}
         workflow = "workflowid"
         parameters = {"input": "value"}
-        result = self.platform.submit_task("sample", project, workflow, parameters)
-        self.assertIsNone(result)
+        with self.assertRaises(Exception):
+            self.platform.submit_task("sample", project, workflow, parameters)
 
     def test_upload_file_success(self):
         self.platform.output_bucket = "bucket"
