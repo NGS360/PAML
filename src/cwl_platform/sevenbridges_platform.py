@@ -26,14 +26,34 @@ class SevenBridgesPlatform(Platform):
         self._session_id = os.environ.get('SESSION_ID')
         self.logger = logging.getLogger(__name__)
 
-        self.api_endpoint = 'https://bms-api.sbgenomics.com/v2'
-        self.token = 'dummy'
-
-        if not self._session_id:
+        if self._session_id:
+            self.api_endpoint = None
+            self.token = None
+        else:
             if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
                 self.api_config = sevenbridges.Config(profile='default')
             else:
                 raise ValueError('No SevenBridges credentials found')
+
+    def connect(self, **kwargs):
+        ''' Connect to Sevenbridges '''
+        if self._session_id:
+            self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
+            self.token = kwargs.get('token', self.token)
+
+            self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
+                                        error_handlers=[rate_limit_sleeper,
+                                                        maintenance_sleeper,
+                                                        general_error_sleeper],
+                                        advance_access=True)
+            self.api._session_id = self._session_id  # pylint: disable=protected-access
+        else:
+            self.api = sevenbridges.Api(config=self.api_config,
+                                        error_handlers=[rate_limit_sleeper,
+                                                        maintenance_sleeper,
+                                                        general_error_sleeper],
+                                        advance_access=True)
+        self.connected = True
 
     # File methods
     def _find_or_create_path(self, project, path):
@@ -882,25 +902,6 @@ class SevenBridgesPlatform(Platform):
         return None
 
     # Other methods
-    def connect(self, **kwargs):
-        ''' Connect to Sevenbridges '''
-        self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
-        self.token = kwargs.get('token', self.token)
-
-        if self._session_id:
-            self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
-                                        error_handlers=[rate_limit_sleeper,
-                                                        maintenance_sleeper,
-                                                        general_error_sleeper],
-                                        advance_access=True)
-            self.api._session_id = self._session_id  # pylint: disable=protected-access
-        else:
-            self.api = sevenbridges.Api(config=self.api_config,
-                                        error_handlers=[rate_limit_sleeper,
-                                                        maintenance_sleeper,
-                                                        general_error_sleeper],
-                                        advance_access=True)
-        self.connected = True
 
     @classmethod
     def detect(cls):
