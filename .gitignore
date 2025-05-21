@@ -17,6 +17,7 @@ venv/
 .idea/
 .vscode/
 *.log
+build
 
 # Ignore code coverage files
 .coverage
