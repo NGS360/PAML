@@ -86,12 +86,14 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False):
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None,
+                    overwrite=False):
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
-        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param dest_folder: The target path to the folder that file will be uploaded to.
+        None will upload to root.
         :param destination_filename: File name after uploaded to destination folder.
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
@@ -172,11 +174,14 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def get_tasks_by_name(self, project, task_name=None):
+    def get_tasks_by_name(self, project:str, task_name:str=None, inputs_to_compare:dict=None):
         '''
-        Get all processes/tasks in a project with a specified name
+        Get all processes/tasks in a project with a specified name, or all tasks
+        if no name is specified. Optionally, compare task inputs to ensure
+        equivalency (eg for reuse).
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
+        :param inputs_to_compare: Inputs to compare to ensure task equivalency
         :return: List of tasks
         '''
 

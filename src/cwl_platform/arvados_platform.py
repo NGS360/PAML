@@ -74,7 +74,9 @@ class ArvadosTaskEncoder(json.JSONEncoder):
         return super().default(o)
 
 class StreamFileReader(arvados.arvfile.ArvadosFileReader):
-    ''' This class replaces the deprecated StreamFileReader that existed in Arvados prior to 2.7.4 '''
+    '''
+    This class replaces the deprecated StreamFileReader that existed in Arvados prior to 2.7.4
+    '''
     class _NameAttribute(str):
         # The Python file API provides a plain .name attribute.
         # Older SDK provided a name() method.
@@ -123,7 +125,8 @@ class ArvadosPlatform(Platform):
 
     def _get_files_list_in_collection(self, collection_uuid, subdirectory_path=None):
         '''
-        Get list of files in collection, if subdirectory_path is provided, return only files in that subdirectory.
+        Get list of files in collection, if subdirectory_path is provided, return
+        only files in that subdirectory.
 
         :param collection_uuid: uuid of the collection
         :param subdirectory_path: subdirectory path to filter files in the collection
@@ -132,7 +135,9 @@ class ArvadosPlatform(Platform):
         the_col = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid)
         file_list = self._all_files(the_col)
         if subdirectory_path:
-            return [fl for fl in file_list if os.path.basename(fl.stream_name()) == subdirectory_path]
+            return [fl for fl in file_list if (
+                os.path.basename(fl.stream_name()) == subdirectory_path
+                )]
         return list(file_list)
 
     def _load_cwl_output(self, task: ArvadosTask):
@@ -171,10 +176,12 @@ class ArvadosPlatform(Platform):
             ["name", "=", collection_name]
             ]).execute()
         if len(search_result['items']) > 0:
-            self.logger.debug("Found source collection %s in project %s", collection_name, project["uuid"])
+            self.logger.debug("Found source collection %s in project %s",
+                              collection_name, project["uuid"])
             return search_result['items'][0]
 
-        self.logger.error("Source collection %s not found in project %s", collection_name, project["uuid"])
+        self.logger.error("Source collection %s not found in project %s",
+                          collection_name, project["uuid"])
         return None
 
     # File methods
@@ -195,7 +202,8 @@ class ArvadosPlatform(Platform):
             return None
 
         # 2. Get the destination project collection
-        destination_collection = self._lookup_collection_from_foldername(destination_project, source_folder)
+        destination_collection = self._lookup_collection_from_foldername(
+            destination_project, source_folder)
         if not destination_collection:
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": destination_project["uuid"],
@@ -206,7 +214,8 @@ class ArvadosPlatform(Platform):
         # Copy the files from the reference project to the destination project
         self.logger.debug("Get list of files in source collection, %s", source_collection["uuid"])
         source_files = self._get_files_list_in_collection(source_collection["uuid"])
-        self.logger.debug("Getting list of files in destination collection, %s", destination_collection["uuid"])
+        self.logger.debug("Getting list of files in destination collection, %s",
+                          destination_collection["uuid"])
         destination_files = self._get_files_list_in_collection(destination_collection["uuid"])
 
         source_collection = arvados.collection.Collection(source_collection["uuid"])
@@ -216,7 +225,9 @@ class ArvadosPlatform(Platform):
             source_path = f"{source_file.stream_name()}/{source_file.name()}"
             if source_path not in [f"{destination_file.stream_name()}/{destination_file.name()}"
                                 for destination_file in destination_files]:
-                target_collection.copy(source_path, target_path=source_path, source_collection=source_collection)
+                target_collection.copy(source_path,
+                                       target_path=source_path,
+                                       source_collection=source_collection)
         target_collection.save()
 
         self.logger.debug("Done copying folder.")
@@ -282,7 +293,8 @@ class ArvadosPlatform(Platform):
         dest_file = os.path.join(dest_folder, os.path.basename(file))
         collection_uuid, file_path = find_collection_file_path(file)
 
-        c = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid, api_client=self.api)
+        c = arvados.collection.CollectionReader(manifest_locator_or_text=collection_uuid,
+                                                api_client=self.api)
         with c.open(file_path, "rb") as reader:
             with open(dest_file, "wb") as writer:
                 content = reader.read(128*1024)
@@ -343,8 +355,9 @@ class ArvadosPlatform(Platform):
         else:
             raise ValueError(f"Collection {collection_name} not found in project {project['uuid']}")
 
-        # Do we need to check for the file in the collection?  That could add a lot of overhead to query the collection
-        # for the file.  Lets see if this comes up before implementing it.
+        # Do we need to check for the file in the collection?
+        # That could add a lot of overhead to query the collection for the file.
+        # Lets see if this comes up before implementing it.
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
     def get_folder_id(self, project, folder_path):
@@ -416,13 +429,15 @@ class ArvadosPlatform(Platform):
             outputs_collection = self.api.collections().create(body={
                 "owner_uuid": project["uuid"],
                 "name": output_collection_name}).execute()
-        outputs_collection = arvados.collection.Collection(outputs_collection['uuid'], api_client=self.api)
+        outputs_collection = arvados.collection.Collection(outputs_collection['uuid'],
+                                                           api_client=self.api)
 
         with outputs_collection.open("sources.txt", "a+") as sources:
             copied_outputs = [n.strip() for n in sources.readlines()]
 
             for output_file in output_files:
-                self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
+                self.logger.info("Staging output file %s -> %s",
+                                 output_file['source'], output_file['destination'])
                 if output_file['source'] in copied_outputs:
                     continue
 
@@ -430,7 +445,8 @@ class ArvadosPlatform(Platform):
                 #keep:asdf-asdf-asdf/some/file.txt
                 source_collection_uuid = output_file['source'].split(':')[1].split('/')[0]
                 source_file = '/'.join(output_file['source'].split(':')[1].split('/')[1:])
-                source_collection = arvados.collection.Collection(source_collection_uuid, api_client=self.api)
+                source_collection = arvados.collection.Collection(source_collection_uuid,
+                                                                  api_client=self.api)
 
                 # Copy the file
                 outputs_collection.copy(source_file, target_path=output_file['destination'],
@@ -442,12 +458,14 @@ class ArvadosPlatform(Platform):
         except googleapiclient.errors.HttpError as exc:
             self.logger.error("Failed to save output files: %s", exc)
 
-    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None,
+                    overwrite=False): # pylint: disable=too-many-arguments
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
-        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param dest_folder: The target path to the folder that file will be uploaded to.
+        None will upload to root.
         :param destination_filename: File name after uploaded to destination folder.
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
@@ -509,7 +527,8 @@ class ArvadosPlatform(Platform):
         :param destination_project: The project to copy the workflow to
         :return: The workflow that was copied or exists in the destination project
         '''
-        self.logger.debug("Copying workflow %s to project %s", src_workflow, destination_project["uuid"])
+        self.logger.debug("Copying workflow %s to project %s",
+                          src_workflow, destination_project["uuid"])
         # Get the workflow we want to copy
         try:
             workflow = self.api.workflows().get(uuid=src_workflow).execute()
@@ -532,12 +551,14 @@ class ArvadosPlatform(Platform):
             ["name", "like", f"{wf_name}%"]
             ]).execute()
         if len(existing_workflows["items"]):
-            self.logger.debug("Workflow %s already exists in project %s", wf_name, destination_project["uuid"])
+            self.logger.debug("Workflow %s already exists in project %s",
+                              wf_name, destination_project["uuid"])
             # Return existing matching workflow
             return existing_workflows["items"][0]
 
         # Workflow does not exist in project, so copy it
-        self.logger.debug("Workflow %s does not exist in project %s, copying", wf_name, destination_project["uuid"])
+        self.logger.debug("Workflow %s does not exist in project %s, copying",
+                          wf_name, destination_project["uuid"])
         workflow['owner_uuid'] = destination_project['uuid']
         del workflow['uuid']
         copied_workflow = self.api.workflows().create(body=workflow).execute()
@@ -554,7 +575,9 @@ class ArvadosPlatform(Platform):
         destination_workflows = self.get_workflows(destination_project)
         # Copy the workflow if it doesn't already exist in the destination project
         for workflow in reference_workflows["items"]:
-            if workflow["name"] not in [workflow["name"] for workflow in destination_workflows["items"]]:
+            if workflow["name"] not in [
+                workflow["name"]for workflow in destination_workflows["items"]
+            ]:
                 workflow['owner_uuid'] = destination_project["uuid"]
                 del workflow['uuid']
                 destination_workflows.append(self.api.workflows().create(body=workflow).execute())
@@ -607,15 +630,17 @@ class ArvadosPlatform(Platform):
                 all(isinstance(input, dict) and 'location' in input for input in input_value)):
                 return [input['location'] for input in input_value]
             return input_value
-        raise ValueError(f"Could not find input {input_name} in task {task.container_request['uuid']}")
+        raise ValueError(
+            f"Could not find input {input_name} in task {task.container_request['uuid']}"
+        )
 
     def get_task_state(self, task: ArvadosTask, refresh=False):
         '''
         Get workflow/task state
 
         :param project: The project to search
-        :param task: The task to search for. Task is an ArvadosTask containing a container_request_uuid and
-            container dictionary.
+        :param task: The task to search for. Task is an ArvadosTask containing
+        a container_request_uuid and container dictionary.
         :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
         '''
         if refresh:
@@ -624,7 +649,9 @@ class ArvadosPlatform(Platform):
             task.container_request = arvados.api().container_requests().get( # pylint: disable=not-callable
                 uuid = task.container_request['uuid']
             ).execute()
-            task.container = arvados.api().containers().get(uuid = task.container_request['container_uuid']).execute() # pylint: disable=not-callable
+            task.container = arvados.api().containers().get( # pylint: disable=not-callable
+                uuid = task.container_request['container_uuid']
+                ).execute()
 
         if task.container['exit_code'] == 0:
             return 'Complete'
@@ -658,7 +685,9 @@ class ArvadosPlatform(Platform):
             for output in output_field:
                 if 'location' in output:
                     output_file = output['location']
-                    output_files.append(f"keep:{task.container_request['output_uuid']}/{output_file}")
+                    output_files.append(
+                        f"keep:{task.container_request['output_uuid']}/{output_file}"
+                        )
             return output_files
 
         if 'location' in output_field:
@@ -678,7 +707,9 @@ class ArvadosPlatform(Platform):
         Retrieve the output field of the task and return filename
         NOTE: This method is deprecated as of v0.2.5 of PAML.  Will be removed in v1.0.
         '''
-        self.logger.warning("get_task_output_filename to be DEPRECATED (as of v0.2.5), use get_task_output instead.")
+        self.logger.warning(
+            "get_task_output_filename to be DEPRECATED (as of v0.2.5),use get_task_output instead."
+        )
         cwl_output_collection = arvados.collection.Collection(task.container_request['output_uuid'],
                                                               api_client=self.api,
                                                               keep_client=self.keep_client)
@@ -689,18 +720,26 @@ class ArvadosPlatform(Platform):
                 return [output['basename'] for output in cwl_output[output_name]]
             if isinstance(cwl_output[output_name], dict):
                 return cwl_output[output_name]['basename']
-        raise ValueError(f"Output {output_name} does not exist for task {task.container_request['uuid']}.")
+        raise ValueError(
+            f"Output {output_name} does not exist for task {task.container_request['uuid']}."
+        )
 
-    def get_tasks_by_name(self, project, task_name=None): # -> list(ArvadosTask):
+    def get_tasks_by_name(self,
+                          project:str,
+                          task_name:str=None,
+                          inputs_to_compare:dict=None): # -> list(ArvadosTask):
         '''
-        Get all processes/tasks in a project with a specified name
+        Get all processes/tasks in a project with a specified name, or all tasks
+        if no name is specified. Optionally, compare task inputs to ensure
+        equivalency (eg for reuse).
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
+        :param inputs_to_compare: Inputs to compare to ensure task equivalency
         :return: List of tasks
         '''
         # We must add priority>0 filter so we do not capture Cancelled jobs as Queued jobs.
-        # According to Curii, 'Cancelled' on the UI = 'Queued' with priority=0, we are not interested in Cancelled
-        # jobs here anyway, we will submit the job again
+        # According to Curii, 'Cancelled' on the UI = 'Queued' with priority=0,
+        # we are not interested in Cancelled jobs here anyway, we will submit the job again
         filters = [
             ['owner_uuid', '=', project['uuid']], ['priority', '>', 0]
         ]
@@ -715,9 +754,114 @@ class ArvadosPlatform(Platform):
             filters=filters
         ):
             # Get the container
-            container = self.api.containers().get(uuid=container_request['container_uuid']).execute()
-            tasks.append(ArvadosTask(container_request, container))
+            container = self.api.containers().get(
+                uuid=container_request['container_uuid']).execute()
+            task = ArvadosTask(container_request, container)
+
+            if inputs_to_compare is None:
+                if task_name is None or container_request['name'] == task_name:
+                    tasks.append(task)
+            else:
+                if container_request['name'] == task_name:
+                    # Check if the task inputs match the inputs_to_compare
+                    task_inputs = None
+                    if 'properties' in container_request and \
+                        'cwl_input' in container_request['properties']:
+                        task_inputs = container_request['properties']['cwl_input']
+                    elif 'mounts' in container and \
+                        '/var/lib/cwl/cwl.input.json' in container['mounts']:
+                        task_inputs = container['mounts']['/var/lib/cwl/cwl.input.json']['content']
+
+                    if task_inputs:
+                        # Check if all inputs_to_compare are in task_inputs and have the same values
+                        inputs_match = True
+                        for input_name, input_value in inputs_to_compare.items():
+                            if input_name not in task_inputs:
+                                self.logger.info(
+                                    "Input %s not found in task %s",
+                                    input_name, container_request['uuid']
+                                )
+                                inputs_match = False
+                                break
+
+                            # Compare the input values
+                            if not self._compare_inputs(task_inputs[input_name], input_value):
+                                self.logger.info("Task %s input %s does not match: %s vs query %s",
+                                                container_request['uuid'], input_name,
+                                                task_inputs[input_name], input_value)
+                                inputs_match = False
+                                break
+
+                        if inputs_match:
+                            self.logger.info("Task %s matches inputs", container_request['uuid'])
+                            tasks.append(task)
+                    else:
+                        self.logger.info(
+                            "Task %s has no cwl_input property", container_request['uuid']
+                        )
         return tasks
+
+    def _compare_inputs(self, task_input, input_to_compare):
+        """
+        Compare a task input to an input to compare
+        :param task_input: The task input to compare
+        :param input_to_compare: The input to compare against
+        :return: True if the inputs match, False otherwise
+        """
+        # If the inputs are dictionaries, compare them recursively
+        if isinstance(task_input, dict) and isinstance(input_to_compare, dict):
+            # For File objects, compare the location/path
+            if 'class' in input_to_compare and input_to_compare['class'] == 'File':
+                if 'location' in task_input and 'path' in input_to_compare:
+                    return task_input['location'] == input_to_compare['path']
+                return False
+
+            # For Directory objects, compare the location/path and listing if available
+            if 'class' in input_to_compare and input_to_compare['class'] == 'Directory':
+                if 'location' in task_input and 'path' in input_to_compare:
+                    if task_input['location'] != input_to_compare['path']:
+                        return False
+
+                    # If listing is available, compare it
+                    if 'listing' in task_input and 'listing' in input_to_compare:
+                        if len(task_input['listing']) != len(input_to_compare['listing']):
+                            return False
+
+                        # Compare each item in the listing
+                        for task_item, compare_item in zip(
+                            task_input['listing'], input_to_compare['listing']
+                            ):
+                            if not self._compare_inputs(task_item, compare_item):
+                                return False
+
+                        return True
+                return False
+
+            # For other dictionaries, check if both dictionaries have the same keys
+            # and the same values for those keys
+            if set(task_input.keys()) != set(input_to_compare.keys()):
+                return False
+
+            # Now check that all values match
+            for key, value in input_to_compare.items():
+                if not self._compare_inputs(task_input[key], value):
+                    return False
+            return True
+
+        # If the inputs are lists, compare them item by item
+        elif isinstance(task_input, list) and isinstance(input_to_compare, list):
+            if len(task_input) != len(input_to_compare):
+                return False
+
+            # Compare each item in the list
+            for task_item, compare_item in zip(task_input, input_to_compare):
+                if not self._compare_inputs(task_item, compare_item):
+                    return False
+            return True
+
+        # For simple values, compare them directly
+        else:
+            return task_input == input_to_compare
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
@@ -785,7 +929,8 @@ class ArvadosPlatform(Platform):
             with open(parameter_file.name, mode='w', encoding="utf-8") as fout:
                 json.dump(parameters, fout)
 
-            use_spot_instance = execution_settings.get('use_spot_instance', True) if execution_settings else True
+            use_spot_instance = execution_settings.get(
+                'use_spot_instance', True) if execution_settings else True
             if use_spot_instance:
                 cmd_spot_instance = "--enable-preemptible"
             else:
@@ -927,7 +1072,9 @@ class ArvadosPlatform(Platform):
         :param project: platform project
         :param permission: permission (permission="read|write|execute|admin")
         """
-        a_permission = 'can_manage' if permission=="admin" else 'can_write' if permission=="write" else 'can_read'
+        a_permission = 'can_manage' if permission=="admin" \
+            else 'can_write' if permission=="write" \
+            else 'can_read'
         self.api.links().create(body={"link": {
                                             "link_class": "permission",
                                             "name": a_permission,
