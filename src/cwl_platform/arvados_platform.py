@@ -777,7 +777,7 @@ class ArvadosPlatform(Platform):
                         inputs_match = True
                         for input_name, input_value in inputs_to_compare.items():
                             if input_name not in task_inputs:
-                                self.logger.info(
+                                self.logger.debug(
                                     "Input %s not found in task %s",
                                     input_name, container_request['uuid']
                                 )
@@ -786,17 +786,17 @@ class ArvadosPlatform(Platform):
 
                             # Compare the input values
                             if not self._compare_inputs(task_inputs[input_name], input_value):
-                                self.logger.info("Task %s input %s does not match: %s vs query %s",
+                                self.logger.debug("Task %s input %s does not match: %s vs query %s",
                                                 container_request['uuid'], input_name,
                                                 task_inputs[input_name], input_value)
                                 inputs_match = False
                                 break
 
                         if inputs_match:
-                            self.logger.info("Task %s matches inputs", container_request['uuid'])
+                            self.logger.debug("Task %s matches inputs", container_request['uuid'])
                             tasks.append(task)
                     else:
-                        self.logger.info(
+                        self.logger.debug(
                             "Task %s has no cwl_input property", container_request['uuid']
                         )
         return tasks

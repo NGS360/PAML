@@ -613,11 +613,11 @@ class SevenBridgesPlatform(Platform):
                     not isinstance(input_to_compare, dict) or
                     input_to_compare.get("class") != "Directory"
                 ):
-                    self.logger.info("Platform object is a Directory, but input to compare is not")
+                    self.logger.debug("Platform object is a Directory, but input to compare is not")
                     return False
                 folder_contents = list(platform_object.list_files().all())
                 if not len(folder_contents) == len(input_to_compare['listing']):
-                    self.logger.info("Platform object and input to compare are not the same length")
+                    self.logger.debug("Platform object and input to compare are not the same length")
                     return False
                 for platform_element, input_element in zip(
                     folder_contents,
@@ -625,28 +625,28 @@ class SevenBridgesPlatform(Platform):
                     # Directory inputs are sorted alphabetically, so while this check is order-
                     # dependent, this is unlikely to differ in reality if elements are the same
                     if not self._compare_platform_object(platform_element, input_element):
-                        self.logger.info(
+                        self.logger.debug(
                             "Platform object and input to compare were not the same: %s != %s",
                             platform_element, input_element
                         )
                         return False
                 return True
             if not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "File":
-                self.logger.info("Platform object is a File, but input to compare is not")
+                self.logger.debug("Platform object is a File, but input to compare is not")
                 return False
             return platform_object.id == input_to_compare.get("path")
 
         if isinstance(platform_object, list):
             if not isinstance(input_to_compare, list):
-                self.logger.info("Platform object is a list, but input to compare is not")
+                self.logger.debug("Platform object is a list, but input to compare is not")
                 return False
             if len(platform_object) != len(input_to_compare):
-                self.logger.info("Platform object and input to compare are not the same length")
+                self.logger.debug("Platform object and input to compare are not the same length")
                 return False
             for task_input, input_element in zip(platform_object, input_to_compare):
                 # this is intentionally sensitive to order
                 if not self._compare_platform_object(task_input, input_element):
-                    self.logger.info(
+                    self.logger.debug(
                         "Platform object and input to compare were not the same: %s != %s",
                         task_input, input_element
                     )
@@ -677,17 +677,17 @@ class SevenBridgesPlatform(Platform):
                 if task.name == task_name:
                     for input_name, input_value in inputs_to_compare.items():
                         if input_name not in task.inputs:
-                            self.logger.info("Input %s not found in task %s", input_name, task.id)
+                            self.logger.debug("Input %s not found in task %s", input_name, task.id)
                             break
                         if not self._compare_platform_object(task.inputs[input_name], input_value):
-                            self.logger.info(
+                            self.logger.debug(
                                 "Task %s input %s does not match: %s vs query %s",
                                 task.id, input_name, task.inputs[input_name], input_value
                             )
                             break
                     else:
                         # If we didn't break, then the task matches the inputs
-                        self.logger.info("Task %s matches inputs", task.id)
+                        self.logger.debug("Task %s matches inputs", task.id)
                         tasks.append(task)
         return tasks
 
