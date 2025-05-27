@@ -849,7 +849,7 @@ class ArvadosPlatform(Platform):
             return True
 
         # If the inputs are lists, compare them item by item
-        elif isinstance(task_input, list) and isinstance(input_to_compare, list):
+        if isinstance(task_input, list) and isinstance(input_to_compare, list):
             if len(task_input) != len(input_to_compare):
                 return False
 
@@ -860,8 +860,7 @@ class ArvadosPlatform(Platform):
             return True
 
         # For simple values, compare them directly
-        else:
-            return task_input == input_to_compare
+        return task_input == input_to_compare
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''

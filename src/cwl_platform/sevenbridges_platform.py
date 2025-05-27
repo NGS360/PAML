@@ -599,16 +599,14 @@ class SevenBridgesPlatform(Platform):
                 return task.outputs[output_name].name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def _compare_platform_object(self,
-                       platform_object:Any,
-                       input_to_compare:Any) -> bool:
-        """
+    def _compare_platform_object(self, platform_object:Any, input_to_compare:Any) -> bool:
+        '''
         Compare a platform object to a CWL representation of the object
         For example, a SevenBridges File object to a CWL File object
         :param platform_object: Object to compare to, such as an input or output
         :param input_to_compare: CWL representation of the object
         :return: True if the object is equivalent, False otherwise
-        """
+        '''
         if isinstance(platform_object, sevenbridges.File):
             if platform_object.is_folder():
                 if (
@@ -633,12 +631,12 @@ class SevenBridgesPlatform(Platform):
                         )
                         return False
                 return True
-            elif not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "File":
+            if not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "File":
                 self.logger.info("Platform object is a File, but input to compare is not")
                 return False
-            else:
-                return platform_object.id == input_to_compare.get("path")
-        elif isinstance(platform_object, list):
+            return platform_object.id == input_to_compare.get("path")
+
+        if isinstance(platform_object, list):
             if not isinstance(input_to_compare, list):
                 self.logger.info("Platform object is a list, but input to compare is not")
                 return False
@@ -654,8 +652,8 @@ class SevenBridgesPlatform(Platform):
                     )
                     return False
             return True
-        else:
-            return platform_object == input_to_compare
+
+        return platform_object == input_to_compare
 
     def get_tasks_by_name(self,
                           project:str,
