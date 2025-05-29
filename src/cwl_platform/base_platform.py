@@ -15,8 +15,43 @@ class Platform(ABC):
         ''' Copy source folder to destination project '''
 
     @abstractmethod
+    def download_file(self, file, dest_folder):
+        """
+        Download a file to a local directory
+        :param fileid: File to download
+        :param dest_folder: Destination folder to download file to
+        :return: Name of local file downloaded or None
+        """
+
+    @abstractmethod
+    def export_file(self, file, bucket_name, prefix):
+        """
+        Use platform specific functionality to copy a file from a platform to an S3 bucket.
+        :param file: File to export
+        :param bucket_name: S3 bucket name
+        :param prefix: Destination S3 folder to export file to, path/to/folder
+        :return: s3 file path or None
+        """
+
+    @abstractmethod
     def get_file_id(self, project, file_path):
         ''' Get a file id by its full path name '''
+
+    @abstractmethod
+    def get_files(self, project, filters=None):
+        """
+        Retrieve files in a project matching the filter criteria
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of tuples (file path, file object) matching filter criteria
+        """
 
     @abstractmethod
     def get_folder_id(self, project, folder_path):
@@ -51,40 +86,18 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def upload_file_to_project(self, filename, project, dest_folder, destination_filename=None, overwrite=False):
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None,
+                    overwrite=False):
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
-        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param dest_folder: The target path to the folder that file will be uploaded to.
+        None will upload to root.
         :param destination_filename: File name after uploaded to destination folder.
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
         '''
-
-    # Project methods
-    @abstractmethod
-    def create_project(self, project_name, project_description, **kwargs):
-        '''
-        Create a project
-        
-        :param project_name: Name of the project
-        :param project_description: Description of the project
-        :param kwargs: Additional arguments for creating a project
-        :return: Project object
-        '''
-
-    @abstractmethod
-    def get_project(self):
-        ''' Determine what project we are running in '''
-
-    @abstractmethod
-    def get_project_by_name(self, project_name):
-        ''' Get a project by its name '''
-
-    @abstractmethod
-    def get_project_by_id(self, project_id):
-        ''' Get a project by its id '''
 
     # Task/Workflow methods
     @abstractmethod
@@ -110,12 +123,25 @@ class Platform(ABC):
         '''
 
     @abstractmethod
+    def get_workflows(self, project):
+        '''
+        Get workflows in a project
+
+        :param: Platform Project
+        :return: List of workflows
+        '''
+
+    @abstractmethod
     def delete_task(self, task):
         ''' Delete a task/workflow/process '''
 
     @abstractmethod
     def get_current_task(self):
         ''' Get the current task '''
+
+    @abstractmethod
+    def get_task_cost(self, task):
+        ''' Return task cost '''
 
     @abstractmethod
     def get_task_input(self, task, input_name):
@@ -142,11 +168,22 @@ class Platform(ABC):
 
     @abstractmethod
     def get_task_output_filename(self, task, output_name):
-        ''' Retrieve the output field of the task and return filename'''
+        '''
+        Retrieve the output field of the task and return filename
+        NOTE: This method is deprecated as of v0.2.5 of PAML.  Will be removed in v1.0.
+        '''
 
     @abstractmethod
-    def get_tasks_by_name(self, project, task_name):
-        ''' Get a tasks by its name '''
+    def get_tasks_by_name(self, project:str, task_name:str=None, inputs_to_compare:dict=None):
+        '''
+        Get all processes/tasks in a project with a specified name, or all tasks
+        if no name is specified. Optionally, compare task inputs to ensure
+        equivalency (eg for reuse).
+        :param project: The project to search
+        :param task_name: The name of the process to search for (if None return all tasks)
+        :param inputs_to_compare: Inputs to compare to ensure task equivalency
+        :return: List of tasks
+        '''
 
     @abstractmethod
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
@@ -178,13 +215,64 @@ class Platform(ABC):
         :return: Task object or None
         '''
 
+    # Project methods
+    @abstractmethod
+    def create_project(self, project_name, project_description, **kwargs):
+        '''
+        Create a project
+        
+        :param project_name: Name of the project
+        :param project_description: Description of the project
+        :param kwargs: Additional arguments for creating a project
+        :return: Project object
+        '''
+
+    @abstractmethod
+    def delete_project_by_name(self, project_name):
+        '''
+        Delete a project on the platform 
+        '''
+
+    @abstractmethod
+    def get_project(self):
+        ''' Determine what project we are running in '''
+
+    @abstractmethod
+    def get_project_by_name(self, project_name):
+        ''' Get a project by its name '''
+
+    @abstractmethod
+    def get_project_by_id(self, project_id):
+        ''' Get a project by its id '''
+
+    @abstractmethod
+    def get_project_cost(self, project):
+        ''' Return project cost '''
+
+    @abstractmethod
+    def get_project_users(self, project):
+        ''' Return a list of user objects associated with a project '''
+
+    @abstractmethod
+    def get_projects(self):
+        ''' Get list of all projects '''
+
     # User methods
+    @abstractmethod
+    def add_user_to_project(self, platform_user, project, permission):
+        """
+        Add a user to a project on the platform
+        :param platform_user: platform user (from get_user)
+        :param project: platform project
+        :param permission: permission (permission="read|write|execute|admin")
+        """
+
     @abstractmethod
     def get_user(self, user):
         """
         Get a user object from their (platform) user id or email address
 
-        :param user: BMS user id or email address
+        :param user: user id or email address
         :return: User object or None
         """
 

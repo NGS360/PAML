@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v3
@@ -38,5 +38,5 @@ jobs:
 
     - name: Test
       run: |
-        PYTHONPATH=src coverage run --source=src -m pytest
+        PYTHONPATH=src coverage run --source=src -m pytest -v --log-cli-level=INFO
         coverage report
