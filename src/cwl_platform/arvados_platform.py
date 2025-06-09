@@ -743,11 +743,11 @@ class ArvadosPlatform(Platform):
         if tasks is None:
             # Filter out cancelled jobs (priority=0)
             filters = [['owner_uuid', '=', project['uuid']], ['priority', '>', 0]]
-            
+
             # Add name filter if specified
             if task_name:
                 filters.append(["name", '=', task_name])
-                
+
             tasks = arvados.util.keyset_list_all(self.api.container_requests().list, filters=filters)
 
         matching_tasks = []
@@ -777,29 +777,29 @@ class ArvadosPlatform(Platform):
             if self._inputs_match(task_inputs, inputs_to_compare, container_request['uuid']):
                 self.logger.debug("Task %s matches inputs", container_request['uuid'])
                 matching_tasks.append(task)
-                
+
         return matching_tasks
 
     def _get_task_inputs(self, container_request, container):
         """
         Extract task inputs from container request or container
-        
+
         :param container_request: The container request object
         :param container: The container object
         :return: Task inputs or None if not found
         """
         if 'properties' in container_request and 'cwl_input' in container_request['properties']:
             return container_request['properties']['cwl_input']
-            
+
         if 'mounts' in container and '/var/lib/cwl/cwl.input.json' in container['mounts']:
             return container['mounts']['/var/lib/cwl/cwl.input.json']['content']
-            
+
         return None
 
-        def _inputs_match(self, task_inputs, inputs_to_compare, task_uuid):
+    def _inputs_match(self, task_inputs, inputs_to_compare, task_uuid):
         """
         Check if task inputs match the inputs to compare
-        
+
         :param task_inputs: The task inputs
         :param inputs_to_compare: The inputs to compare against
         :param task_uuid: Task UUID for logging
@@ -809,12 +809,12 @@ class ArvadosPlatform(Platform):
             if input_name not in task_inputs:
                 self.logger.debug("Input %s not found in task %s", input_name, task_uuid)
                 return False
-                
+
             if not self._compare_inputs(task_inputs[input_name], input_value):
                 self.logger.debug("Task %s input %s does not match: %s vs query %s",
                                 task_uuid, input_name, task_inputs[input_name], input_value)
                 return False
-                
+
         return True
 
     def _compare_inputs(self, task_input, input_to_compare):
