@@ -753,7 +753,7 @@ class ArvadosPlatform(Platform):
                     ["name", '=', task_name]
                 )
             tasks = arvados.util.keyset_list_all(self.api.container_requests().list, filters=filters)
-        
+
         for container_request in tasks:
             # Get the container
             container = self.api.containers().get(
