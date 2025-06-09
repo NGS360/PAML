@@ -727,7 +727,8 @@ class ArvadosPlatform(Platform):
     def get_tasks_by_name(self,
                           project:str,
                           task_name:str=None,
-                          inputs_to_compare:dict=None): # -> list(ArvadosTask):
+                          inputs_to_compare:dict=None,
+                          tasks:list=None): # -> list(ArvadosTask):
         '''
         Get all processes/tasks in a project with a specified name, or all tasks
         if no name is specified. Optionally, compare task inputs to ensure
@@ -735,24 +736,25 @@ class ArvadosPlatform(Platform):
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
         :param inputs_to_compare: Inputs to compare to ensure task equivalency
+        :param tasks: List of tasks to search in (if None, query all tasks in project)
         :return: List of tasks
         '''
         # We must add priority>0 filter so we do not capture Cancelled jobs as Queued jobs.
         # According to Curii, 'Cancelled' on the UI = 'Queued' with priority=0,
         # we are not interested in Cancelled jobs here anyway, we will submit the job again
-        filters = [
-            ['owner_uuid', '=', project['uuid']], ['priority', '>', 0]
-        ]
-        if task_name:
-            filters.append(
-                ["name", '=', task_name]
-            )
+        matching_tasks = []
 
-        tasks = []
-        for container_request in arvados.util.keyset_list_all(
-            self.api.container_requests().list,
-            filters=filters
-        ):
+        if tasks is None:
+            filters = [
+                ['owner_uuid', '=', project['uuid']], ['priority', '>', 0]
+            ]
+            if task_name:
+                filters.append(
+                    ["name", '=', task_name]
+                )
+            tasks = arvados.util.keyset_list_all(self.api.container_requests().list, filters=filters)
+        
+        for container_request in tasks:
             # Get the container
             container = self.api.containers().get(
                 uuid=container_request['container_uuid']).execute()
@@ -760,7 +762,7 @@ class ArvadosPlatform(Platform):
 
             if inputs_to_compare is None:
                 if task_name is None or container_request['name'] == task_name:
-                    tasks.append(task)
+                    matching_tasks.append(task)
             else:
                 if container_request['name'] == task_name:
                     # Check if the task inputs match the inputs_to_compare
@@ -794,12 +796,12 @@ class ArvadosPlatform(Platform):
 
                         if inputs_match:
                             self.logger.debug("Task %s matches inputs", container_request['uuid'])
-                            tasks.append(task)
+                            matching_tasks.append(task)
                     else:
                         self.logger.debug(
                             "Task %s has no cwl_input property", container_request['uuid']
                         )
-        return tasks
+        return matching_tasks
 
     def _compare_inputs(self, task_input, input_to_compare):
         """

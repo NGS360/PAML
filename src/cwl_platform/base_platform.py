@@ -174,7 +174,7 @@ class Platform(ABC):
         '''
 
     @abstractmethod
-    def get_tasks_by_name(self, project:str, task_name:str=None, inputs_to_compare:dict=None):
+    def get_tasks_by_name(self, project:str, task_name:str=None, inputs_to_compare:dict=None, tasks:list=None):
         '''
         Get all processes/tasks in a project with a specified name, or all tasks
         if no name is specified. Optionally, compare task inputs to ensure
@@ -182,6 +182,7 @@ class Platform(ABC):
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
         :param inputs_to_compare: Inputs to compare to ensure task equivalency
+        :param tasks: List of tasks to search in (if None, query all tasks in project)
         :return: List of tasks
         '''
 

@@ -658,7 +658,8 @@ class SevenBridgesPlatform(Platform):
     def get_tasks_by_name(self,
                           project:str,
                           task_name:str=None,
-                          inputs_to_compare:dict=None): # -> list(sevenbridges.Task):
+                          inputs_to_compare:dict=None,
+                          tasks:list=None) -> list: # -> list(sevenbridges.Task)
         '''
         Get all processes/tasks in a project with a specified name, or all tasks
         if no name is specified. Optionally, compare task inputs to ensure
@@ -666,13 +667,18 @@ class SevenBridgesPlatform(Platform):
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
         :param inputs_to_compare: Inputs to compare to ensure task equivalency
+        :param tasks: List of tasks to search in (if None, query all tasks in project)
         :return: List of tasks
         '''
-        tasks = []
-        for task in self.api.tasks.query(project=project).all():
+        matching_tasks = []
+
+        if tasks is None:
+            tasks = self.api.tasks.query(project=project).all()
+
+        for task in tasks:
             if inputs_to_compare is None:
                 if task_name is None or task.name == task_name:
-                    tasks.append(task)
+                    matching_tasks.append(task)
             else:
                 if task.name == task_name:
                     for input_name, input_value in inputs_to_compare.items():
@@ -688,8 +694,8 @@ class SevenBridgesPlatform(Platform):
                     else:
                         # If we didn't break, then the task matches the inputs
                         self.logger.debug("Task %s matches inputs", task.id)
-                        tasks.append(task)
-        return tasks
+                        matching_tasks.append(task)
+        return matching_tasks
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
