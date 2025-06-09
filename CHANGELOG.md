@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.3.1](https://github.com/NGS360/PAML.git/releases/tag/v0.3.1) - 2025-06-09
+
+### Added
+
+- get_tasks_by_name can now return all tasks in a project, to assist with caching
+
+### Changed
+
+- Update Arvados Python Client requirement to use >=3.0.0 and <3.2.0
+
 ## [v0.3](https://github.com/NGS360/PAML.git/releases/tag/v0.3) - 2025-06-02
 
 ### Added
