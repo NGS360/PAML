@@ -739,69 +739,83 @@ class ArvadosPlatform(Platform):
         :param tasks: List of tasks to search in (if None, query all tasks in project)
         :return: List of tasks
         '''
-        # We must add priority>0 filter so we do not capture Cancelled jobs as Queued jobs.
-        # According to Curii, 'Cancelled' on the UI = 'Queued' with priority=0,
-        # we are not interested in Cancelled jobs here anyway, we will submit the job again
-        matching_tasks = []
-
+        # Fetch tasks if not provided
         if tasks is None:
-            filters = [
-                ['owner_uuid', '=', project['uuid']], ['priority', '>', 0]
-            ]
+            # Filter out cancelled jobs (priority=0)
+            filters = [['owner_uuid', '=', project['uuid']], ['priority', '>', 0]]
+            
+            # Add name filter if specified
             if task_name:
-                filters.append(
-                    ["name", '=', task_name]
-                )
+                filters.append(["name", '=', task_name])
+                
             tasks = arvados.util.keyset_list_all(self.api.container_requests().list, filters=filters)
 
+        matching_tasks = []
+
         for container_request in tasks:
+            # Skip if name doesn't match (when task_name is specified)
+            if task_name and container_request['name'] != task_name:
+                continue
+
             # Get the container
             container = self.api.containers().get(
                 uuid=container_request['container_uuid']).execute()
             task = ArvadosTask(container_request, container)
 
+            # If no input comparison needed, add task to results
             if inputs_to_compare is None:
-                if task_name is None or container_request['name'] == task_name:
-                    matching_tasks.append(task)
-            else:
-                if container_request['name'] == task_name:
-                    # Check if the task inputs match the inputs_to_compare
-                    task_inputs = None
-                    if 'properties' in container_request and \
-                        'cwl_input' in container_request['properties']:
-                        task_inputs = container_request['properties']['cwl_input']
-                    elif 'mounts' in container and \
-                        '/var/lib/cwl/cwl.input.json' in container['mounts']:
-                        task_inputs = container['mounts']['/var/lib/cwl/cwl.input.json']['content']
+                matching_tasks.append(task)
+                continue
 
-                    if task_inputs:
-                        # Check if all inputs_to_compare are in task_inputs and have the same values
-                        inputs_match = True
-                        for input_name, input_value in inputs_to_compare.items():
-                            if input_name not in task_inputs:
-                                self.logger.debug(
-                                    "Input %s not found in task %s",
-                                    input_name, container_request['uuid']
-                                )
-                                inputs_match = False
-                                break
+            # Get task inputs from either properties or mounts
+            task_inputs = self._get_task_inputs(container_request, container)
+            if not task_inputs:
+                self.logger.debug("Task %s has no cwl_input property", container_request['uuid'])
+                continue
 
-                            # Compare the input values
-                            if not self._compare_inputs(task_inputs[input_name], input_value):
-                                self.logger.debug("Task %s input %s does not match: %s vs query %s",
-                                                container_request['uuid'], input_name,
-                                                task_inputs[input_name], input_value)
-                                inputs_match = False
-                                break
-
-                        if inputs_match:
-                            self.logger.debug("Task %s matches inputs", container_request['uuid'])
-                            matching_tasks.append(task)
-                    else:
-                        self.logger.debug(
-                            "Task %s has no cwl_input property", container_request['uuid']
-                        )
+            # Check if inputs match
+            if self._inputs_match(task_inputs, inputs_to_compare, container_request['uuid']):
+                self.logger.debug("Task %s matches inputs", container_request['uuid'])
+                matching_tasks.append(task)
+                
         return matching_tasks
+
+    def _get_task_inputs(self, container_request, container):
+        """
+        Extract task inputs from container request or container
+        
+        :param container_request: The container request object
+        :param container: The container object
+        :return: Task inputs or None if not found
+        """
+        if 'properties' in container_request and 'cwl_input' in container_request['properties']:
+            return container_request['properties']['cwl_input']
+            
+        if 'mounts' in container and '/var/lib/cwl/cwl.input.json' in container['mounts']:
+            return container['mounts']['/var/lib/cwl/cwl.input.json']['content']
+            
+        return None
+
+        def _inputs_match(self, task_inputs, inputs_to_compare, task_uuid):
+        """
+        Check if task inputs match the inputs to compare
+        
+        :param task_inputs: The task inputs
+        :param inputs_to_compare: The inputs to compare against
+        :param task_uuid: Task UUID for logging
+        :return: True if inputs match, False otherwise
+        """
+        for input_name, input_value in inputs_to_compare.items():
+            if input_name not in task_inputs:
+                self.logger.debug("Input %s not found in task %s", input_name, task_uuid)
+                return False
+                
+            if not self._compare_inputs(task_inputs[input_name], input_value):
+                self.logger.debug("Task %s input %s does not match: %s vs query %s",
+                                task_uuid, input_name, task_inputs[input_name], input_value)
+                return False
+                
+        return True
 
     def _compare_inputs(self, task_input, input_to_compare):
         """
