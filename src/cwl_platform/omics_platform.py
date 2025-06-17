@@ -323,11 +323,27 @@ class OmicsPlatform(Platform):
         base_output_path = f"s3://{self.output_bucket}/Project/"
         base_output_path += f"{project['RunGroupId']}/{workflow}/{name.replace(' ','')}/"
 
+        if "cacheId" in execution_settings:
+            cacheId = execution_settings["cacheId"]
+        else:
+            cacheId = None
+
         try:
             logger.debug("Starting run for %s", name)
-            # TODO: The roleArn should be a parameter to this function, and not hard-coded.
-            # Put this in the pipeline_config.py.
-            job = self.api.start_run(workflowId=workflow,
+            if cacheId:
+                job = self.api.start_run(workflowId=workflow,
+                                     workflowType='PRIVATE',
+                                     roleArn=self.role_arn,
+                                     parameters=parameters,
+                                     name=name,
+                                     cacheId=cacheId,
+                                     cacheBehavior='CACHE_ON_FAILURE',
+                                     runGroupId=project["RunGroupId"],
+                                     tags={"Project": project["RunGroupId"]},
+                                     outputUri=base_output_path,
+                                     storageType="DYNAMIC")
+            else:
+                job = self.api.start_run(workflowId=workflow,
                                      workflowType='PRIVATE',
                                      roleArn=self.role_arn,
                                      parameters=parameters,
@@ -336,6 +352,7 @@ class OmicsPlatform(Platform):
                                      tags={"Project": project["RunGroupId"]},
                                      outputUri=base_output_path,
                                      storageType="DYNAMIC")
+
             logger.info('Started run for %s, RunID: %s',name,job['id'])
             return job
         except botocore.exceptions.ClientError as err:
