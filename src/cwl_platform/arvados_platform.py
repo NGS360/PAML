@@ -9,6 +9,7 @@ import pathlib
 import re
 import subprocess
 import tempfile
+from typing import List
 
 import chardet
 
@@ -728,7 +729,7 @@ class ArvadosPlatform(Platform):
                           project:str,
                           task_name:str=None,
                           inputs_to_compare:dict=None,
-                          tasks:list=None): # -> list(ArvadosTask):
+                          tasks:list=None) -> List['ArvadosTask']:
         '''
         Get all processes/tasks in a project with a specified name, or all tasks
         if no name is specified. Optionally, compare task inputs to ensure
