@@ -610,7 +610,6 @@ class TestArvadosPlaform(unittest.TestCase):
         Test get_tasks_by_name method with a new task added to the project will still work correctly.
         A new task may only have a uuid and not a name associated with it.
         '''
-        ''' Test get_tasks_by_name method with no task name (should return all tasks) '''
         project = {'uuid': 'project_uuid'}
 
         # Mock container requests and containers
