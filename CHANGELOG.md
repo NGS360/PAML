@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.3.2](https://github.com/NGS360/PAML.git/releases/tag/v0.3.2) - 2025-07-12
+
+### Fixed
+
+- ArvadosPlatform::get_tasks_by_name was not properly handling list of tasks provided
+
 ## [v0.3.1](https://github.com/NGS360/PAML.git/releases/tag/v0.3.1) - 2025-06-09
 
 ### Added
