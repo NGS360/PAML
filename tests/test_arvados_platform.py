@@ -605,6 +605,29 @@ class TestArvadosPlaform(unittest.TestCase):
             self.assertEqual(len(result), 1)
             self.assertEqual(result[0].container_request['uuid'], 'request1')
 
+    def test_get_tasks_by_name_with_new_task_added(self):
+        '''
+        Test get_tasks_by_name method with a new task added to the project will still work correctly.
+        A new task may only have a uuid and not a name associated with it.
+        '''
+        project = {'uuid': 'project_uuid'}
+
+        # Mock container requests and containers
+        mock_container_request1 = {
+            'name': 'task1',
+            'uuid': 'request1'
+        }
+        tasks = [ArvadosTask(
+            container_request=mock_container_request1,
+            container=None
+        )]
+
+        # Test
+        result = self.platform.get_tasks_by_name(project, 'task2', tasks=tasks)
+
+        # Assert
+        self.assertListEqual(result, [])
+
     def test_compare_inputs_simple_values(self):
         ''' Test the _compare_inputs helper method with simple values '''
         # Test string values
@@ -743,6 +766,29 @@ class TestArvadosPlaform(unittest.TestCase):
             ]
         }
         self.assertFalse(self.platform._compare_inputs(dir1, dir3))
+
+    def test_submit_task(self):
+        ''' Test that submit_task returns an ArvadosTask object where container_request has a name and uuid '''
+        name = "test_task"
+        project = {'uuid': 'test_project_uuid'}
+        workflow = {'uuid': 'test_workflow_uuid'}
+        parameters = {'param1': 'value1', 'param2': 'value2'}
+
+        with mock.patch('subprocess.check_output') as mock_subprocess_check_output:
+            mock_subprocess_check_output.return_value = b"container_request_uuid"
+            # Test
+            task = self.platform.submit_task(name, project, workflow, parameters, execution_settings=None)
+
+        # Assert that the returned task is an instance of ArvadosTask
+        self.assertIsInstance(task, ArvadosTask)
+        # Assert that the container_request has a name and uuid
+        self.assertIn('name', task.container_request)
+        self.assertIn('uuid', task.container_request)
+        self.assertEqual(task.container_request['name'], name)
+        self.assertIsNotNone(task.container_request['uuid'])
+        # Assert that the container is None (as per the current implementation)
+        self.assertIsNone(task.container)
+
 
 if __name__ == '__main__':
     unittest.main()
