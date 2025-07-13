@@ -448,6 +448,9 @@ class TestArvadosPlaform(unittest.TestCase):
 
     def test_get_tasks_by_name_match_all(self):
         ''' Test get_tasks_by_name method with no task name (should return all tasks) '''
+        project = {'uuid': 'project_uuid'}
+
+        # Add two tasks with different names to the project
         task1_name = "task1"
         task2_name = "task2"
 
@@ -466,7 +469,7 @@ class TestArvadosPlaform(unittest.TestCase):
         mock_container2 = {'uuid': 'container2'}
 
         # Mock the API calls
-        self.platform.api.container_requests().list.return_value = MagicMock()
+        #self.platform.api.container_requests().list.return_value = MagicMock()
         mock_keyset_list_all = MagicMock(return_value=[mock_container_request1,
                                                        mock_container_request2])
 
@@ -476,12 +479,35 @@ class TestArvadosPlaform(unittest.TestCase):
             ]
 
             # Test
-            result = self.platform.get_tasks_by_name({'uuid': 'project_uuid'})
+            result = self.platform.get_tasks_by_name(project)
 
             # Assert
             self.assertEqual(len(result), 2)
             self.assertEqual(result[0].container_request['name'], task1_name)
             self.assertEqual(result[1].container_request['name'], task2_name)
+
+    def test_get_tasks_by_name_from_provided_tasks(self):
+        ''' Test that get_task_by_name can use provided tasks '''
+        project = {'uuid': 'project_uuid'}
+
+        # Mock container requests and containers
+        container_request1 = {'name': 'task1', 'uuid': 'request1', 'container_uuid': 'container1'}
+        container_request2 = {'name': 'task2', 'uuid': 'request2', 'container_uuid': 'container2'}
+        container1 = {'uuid': 'container1'}
+        container2 = {'uuid': 'container2'}
+
+        tasks = [
+            ArvadosTask(container_request=container_request1, container=container1),
+            ArvadosTask(container_request=container_request2, container=container2)
+        ]
+        # Test
+        self.platform.api.containers().get().execute.side_effect = [
+            container1, container2
+        ]
+        result = self.platform.get_tasks_by_name(project, task_name='task1', tasks=tasks)
+        # Assert
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].container_request['name'], 'task1')
 
     def test_get_tasks_by_name_match_name_and_inputs(self):
         ''' Test get_tasks_by_name method with task name and matching inputs '''
