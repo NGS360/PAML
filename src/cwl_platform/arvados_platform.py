@@ -970,7 +970,7 @@ class ArvadosPlatform(Platform):
                 runner_out = subprocess.check_output(cmd_str, stderr = subprocess.STDOUT)
                 runner_log = runner_out.decode("UTF-8")
                 container_request_uuid = list(filter(None, runner_log.split("\n")))[-1]
-                return ArvadosTask({'uuid': container_request_uuid}, None)
+                return ArvadosTask({'name': name, 'uuid': container_request_uuid}, None)
             except subprocess.CalledProcessError as err:
                 self.logger.error("ERROR LOG: %s", str(err))
                 self.logger.error("ERROR LOG: %s", err.output)
