@@ -749,11 +749,14 @@ class ArvadosPlatform(Platform):
             if task_name:
                 filters.append(["name", '=', task_name])
 
-            tasks = arvados.util.keyset_list_all(self.api.container_requests().list, filters=filters)
+            container_requests = arvados.util.keyset_list_all(self.api.container_requests().list, filters=filters)
+        else:
+            # Use provided tasks
+            container_requests = [task.container_request for task in tasks]
 
         matching_tasks = []
 
-        for container_request in tasks:
+        for container_request in container_requests:
             # Skip if name doesn't match (when task_name is specified)
             if task_name and container_request['name'] != task_name:
                 continue
