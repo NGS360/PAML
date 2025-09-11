@@ -761,6 +761,11 @@ class ArvadosPlatform(Platform):
             if task_name and container_request['name'] != task_name:
                 continue
 
+            # Skip is container_request does not have a container_uuid
+            # in the case a task was cancelled or never executed?
+            if container_request['container_uuid'] is None:
+                continue
+
             # Get the container
             container = self.api.containers().get(
                 uuid=container_request['container_uuid']).execute()
