@@ -87,8 +87,8 @@ class NGS360Platform(Platform):
             - api_endpoint: WES API endpoint URL
             - auth_token: Authentication token for the WES API
         """
-        self.api_endpoint = kwargs.get("api_endpoint")
-        self.auth_token = kwargs.get("auth_token")
+        self.api_endpoint = kwargs.get("api_endpoint", os.environ.get("WES_API_ENDPOINT"))
+        self.auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
 
         if not self.api_endpoint:
             raise ValueError("WES API endpoint URL is required")
