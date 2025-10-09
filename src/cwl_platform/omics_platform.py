@@ -6,6 +6,7 @@ import logging
 import json
 import boto3
 import botocore
+import httpx
 
 from tenacity import retry, wait_fixed, stop_after_attempt
 
@@ -20,6 +21,8 @@ class OmicsPlatform(Platform):
         self.api = None
         self.output_bucket = None
         self.role_arn = None
+        self.wes_client = None
+        self.wes_url = None
 
     def _list_file_in_s3(self, s3path):
         '''
@@ -40,7 +43,7 @@ class OmicsPlatform(Platform):
         return files
 
     def connect(self, **kwargs):
-        ''' 
+        '''
         Connect to AWS Omics platform
 
         If ~/.aws/credentials or ~/.aws/config does not provide a region, region
@@ -50,6 +53,11 @@ class OmicsPlatform(Platform):
         self.output_bucket = kwargs['output_bucket']
         self.role_arn = kwargs['role_arn']
         self.s3_client = boto3.client('s3')
+        
+        # WES API connection parameters
+        self.wes_url = kwargs.get('wes_url', 'http://localhost:8000/ga4gh/wes/v1')
+        self.wes_username = kwargs.get('wes_username')
+        self.wes_password = kwargs.get('wes_password')
 
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
@@ -116,8 +124,31 @@ class OmicsPlatform(Platform):
         return
 
     def delete_task(self, task):
-        ''' Delete a task/workflow/process '''
-        self.logger.info('TBD: Deleting task %s', task)
+        '''
+        Cancel a workflow run via WES API
+        task: A dictionary containing the run information, including the WES run ID
+        '''
+        # Set up auth if provided
+        auth = None
+        if self.wes_username and self.wes_password:
+            auth = (self.wes_username, self.wes_password)
+        
+        # Extract the WES run ID from the task dictionary
+        run_id = task.get('id')
+        if not run_id:
+            logger.error("No run ID found in task object")
+            return False
+        
+        try:
+            # Cancel the run via WES API
+            cancel_url = f"{self.wes_url}/runs/{run_id}/cancel"
+            response = httpx.post(cancel_url, auth=auth, timeout=30.0)
+            response.raise_for_status()
+            logger.info(f"Successfully cancelled run {run_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error cancelling run {run_id}: {e}")
+            return False
 
     @classmethod
     def detect(cls):
@@ -163,79 +194,338 @@ class OmicsPlatform(Platform):
         return folder_path + "/"
 
     def get_task_input(self, task, input_name):
-        ''' Retrieve the input field of the task '''
-        self.logger.info("TBD: Getting input for task %s", task)
-        return None
+        '''
+        Retrieve the input field of the task using WES API
+        task: A dictionary containing the run information, including the WES run ID
+        input_name: Name of the input to retrieve
+        '''
+        # Set up auth if provided
+        auth = None
+        if self.wes_username and self.wes_password:
+            auth = (self.wes_username, self.wes_password)
+        
+        # Extract the WES run ID from the task dictionary
+        run_id = task.get('id')
+        if not run_id:
+            logger.error("No run ID found in task object")
+            return None
+        
+        # Check if parameters are already in the task object
+        if task.get('parameters') and input_name in task['parameters']:
+            return task['parameters'][input_name]
+        
+        try:
+            # Get full run details from WES API
+            run_details_url = f"{self.wes_url}/runs/{run_id}"
+            response = httpx.get(run_details_url, auth=auth, timeout=30.0)
+            response.raise_for_status()
+            run_details = response.json()
+            
+            # Check if request and workflow_params are available
+            if not run_details.get('request') or not run_details['request'].get('workflow_params'):
+                logger.warning(f"No workflow parameters found for run {run_id}")
+                return None
+            
+            # Parse workflow parameters
+            try:
+                params = json.loads(run_details['request']['workflow_params'])
+                
+                # Check if the specific input is available
+                if input_name in params:
+                    return params[input_name]
+                else:
+                    logger.warning(f"Input '{input_name}' not found in run {run_id}")
+                    return None
+                    
+            except json.JSONDecodeError:
+                logger.error(f"Could not parse workflow parameters for run {run_id}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting input {input_name} for run {run_id}: {e}")
+            return None
 
     def get_task_outputs(self, task):
-        self.logger.info('TBD: Getting task outputs %s', task)
-        return []
+        '''
+        Get all outputs for a task using WES API
+        task: A dictionary containing the run information, including the WES run ID
+        '''
+        # Set up auth if provided
+        auth = None
+        if self.wes_username and self.wes_password:
+            auth = (self.wes_username, self.wes_password)
+        
+        # Extract the WES run ID from the task dictionary
+        run_id = task.get('id')
+        if not run_id:
+            logger.error("No run ID found in task object")
+            return []
+            
+        try:
+            # Get full run details from WES API
+            run_details_url = f"{self.wes_url}/runs/{run_id}"
+            response = httpx.get(run_details_url, auth=auth, timeout=30.0)
+            response.raise_for_status()
+            run_details = response.json()
+            if not run_details.get('outputs'):
+                logger.warning(f"No outputs available for run {run_id}")
+                return []
+
+            task_outputUri = run_details['outputs'].get('output_location')
+            if not task_outputUri:
+                logger.warning(f"No output_location found for run {run_id}")
+                return []
+                
+            output_json = task_outputUri.split(self.output_bucket+'/')[1] + run_id + "/logs/outputs.json"
+            response = self.s3_client.get_object(Bucket=self.output_bucket, Key=output_json)
+            content = response['Body'].read().decode("utf-8")
+            mapping = json.loads(content)
+
+            return list(mapping.keys())
+
+        except Exception as e:
+            logger.error(f"Error getting outputs for run {run_id}: {e}")
+            return []
 
     def get_task_state(self, task, refresh=False):
-        ''' 
-        Get status of run by task_id.
-        task: A dictionary of omics response from start_run. Includes Run ID, Name, Tags, etc.
+        '''
+        Get status of run by task_id using WES API.
+        task: A dictionary containing the run information, including the WES run ID.
         return status of the run (Complete, Failed, Running, Cancelled, Queued).
         '''
-
+        # Set up auth if provided
+        auth = None
+        if self.wes_username and self.wes_password:
+            auth = (self.wes_username, self.wes_password)
+        
+        # Extract the WES run ID from the task dictionary
+        run_id = task.get('id')
+        if not run_id:
+            logger.error("No run ID found in task object")
+            raise ValueError("No run ID found in task object")
+        
         try:
-            run_info = self.api.get_run(id=task['id'])
-            job_status = run_info['status']
-        except:
-            raise ValueError('No Status information found for job %s. Check job status.', task['id'])
+            # Get run status from WES API
+            run_status_url = f"{self.wes_url}/runs/{run_id}/status"
+            response = httpx.get(run_status_url, auth=auth, timeout=30.0)
+            response.raise_for_status()
+            result = response.json()
+            
+            # Map WES state to PAML state
+            wes_state = result.get('state')
+            logger.debug(f"WES state for run {run_id}: {wes_state}")
 
-        if job_status == 'COMPLETED':
-            return 'Complete'
-        if job_status == 'FAILED':
-            return 'Failed'
-        if job_status in ['STARTING','RUNNING','STOPPING']:
-            return 'Running'
-        if job_status in ['CANCELLED','DELETED']:
-            return 'Cancelled'
-        if job_status == 'PENDING':
+
+            logging.info('check state results')
+            logging.info(task)
+            logging.info(wes_state)
+            a=input()
+
+            if wes_state == 'COMPLETE':
+                return 'Complete'
+            if wes_state == 'EXECUTOR_ERROR' or wes_state == 'SYSTEM_ERROR':
+                return 'Failed'
+            if wes_state == 'RUNNING' or wes_state == 'INITIALIZING':
+                return 'Running'
+            if wes_state == 'CANCELED':
+                return 'Cancelled'
+            if wes_state == 'QUEUED' or wes_state == 'PAUSED':
+                return 'Queued'
+            
+            # Default to queued if we don't recognize the state
+            logger.warning(f"Unknown WES state: {wes_state} for run {run_id}")
             return 'Queued'
-
-        raise ValueError('Unknown task state: %s : %s', task['id'], job_status)
+            
+        except Exception as e:
+            logger.error(f"Error getting status for run {run_id}: {e}")
+            raise ValueError(f'No status information found for job {run_id}. Check job status.')
 
     def get_task_output(self, task, output_name):
-        ''' Retrieve the output field of the task '''
-        # Get output file mapping from outputs.json
-        taskinfo = self.api.get_run(id=task["id"])
-        output_json = taskinfo['outputUri'].split(self.output_bucket+'/')[1] + task["id"] + "/logs/outputs.json"
-        response = self.s3_client.get_object(Bucket=self.output_bucket, Key=output_json)
-        content = response['Body'].read().decode("utf-8")
-        mapping = json.loads(content)
+        '''
+        Retrieve the output field of the task using WES API
+        task: A dictionary containing the run information, including the WES run ID
+        output_name: Name of the output to retrieve
+        '''
+        # Set up auth if provided
+        auth = None
+        if self.wes_username and self.wes_password:
+            auth = (self.wes_username, self.wes_password)
+        
+        # Extract the WES run ID from the task dictionary
+        run_id = task.get('id')
+        if not run_id:
+            logger.error("No run ID found in task object")
+            raise KeyError("No run ID found in task object")
+        
+        try:
+            # Get full run details from WES API
+            run_details_url = f"{self.wes_url}/runs/{run_id}"
+            response = httpx.get(run_details_url, auth=auth, timeout=30.0)
+            response.raise_for_status()
+            run_details = response.json()
+            if not run_details.get('outputs'):
+                raise KeyError(f"No outputs available for run {run_id}")
 
-        if output_name not in mapping:
-            raise KeyError(f"Output field '{output_name}' not found in output json file.")
-        all_outputs = mapping[output_name]
-        if isinstance(all_outputs, list):
-            outputs = [c["location"] for c in all_outputs if "location" in c]
-            return outputs
+            task_outputUri = run_details['outputs'].get('output_location')
+            if not task_outputUri:
+                raise KeyError(f"No output_location found for run {run_id}")
+                
+            output_json = task_outputUri.split(self.output_bucket+'/')[1] + run_id + "/logs/outputs.json"
+            response = self.s3_client.get_object(Bucket=self.output_bucket, Key=output_json)
+            content = response['Body'].read().decode("utf-8")
+            mapping = json.loads(content)
 
-        if "location" in all_outputs:
-            return all_outputs["location"]
-        else:
-            raise KeyError(f"Could not find path for '{output_name}'")
+            if output_name not in mapping:
+                raise KeyError(f"Output field '{output_name}' not found in output json file.")
+            all_outputs = mapping[output_name]
+            if isinstance(all_outputs, list):
+                outputs = [c["location"] for c in all_outputs if "location" in c]
+                return outputs
+
+            if "location" in all_outputs:
+                return all_outputs["location"]
+            else:
+                raise KeyError(f"Could not find path for '{output_name}'")
+
+        except Exception as e:
+            logger.error(f"Error getting output {output_name} for run {run_id}: {e}")
+            raise KeyError(f"Could not retrieve output '{output_name}' for run {run_id}: {str(e)}")
 
     def get_task_output_filename(self, task, output_name):
-        ''' Retrieve the output field of the task and return filename'''
-        self.logger.info("TBD: Getting output filename for task %s", task)
+        '''
+        Retrieve the output field of the task and return filename
+        task: A dictionary containing the run information, including the WES run ID
+        output_name: Name of the output to retrieve
+        '''
         task_output_url = self.get_task_output(task, output_name)
+        
         if isinstance(task_output_url, list):
+            # Handle list of file URLs
             task_output_name = [fileurl.split('/')[-1] for fileurl in task_output_url]
-        else:
+        elif isinstance(task_output_url, str):
+            # Handle single file URL
             task_output_name = task_output_url.split('/')[-1]
+        else:
+            # Handle other types of outputs
+            run_id = task.get('id')
+            logger.warning(f"Output {output_name} for run {run_id} is not a file URL: {task_output_url}")
+            task_output_name = str(task_output_url)
+            
         return task_output_name
 
-    def get_tasks_by_name(self, project, task_name=None):
-        ''' Get a tasks by its name '''
-        tasks = []
-        runs = self.api.list_runs(name=task_name, runGroupId=project['RunGroupId'])
-        for item in runs['items']:
-            run = self.api.get_run(id=item['id'])
-            tasks.append(run)
-        return tasks
+    def get_tasks_by_name(self,
+                          project,
+                          task_name=None,
+                          inputs_to_compare=None,
+                          tasks=None):
+        '''
+        Get all processes/tasks in a project with a specified name, or all tasks
+        if no name is specified. Optionally, compare task inputs to ensure
+        equivalency (eg for reuse).
+        :param project: The project to search (run group ID)
+        :param task_name: The name of the process to search for (if None return all tasks)
+        :param inputs_to_compare: Inputs to compare to ensure task equivalency
+        :param tasks: List of tasks to search in (if None, query all tasks in project)
+        :return: List of task dictionaries with run information
+        '''
+        # Set up auth if provided
+        auth = None
+        if self.wes_username and self.wes_password:
+            auth = (self.wes_username, self.wes_password)
+        
+        matching_tasks = []
+        
+        try:
+            # If tasks is not provided, query tasks from WES API
+            if tasks is None:
+                # Get list of runs from WES API
+                list_runs_url = f"{self.wes_url}/runs"
+                response = httpx.get(list_runs_url, auth=auth, timeout=30.0)
+                response.raise_for_status()
+                result = response.json()
+                
+                # Extract the list of runs
+                runs = result.get('runs', [])
+                tasks = []
+                
+                # Filter by project tag if project is provided
+                if project:
+                    for run in runs:
+                        if run.get('tags') and run['tags'].get('Project') == project:
+                            # If task_name is provided, filter by name
+                            if task_name is None or run.get('name') == task_name:
+                                # Create a task dictionary with the necessary information
+                                task = {
+                                    "id": run.get('run_id'),
+                                    "name": run.get('name'),
+                                    "status": run.get('state'),
+                                    "project": project
+                                }
+                                tasks.append(task)
+                else:
+                    # Create task dictionaries for all runs
+                    for run in runs:
+                        task = {
+                            "id": run.get('run_id'),
+                            "name": run.get('name'),
+                            "status": run.get('state')
+                        }
+                        tasks.append(task)
+            else:
+                if task_name is not None:
+                    tasks = [task for task in tasks if task.get('name',None) == task_name]
+
+            # If inputs_to_compare is provided, we need to get full run details for each task
+            if inputs_to_compare:
+                for task in tasks:
+                    task_id = task.get('id')
+                    if not task_id:
+                        continue
+                    
+                    # Get full run details to check inputs
+                    try:
+                        run_details_url = f"{self.wes_url}/runs/{task_id}"
+                        details_response = httpx.get(run_details_url, auth=auth, timeout=30.0)
+                        details_response.raise_for_status()
+                        details = details_response.json()
+                        
+                        # Check if name matches
+                        if task_name is not None and details.get('name') != task_name:
+                            continue
+                        
+                        # Check if inputs match
+                        if details.get('request') and details['request'].get('workflow_params'):
+                            # Parse workflow params
+                            try:
+                                params = json.loads(details['request']['workflow_params'])
+                                all_inputs_match = True
+                                
+                                for input_name, input_value in inputs_to_compare.items():
+                                    if input_name not in params:
+                                        all_inputs_match = False
+                                        break
+                                    
+                                    if params[input_name] != input_value:
+                                        all_inputs_match = False
+                                        break
+                                
+                                if all_inputs_match:
+                                    # Update task with parameters
+                                    task['parameters'] = params
+                                    matching_tasks.append(task)
+                            except json.JSONDecodeError:
+                                logger.warning(f"Could not parse workflow params for run {task_id}")
+                    except Exception as e:
+                        logger.warning(f"Error getting details for run {task_id}: {e}")
+            else:
+                # If no inputs to compare, just return the tasks
+                matching_tasks = tasks
+            
+            return matching_tasks
+            
+        except Exception as e:
+            logger.error(f"Error getting tasks by name: {e}")
+            return []
 
     def get_project(self):
         '''
@@ -244,27 +534,20 @@ class OmicsPlatform(Platform):
         raise ValueError("Omics does not support get_project. Use get_project_by_id or get_project_by_name instead.")
 
     def get_project_by_name(self, project_name):
-        ''' Return a dictionary of project to provide RunGroupId tag info for omics jobs '''
+        ''' Return the run group ID as the project identifier '''
         response = self.api.list_run_groups(
             name=project_name, maxResults=100
         )
         if len(response['items'])>0:
             run_group_id = response['items'][0]['id']
-
-            project = {
-                'RunGroupId': run_group_id
-            }
-            return project
+            return run_group_id
 
         logger.error('Could not find project with name: %s', project_name)
-        return {}
+        return None
 
     def get_project_by_id(self, project_id):
-        ''' Return a dictionary of project to provide RunGroupId tag info for omics jobs'''
-        project = {
-            'RunGroupId': project_id
-        }
-        return project
+        ''' Return the project ID directly as the run group ID '''
+        return project_id
 
     def get_project_cost(self, project):
         ''' Return project cost '''
@@ -312,57 +595,97 @@ class OmicsPlatform(Platform):
     @retry(wait=wait_fixed(1), stop=stop_after_attempt(3))
     def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         '''
-        Submit workflow for one sample.
+        Submit workflow for one sample using GA4GH WES API.
         name: sample ID.
-        project: dictionary of {'RunGroupId': 'string'}
+        project: string containing the run group ID
         workflow: workflow ID in omics.
         parameters: dictionary of input parameters.
 
-        return omics response for start_run.
+        return: Dictionary containing run information including ID and name
         '''
         base_output_path = f"s3://{self.output_bucket}/Project/"
-        base_output_path += f"{project['RunGroupId']}/{workflow}/{name.replace(' ','')}/"
+        base_output_path += f"{project}/{workflow}/{name.replace(' ','')}/"
 
-        if "cacheId" in execution_settings:
-            cacheId = execution_settings["cacheId"]
-        else:
-            cacheId = None
-
+        # Prepare workflow engine parameters
+        workflow_engine_params = {
+            "roleArn": self.role_arn,
+            "runGroupId": project,
+            "name": name,
+            "outputUri": base_output_path,
+            "storageType": "DYNAMIC"
+        }
+        
+        # Add cache settings if provided
+        if execution_settings and "cacheId" in execution_settings:
+            workflow_engine_params["cacheId"] = execution_settings["cacheId"]
+            #workflow_engine_params["cacheBehavior"] = "CACHE_ON_FAILURE"
+            workflow_engine_params["cacheBehavior"] = "CACHE_ALWAYS"
+        
+        # Prepare tags
+        tags = {"Project": project}
+        
         try:
-            logger.debug("Starting run for %s", name)
-            if cacheId:
-                job = self.api.start_run(workflowId=workflow,
-                                     workflowType='PRIVATE',
-                                     roleArn=self.role_arn,
-                                     parameters=parameters,
-                                     name=name,
-                                     cacheId=cacheId,
-                                     cacheBehavior='CACHE_ON_FAILURE',
-                                     runGroupId=project["RunGroupId"],
-                                     tags={"Project": project["RunGroupId"]},
-                                     outputUri=base_output_path,
-                                     storageType="DYNAMIC")
-            else:
-                job = self.api.start_run(workflowId=workflow,
-                                     workflowType='PRIVATE',
-                                     roleArn=self.role_arn,
-                                     parameters=parameters,
-                                     name=name,
-                                     runGroupId=project["RunGroupId"],
-                                     tags={"Project": project["RunGroupId"]},
-                                     outputUri=base_output_path,
-                                     storageType="DYNAMIC")
-
-            logger.info('Started run for %s, RunID: %s',name,job['id'])
+            logger.debug("Starting run for %s via WES API", name)
+            
+            # Create WES API request
+            url = f"{self.wes_url}/runs"
+            
+            # Prepare request data
+            data = {
+                "workflow_url": f"omics:{workflow}",
+                "workflow_type": "CWL",  # Adjust as needed based on your workflow type
+                "workflow_type_version": "v1.0",
+                "workflow_params": json.dumps(parameters),
+                "workflow_engine_parameters": json.dumps(workflow_engine_params),
+                "tags": json.dumps(tags),
+                "name": name
+            }
+            
+            # Set up auth if provided
+            auth = None
+            if self.wes_username and self.wes_password:
+                auth = (self.wes_username, self.wes_password)
+            
+            # Submit the workflow
+            response = httpx.post(
+                url,
+                data=data,
+                auth=auth,
+                timeout=30.0
+            )
+            response.raise_for_status()
+            
+            # Parse response
+            result = response.json()
+            run_id = result.get("run_id")
+            
+            logger.info('Started run for %s, WES RunID: %s', name, run_id)
+            
+            # Create a job object with the necessary information
+            job = {
+                "id": run_id,
+                "name": name,
+                "status": "PENDING",
+                "project": project,
+                "workflow": workflow,
+                "parameters": parameters,
+                "outputUri": base_output_path
+            }
+            
             return job
-        except botocore.exceptions.ClientError as err:
+            
+        except httpx.HTTPStatusError as err:
+            logger.error('Could not start run for %s: HTTP error %s - %s',
+                        name, err.response.status_code, err.response.text)
+            return None
+        except Exception as err:
             logger.error('Could not start run for %s: %s', name, err)
             return None
 
     def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
         self.logger.info("Uploading file %s to project %s", filename, project)
         target_bucket = self.output_bucket
-        target_filepath = f"Project/{project['RunGroupId']}" + dest_folder
+        target_filepath = f"Project/{project}" + dest_folder
         if destination_filename:
             target_filepath += destination_filename
         else:
