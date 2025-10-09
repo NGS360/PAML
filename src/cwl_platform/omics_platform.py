@@ -7,6 +7,7 @@ import json
 import boto3
 import botocore
 import httpx
+import os
 
 from tenacity import retry, wait_fixed, stop_after_attempt
 
@@ -55,9 +56,9 @@ class OmicsPlatform(Platform):
         self.s3_client = boto3.client('s3')
         
         # WES API connection parameters
-        self.wes_url = kwargs.get('wes_url', 'http://localhost:8000/ga4gh/wes/v1')
-        self.wes_username = kwargs.get('wes_username')
-        self.wes_password = kwargs.get('wes_password')
+        self.wes_url = kwargs.get('wes_url', os.getenv('WES_URL'))
+        self.wes_username = kwargs.get('wes_username',os.getenv('WES_USERNAME'))
+        self.wes_password = kwargs.get('wes_password',os.getenv('WES_PASSWORD'))
 
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
@@ -276,7 +277,7 @@ class OmicsPlatform(Platform):
                 logger.warning(f"No output_location found for run {run_id}")
                 return []
                 
-            output_json = task_outputUri.split(self.output_bucket+'/')[1] + run_id + "/logs/outputs.json"
+            output_json = task_outputUri.split(self.output_bucket+'/')[1] + "logs/outputs.json"
             response = self.s3_client.get_object(Bucket=self.output_bucket, Key=output_json)
             content = response['Body'].read().decode("utf-8")
             mapping = json.loads(content)
@@ -315,12 +316,6 @@ class OmicsPlatform(Platform):
             wes_state = result.get('state')
             logger.debug(f"WES state for run {run_id}: {wes_state}")
 
-
-            logging.info('check state results')
-            logging.info(task)
-            logging.info(wes_state)
-            a=input()
-
             if wes_state == 'COMPLETE':
                 return 'Complete'
             if wes_state == 'EXECUTOR_ERROR' or wes_state == 'SYSTEM_ERROR':
@@ -350,27 +345,27 @@ class OmicsPlatform(Platform):
         auth = None
         if self.wes_username and self.wes_password:
             auth = (self.wes_username, self.wes_password)
-        
+
         # Extract the WES run ID from the task dictionary
         run_id = task.get('id')
         if not run_id:
             logger.error("No run ID found in task object")
             raise KeyError("No run ID found in task object")
-        
         try:
             # Get full run details from WES API
             run_details_url = f"{self.wes_url}/runs/{run_id}"
             response = httpx.get(run_details_url, auth=auth, timeout=30.0)
             response.raise_for_status()
             run_details = response.json()
+
             if not run_details.get('outputs'):
                 raise KeyError(f"No outputs available for run {run_id}")
 
             task_outputUri = run_details['outputs'].get('output_location')
             if not task_outputUri:
                 raise KeyError(f"No output_location found for run {run_id}")
-                
-            output_json = task_outputUri.split(self.output_bucket+'/')[1] + run_id + "/logs/outputs.json"
+            
+            output_json = task_outputUri.split(self.output_bucket+'/')[1] + "logs/outputs.json"
             response = self.s3_client.get_object(Bucket=self.output_bucket, Key=output_json)
             content = response['Body'].read().decode("utf-8")
             mapping = json.loads(content)
