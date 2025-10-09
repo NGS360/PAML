@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.3.2](https://github.com/NGS360/PAML.git/releases/tag/v0.3.2) - 2025-07-12
+
+### Fixed
+
+- ArvadosPlatform::get_tasks_by_name was not properly handling list of tasks provided
+
+## [v0.3.1](https://github.com/NGS360/PAML.git/releases/tag/v0.3.1) - 2025-06-09
+
+### Added
+
+- get_tasks_by_name can now return all tasks in a project, to assist with caching
+
+### Changed
+
+- Update Arvados Python Client requirement to use >=3.0.0 and <3.2.0
+
+## [v0.3](https://github.com/NGS360/PAML.git/releases/tag/v0.3) - 2025-06-02
+
+### Added
+
+- Added get_costs method
+- Added get_projects method
+
+### Changed
+
+- Update Arvados Python Client to 3.1.1
+- get_task_by_name now checks for equilevant input values 
+- Remove SevenBridges Endpoint and make that a parameter to connect()
+- Update get_task_input to handle list of files
+- Resolve failing SBG integration test
+
 ## [v0.2.5](https://github.com/NGS360/PAML.git/releases/tag/v0.2.5) - 2025-03-11
 
 ### Added

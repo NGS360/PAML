@@ -3,9 +3,12 @@ SevenBridges Platform class
 '''
 import os
 import logging
+from typing import Any
 import sevenbridges
 from sevenbridges.errors import SbgError
-from sevenbridges.http.error_handlers import rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
+from sevenbridges.http.error_handlers import (
+    rate_limit_sleeper, maintenance_sleeper, general_error_sleeper
+)
 
 from .base_platform import Platform
 
@@ -23,14 +26,34 @@ class SevenBridgesPlatform(Platform):
         self._session_id = os.environ.get('SESSION_ID')
         self.logger = logging.getLogger(__name__)
 
-        self.api_endpoint = 'https://bms-api.sbgenomics.com/v2'
-        self.token = 'dummy'
-
-        if not self._session_id:
+        if self._session_id:
+            self.api_endpoint = None
+            self.token = None
+        else:
             if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
                 self.api_config = sevenbridges.Config(profile='default')
             else:
                 raise ValueError('No SevenBridges credentials found')
+
+    def connect(self, **kwargs):
+        ''' Connect to Sevenbridges '''
+        if self._session_id:
+            self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
+            self.token = kwargs.get('token', self.token)
+
+            self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
+                                        error_handlers=[rate_limit_sleeper,
+                                                        maintenance_sleeper,
+                                                        general_error_sleeper],
+                                        advance_access=True)
+            self.api._session_id = self._session_id  # pylint: disable=protected-access
+        else:
+            self.api = sevenbridges.Api(config=self.api_config,
+                                        error_handlers=[rate_limit_sleeper,
+                                                        maintenance_sleeper,
+                                                        general_error_sleeper],
+                                        advance_access=True)
+        self.connected = True
 
     # File methods
     def _find_or_create_path(self, project, path):
@@ -137,7 +160,8 @@ class SevenBridgesPlatform(Platform):
         sbg_destination_folder = self._find_or_create_path(destination_project, source_folder)
         # Copy the files from the reference project to the destination project
         reference_files = self._list_files_in_folder(project=source_project, folder=source_folder)
-        destination_files = list(self._list_files_in_folder(project=destination_project, folder=source_folder))
+        destination_files = list(self._list_files_in_folder(project=destination_project,
+                                                            folder=source_folder))
         for reference_file in reference_files:
             if reference_file.is_folder():
                 source_folder_rec = os.path.join(source_folder, reference_file.name)
@@ -229,7 +253,8 @@ class SevenBridgesPlatform(Platform):
 
     def _get_folder_contents(self, path, folder, filters):
         '''
-        Recusivelly returns all the files in a directory and subdirectories in a SevenBridges project.
+        Recusivelly returns all the files in a directory and subdirectories
+        in a SevenBridges project.
 
         :param path: path of file
         :param folder: SBG Folder reference
@@ -356,10 +381,14 @@ class SevenBridgesPlatform(Platform):
         if newtag not in target_file.tags:
             target_file.tags += [newtag]
             target_file.save()
-        if hasattr(target_file,'secondary_files') and target_file.secondary_files is not None:
+        if hasattr(target_file, 'secondary_files') and target_file.secondary_files is not None:
             secondary_files = target_file.secondary_files
             for secfile in secondary_files:
-                if isinstance(secfile,sevenbridges.models.file.File) and secfile.tags and newtag not in secfile.tags:
+                if (
+                    isinstance(secfile,sevenbridges.models.file.File) and
+                    secfile.tags and
+                    newtag not in secfile.tags
+                ):
                     secfile.tags += [newtag]
                     secfile.save()
 
@@ -385,7 +414,8 @@ class SevenBridgesPlatform(Platform):
         '''
         self.logger.warning("stage_output_files to be deprecated in future release.")
         for output_file in output_files:
-            self.logger.info("Staging output file %s -> %s", output_file['source'], output_file['destination'])
+            self.logger.info("Staging output file %s -> %s",
+                             output_file['source'], output_file['destination'])
             outfile = self.api.files.get(id=output_file['source'])
             if isinstance(outfile, sevenbridges.models.file.File):
                 if outfile.type == "file":
@@ -400,12 +430,14 @@ class SevenBridgesPlatform(Platform):
                         elif file.type == "folder":
                             self._add_tag_to_folder(file, "OUTPUT")
 
-    def upload_file(self, filename, project, dest_folder=None, destination_filename=None, overwrite=False): # pylint: disable=too-many-arguments
+    def upload_file(self, filename, project, dest_folder=None, destination_filename=None,
+                    overwrite=False): # pylint: disable=too-many-arguments
         '''
         Upload a local file to project 
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
-        :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
+        :param dest_folder: The target path to the folder that file will be uploaded to.
+        None will upload to root.
         :param destination_filename: File name after uploaded to destination folder.
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
@@ -472,7 +504,8 @@ class SevenBridgesPlatform(Platform):
         destination_workflows = list(destination_project.get_apps().all())
         # Copy the workflow if it doesn't already exist in the destination project
         for workflow in reference_workflows:
-            # NOTE This is also copies archived apps.  How do we filter those out?  Asked Nikola, waiting for response.
+            # NOTE This is also copies archived apps.  How do we filter those out?
+            # Asked Nikola, waiting for response.
             if workflow.name not in [wf.name for wf in destination_workflows]:
                 destination_workflows.append(workflow.copy(project=destination_project.id))
         return destination_workflows
@@ -504,7 +537,7 @@ class SevenBridgesPlatform(Platform):
         task_cost = 0.0
         try:
             task_cost = task.price.amount
-        except:
+        except Exception:
             pass
         return task_cost
 
@@ -566,18 +599,103 @@ class SevenBridgesPlatform(Platform):
                 return task.outputs[output_name].name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def get_tasks_by_name(self, project, task_name=None): # -> list(sevenbridges.Task):
+    def _compare_platform_object(self, platform_object:Any, input_to_compare:Any) -> bool:
         '''
-        Get all processes/tasks in a project with a specified name
+        Compare a platform object to a CWL representation of the object
+        For example, a SevenBridges File object to a CWL File object
+        :param platform_object: Object to compare to, such as an input or output
+        :param input_to_compare: CWL representation of the object
+        :return: True if the object is equivalent, False otherwise
+        '''
+        if isinstance(platform_object, sevenbridges.File):
+            if platform_object.is_folder():
+                if (
+                    not isinstance(input_to_compare, dict) or
+                    input_to_compare.get("class") != "Directory"
+                ):
+                    self.logger.debug("Platform object is a Directory, but input to compare is not")
+                    return False
+                folder_contents = list(platform_object.list_files().all())
+                if not len(folder_contents) == len(input_to_compare['listing']):
+                    self.logger.debug("Platform object and input to compare are not the same length")
+                    return False
+                for platform_element, input_element in zip(
+                    folder_contents,
+                    input_to_compare['listing']):
+                    # Directory inputs are sorted alphabetically, so while this check is order-
+                    # dependent, this is unlikely to differ in reality if elements are the same
+                    if not self._compare_platform_object(platform_element, input_element):
+                        self.logger.debug(
+                            "Platform object and input to compare were not the same: %s != %s",
+                            platform_element, input_element
+                        )
+                        return False
+                return True
+            if not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "File":
+                self.logger.debug("Platform object is a File, but input to compare is not")
+                return False
+            return platform_object.id == input_to_compare.get("path")
+
+        if isinstance(platform_object, list):
+            if not isinstance(input_to_compare, list):
+                self.logger.debug("Platform object is a list, but input to compare is not")
+                return False
+            if len(platform_object) != len(input_to_compare):
+                self.logger.debug("Platform object and input to compare are not the same length")
+                return False
+            for task_input, input_element in zip(platform_object, input_to_compare):
+                # this is intentionally sensitive to order
+                if not self._compare_platform_object(task_input, input_element):
+                    self.logger.debug(
+                        "Platform object and input to compare were not the same: %s != %s",
+                        task_input, input_element
+                    )
+                    return False
+            return True
+
+        return platform_object == input_to_compare
+
+    def get_tasks_by_name(self,
+                          project:str,
+                          task_name:str=None,
+                          inputs_to_compare:dict=None,
+                          tasks:list=None) -> list: # -> list(sevenbridges.Task)
+        '''
+        Get all processes/tasks in a project with a specified name, or all tasks
+        if no name is specified. Optionally, compare task inputs to ensure
+        equivalency (eg for reuse).
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
+        :param inputs_to_compare: Inputs to compare to ensure task equivalency
+        :param tasks: List of tasks to search in (if None, query all tasks in project)
         :return: List of tasks
         '''
-        tasks = []
-        for task in self.api.tasks.query(project=project).all():
-            if task_name is None or task.name == task_name:
-                tasks.append(task)
-        return tasks
+        matching_tasks = []
+
+        if tasks is None:
+            tasks = self.api.tasks.query(project=project).all()
+
+        for task in tasks:
+            if inputs_to_compare is None:
+                if task_name is None or task.name == task_name:
+                    matching_tasks.append(task)
+            else:
+                if task.name == task_name:
+                    for input_name, input_value in inputs_to_compare.items():
+                        if input_name not in task.inputs:
+                            self.logger.debug("Input %s not found in task %s", input_name, task.id)
+                            break
+                        if not self._compare_platform_object(task.inputs[input_name], input_value):
+                            self.logger.debug(
+                                "Task %s input %s does not match: %s vs query %s",
+                                task.id, input_name, task.inputs[input_name], input_value
+                            )
+                            break
+                    else:
+                        # If we didn't break, then the task matches the inputs
+                        self.logger.debug("Task %s matches inputs", task.id)
+                        matching_tasks.append(task)
+        return matching_tasks
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
         '''
@@ -639,7 +757,8 @@ class SevenBridgesPlatform(Platform):
                         sbgfile = self.api.files.get(id=entry['location'])
                     set_file_metadata(sbgfile, entry['metadata'])
 
-        use_spot_instance = execution_settings.get('use_spot_instance', True) if execution_settings else True
+        use_spot_instance = execution_settings.get('use_spot_instance', True) \
+            if execution_settings else True
         sbg_execution_settings = {'use_elastic_disk': True, 'use_memoization': True}
 
         # This metadata code will come out as part of the metadata removal effort.
@@ -779,30 +898,14 @@ class SevenBridgesPlatform(Platform):
         for division in divisions:
             platform_users = self.api.users.query(division=division, limit=500).all()
             for platform_user in platform_users:
-                if user.lower() in platform_user.username.lower() or platform_user.email.lower() == user.lower():
+                if (
+                    user.lower() in platform_user.username.lower() or
+                    platform_user.email.lower() == user.lower()
+                ):
                     return platform_user
         return None
 
     # Other methods
-    def connect(self, **kwargs):
-        ''' Connect to Sevenbridges '''
-        self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
-        self.token = kwargs.get('token', self.token)
-
-        if self._session_id:
-            self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
-                                        error_handlers=[rate_limit_sleeper,
-                                                        maintenance_sleeper,
-                                                        general_error_sleeper],
-                                        advance_access=True)
-            self.api._session_id = self._session_id  # pylint: disable=protected-access
-        else:
-            self.api = sevenbridges.Api(config=self.api_config,
-                                        error_handlers=[rate_limit_sleeper,
-                                                        maintenance_sleeper,
-                                                        general_error_sleeper],
-                                        advance_access=True)
-        self.connected = True
 
     @classmethod
     def detect(cls):
