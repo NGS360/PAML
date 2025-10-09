@@ -1,6 +1,7 @@
 '''
 Test Module for Arvados Platform
 '''
+# pylint: disable=protected-access
 import json
 import os
 
@@ -111,7 +112,9 @@ class TestArvadosPlaform(unittest.TestCase):
     def test_get_task_output(self, mock__load_cwl_output):
         ''' Test that get_task_output can handle cases when the cwl_output is {} '''
         # Set up test parameters
-        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        task = ArvadosTask(container_request={"uuid":"uuid",
+                                              "output_uuid": "output_uuid"},
+                           container={})
         # Set up supporting mocks
         mock__load_cwl_output.return_value = {}
         # Test
@@ -121,9 +124,13 @@ class TestArvadosPlaform(unittest.TestCase):
 
     @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
     def test_get_task_output_optional_step_file_missing(self, mock__load_cwl_output):
-        ''' Test that get_task_output can handle cases when an optional step file is missing in cwl_output '''
+        ''' 
+        Test that get_task_output can handle cases when an optional 
+        step file is missing in cwl_output 
+        '''
         # Set up test parameters
-        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"},
+                           container={})
         # Set up supporting mocks
         mock__load_cwl_output.return_value = {'some_output_field': None}
         # Test
@@ -132,9 +139,13 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertIsNone(actual_value)
     @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
     def test_get_task_output_nonexistent_output(self, mock__load_cwl_output):
-        ''' Test that get_task_output can handle cases when the output is non-existent in cwl_output '''
+        ''' 
+        Test that get_task_output can handle cases when the 
+        output is non-existent in cwl_output
+        '''
         # Set up test parameters
-        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"},
+                           container={})
         # Set up supporting mocks
         mock__load_cwl_output.return_value = {'other_output_field': None}
         # Test
@@ -147,10 +158,14 @@ class TestArvadosPlaform(unittest.TestCase):
         ''' Test get_task_output_filename method with single dictionary output '''
         # Set up mocks
         expected_filename = "output_file.txt"
-        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
-        mock_collection.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps({
-            "output_name": {"basename": expected_filename}
-        })
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"},
+                           container={})
+        mock_collection.return_value. \
+            open.return_value \
+            .__enter__.return_value \
+            .read.return_value = json.dumps({
+                "output_name": {"basename": expected_filename}
+            })
 
         # Test
         filename = self.platform.get_task_output_filename(task, "output_name")
@@ -165,9 +180,14 @@ class TestArvadosPlaform(unittest.TestCase):
         ''' Test get_task_output_filename method with list output '''
         # Set up mocks
         expected_filenames = ["output_file1.txt", "output_file2.txt"]
-        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
-        mock_collection.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps({
-            "output_name": [{"basename": expected_filenames[0]}, {"basename": expected_filenames[1]}]
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"},
+                           container={})
+        mock_collection.return_value \
+            .open.return_value \
+            .__enter__.return_value \
+            .read.return_value = json.dumps({
+            "output_name": [{"basename": expected_filenames[0]},
+                            {"basename": expected_filenames[1]}]
         })
 
         # Test
@@ -180,10 +200,14 @@ class TestArvadosPlaform(unittest.TestCase):
     def test_output_filename_nonexistant_output_name(self, mock_collection):
         ''' Test get_task_output_filename method when output name does not exist '''
         # Set up mocks
-        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
-        mock_collection.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps({
-            "output_name": []
-        })
+        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"},
+                           container={})
+        mock_collection.return_value \
+            .open.return_value \
+            .__enter__.return_value \
+            .read.return_value = json.dumps({
+                "output_name": []
+            })
 
         # Test
         with self.assertRaises(ValueError):
@@ -193,10 +217,15 @@ class TestArvadosPlaform(unittest.TestCase):
     def test_output_filename_none(self, mock_collection):
         ''' Test get_task_output_filename method when value of output_name is None '''
         # Set up mocks
-        task = ArvadosTask(container_request={"uuid":"uuid", "output_uuid": "output_uuid"}, container={})
-        mock_collection.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps({
-            "output_name": None
-        })
+        task = ArvadosTask(container_request={"uuid": "uuid",
+                                              "output_uuid": "output_uuid"},
+                           container={})
+        mock_collection.return_value \
+            .open.return_value \
+            .__enter__.return_value \
+            .read.return_value = json.dumps({
+                "output_name": None
+            })
 
         # Test
         with self.assertRaises(ValueError):
@@ -271,11 +300,13 @@ class TestArvadosPlaform(unittest.TestCase):
         with mock.patch('arvados.collection.Collection') as _:
             with mock.patch('arvados.collection.Collection') as mock_destination_collection_object:
                 # Test
-                result = self.platform.copy_folder(source_project, source_folder, destination_project)
+                result = self.platform.copy_folder(source_project,
+                                                   source_folder,
+                                                   destination_project)
 
                 # Assertions
-                self.assertIsNotNone(result)  # Ensure the result is not None
-                self.assertEqual(result['uuid'], 'destination-uuid')  # Ensure we got the correct destination UUID
+                self.assertIsNotNone(result)
+                self.assertEqual(result['uuid'], 'destination-uuid')
                 # Ensure a file is copied to the destination collection
                 self.assertEqual(mock_destination_collection_object().copy.call_count, 1)
                 self.assertEqual(mock_destination_collection_object().save.call_count, 1)
@@ -301,7 +332,9 @@ class TestArvadosPlaform(unittest.TestCase):
 
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
-    def test_copy_folder_create_destination_collection(self, mock_get_files_list, mock_lookup_folder_name):
+    def test_copy_folder_create_destination_collection(self,
+                                                       mock_get_files_list,
+                                                       mock_lookup_folder_name):
         ''' Test copy_folder method with file streaming to CREATE the destination collection'''
         # Set up test parameters
         source_project = {"uuid": "source-project-uuid"}
@@ -348,7 +381,9 @@ class TestArvadosPlaform(unittest.TestCase):
         with mock.patch('arvados.collection.Collection') as _:
             with mock.patch('arvados.collection.Collection') as mock_destination_collection_object:
                 # Test
-                result = self.platform.copy_folder(source_project, source_folder, destination_project)
+                result = self.platform.copy_folder(source_project,
+                                                   source_folder,
+                                                   destination_project)
 
                 # Assertions
                 self.assertIsNotNone(result)  # Ensure the result is not None
@@ -366,12 +401,394 @@ class TestArvadosPlaform(unittest.TestCase):
         project = {'uuid': 'aproject'}
         dest_folder = '/inputs'
         # Set up supporting mocks
-        self.platform.api.collections().create().execute.return_value = {'uuid': 'a_destination_collection'}
+        self.platform.api.collections().create().execute.return_value = {
+            'uuid': 'a_destination_collection'
+        }
         # Test
         actual_result = self.platform.upload_file(
             filename, project, dest_folder, destination_filename=None, overwrite=False)
         # Check results
         self.assertEqual(actual_result, "keep:a_destination_collection/file.txt")
+
+    def test_get_tasks_by_name(self):
+        ''' Test get_tasks_by_name method with task name only '''
+        matching_task_name = "matching_task"
+        non_matching_task_name = "non_matching_task"
+
+        # Mock container requests and containers
+        mock_container_request1 = {
+            'name': matching_task_name,
+            'container_uuid': 'container1',
+            'uuid': 'request1'
+        }
+        mock_container_request2 = {
+            'name': non_matching_task_name,
+            'container_uuid': 'container2',
+            'uuid': 'request2'
+        }
+        mock_container1 = {'uuid': 'container1'}
+        mock_container2 = {'uuid': 'container2'}
+
+        # Mock the API calls
+        self.platform.api.container_requests().list.return_value = MagicMock()
+        mock_keyset_list_all = MagicMock(return_value = [mock_container_request1,
+                                                       mock_container_request2])
+
+        with mock.patch('arvados.util.keyset_list_all', mock_keyset_list_all):
+            self.platform.api.containers().get().execute.side_effect = [
+                mock_container1, mock_container2
+            ]
+
+            # Test
+            result = self.platform.get_tasks_by_name({'uuid': 'project_uuid'}, matching_task_name)
+
+            # Assert
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0].container_request['name'], matching_task_name)
+
+    def test_get_tasks_by_name_match_all(self):
+        ''' Test get_tasks_by_name method with no task name (should return all tasks) '''
+        project = {'uuid': 'project_uuid'}
+
+        # Add two tasks with different names to the project
+        task1_name = "task1"
+        task2_name = "task2"
+
+        # Mock container requests and containers
+        mock_container_request1 = {
+            'name': task1_name,
+            'container_uuid': 'container1',
+            'uuid': 'request1'
+        }
+        mock_container_request2 = {
+            'name': task2_name,
+            'container_uuid': 'container2',
+            'uuid': 'request2'
+        }
+        mock_container1 = {'uuid': 'container1'}
+        mock_container2 = {'uuid': 'container2'}
+
+        # Mock the API calls
+        #self.platform.api.container_requests().list.return_value = MagicMock()
+        mock_keyset_list_all = MagicMock(return_value=[mock_container_request1,
+                                                       mock_container_request2])
+
+        with mock.patch('arvados.util.keyset_list_all', mock_keyset_list_all):
+            self.platform.api.containers().get().execute.side_effect = [
+                mock_container1, mock_container2
+            ]
+
+            # Test
+            result = self.platform.get_tasks_by_name(project)
+
+            # Assert
+            self.assertEqual(len(result), 2)
+            self.assertEqual(result[0].container_request['name'], task1_name)
+            self.assertEqual(result[1].container_request['name'], task2_name)
+
+    def test_get_tasks_by_name_from_provided_tasks(self):
+        ''' Test that get_task_by_name can use provided tasks '''
+        project = {'uuid': 'project_uuid'}
+
+        # Mock container requests and containers
+        container_request1 = {'name': 'task1', 'uuid': 'request1', 'container_uuid': 'container1'}
+        container_request2 = {'name': 'task2', 'uuid': 'request2', 'container_uuid': 'container2'}
+        container1 = {'uuid': 'container1'}
+        container2 = {'uuid': 'container2'}
+
+        tasks = [
+            ArvadosTask(container_request=container_request1, container=container1),
+            ArvadosTask(container_request=container_request2, container=container2)
+        ]
+        # Test
+        self.platform.api.containers().get().execute.side_effect = [
+            container1, container2
+        ]
+        result = self.platform.get_tasks_by_name(project, task_name='task1', tasks=tasks)
+        # Assert
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].container_request['name'], 'task1')
+
+    def test_get_tasks_by_name_match_name_and_inputs(self):
+        ''' Test get_tasks_by_name method with task name and matching inputs '''
+        task_name = "sample_task"
+
+        # Define inputs to compare
+        inputs_to_compare = {
+            'input1': {
+                'class': 'File',
+                'path': 'keep:file1'
+            },
+            'input2': [
+                {
+                    'class': 'File',
+                    'path': 'keep:file2'
+                },
+                {
+                    'class': 'File',
+                    'path': 'keep:file3'
+                }
+            ]
+        }
+
+        # Mock container requests with matching and non-matching inputs
+        mock_container_request1 = {
+            'name': task_name,
+            'container_uuid': 'container1',
+            'uuid': 'request1',
+            'properties': {
+                'cwl_input': {
+                    'input1': {
+                        'class': 'File',
+                        'location': 'keep:file1'
+                    },
+                    'input2': [
+                        {
+                            'class': 'File',
+                            'location': 'keep:file2'
+                        },
+                        {
+                            'class': 'File',
+                            'location': 'keep:file3'
+                        }
+                    ]
+                }
+            }
+        }
+
+        mock_container_request2 = {
+            'name': task_name,
+            'container_uuid': 'container2',
+            'uuid': 'request2',
+            'properties': {
+                'cwl_input': {
+                    'input1': {
+                        'class': 'File',
+                        'location': 'keep:file1'
+                    },
+                    'input2': [
+                        {
+                            'class': 'File',
+                            'location': 'keep:file2'
+                        },
+                        {
+                            'class': 'File',
+                            'location': 'keep:different_file3'  # Different file
+                        }
+                    ]
+                }
+            }
+        }
+
+        mock_container1 = {'uuid': 'container1'}
+        mock_container2 = {'uuid': 'container2'}
+
+        # Mock the API calls
+        self.platform.api.container_requests().list.return_value = MagicMock()
+        mock_keyset_list_all = MagicMock(return_value=[
+            mock_container_request1, mock_container_request2
+        ])
+
+        with mock.patch('arvados.util.keyset_list_all', mock_keyset_list_all):
+            self.platform.api.containers().get().execute.side_effect = [
+                mock_container1, mock_container2
+            ]
+
+            # Test
+            result = self.platform.get_tasks_by_name(
+                {'uuid': 'project_uuid'},
+                task_name=task_name,
+                inputs_to_compare=inputs_to_compare
+            )
+
+            # Assert
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0].container_request['uuid'], 'request1')
+
+    def test_get_tasks_by_name_with_new_task_added(self):
+        '''
+        Test get_tasks_by_name method with a new task added to the project will still work correctly.
+        A new task may only have a uuid and not a name associated with it.
+        '''
+        project = {'uuid': 'project_uuid'}
+
+        # Mock container requests and containers
+        mock_container_request1 = {
+            'name': 'task1',
+            'uuid': 'request1'
+        }
+        tasks = [ArvadosTask(
+            container_request=mock_container_request1,
+            container=None
+        )]
+
+        # Test
+        result = self.platform.get_tasks_by_name(project, 'task2', tasks=tasks)
+
+        # Assert
+        self.assertListEqual(result, [])
+
+    def test_compare_inputs_simple_values(self):
+        ''' Test the _compare_inputs helper method with simple values '''
+        # Test string values
+        self.assertTrue(self.platform._compare_inputs("test", "test"))
+        self.assertFalse(self.platform._compare_inputs("test", "different"))
+
+        # Test numeric values
+        self.assertTrue(self.platform._compare_inputs(123, 123))
+        self.assertFalse(self.platform._compare_inputs(123, 456))
+
+        # Test boolean values
+        self.assertTrue(self.platform._compare_inputs(True, True))
+        self.assertFalse(self.platform._compare_inputs(True, False))
+
+        # Test None values
+        self.assertTrue(self.platform._compare_inputs(None, None))
+        self.assertFalse(self.platform._compare_inputs(None, "not none"))
+
+    def test_compare_inputs_file_objects(self):
+        ''' Test the _compare_inputs helper method with File objects '''
+        # Test matching File objects
+        file1 = {
+            'class': 'File',
+            'location': 'keep:file1'
+        }
+        file1_compare = {
+            'class': 'File',
+            'path': 'keep:file1'
+        }
+        self.assertTrue(self.platform._compare_inputs(file1, file1_compare))
+
+        # Test non-matching File objects
+        file2 = {
+            'class': 'File',
+            'location': 'keep:file2'
+        }
+        self.assertFalse(self.platform._compare_inputs(file1, file2))
+
+        # Test File object with missing location
+        file_missing_location = {
+            'class': 'File'
+        }
+        self.assertFalse(self.platform._compare_inputs(file_missing_location, file1_compare))
+
+    def test_compare_inputs_lists(self):
+        ''' Test the _compare_inputs helper method with lists '''
+        # Test matching simple lists
+        list1 = [1, 2, 3]
+        list2 = [1, 2, 3]
+        self.assertTrue(self.platform._compare_inputs(list1, list2))
+
+        # Test non-matching simple lists
+        list3 = [1, 2, 4]
+        self.assertFalse(self.platform._compare_inputs(list1, list3))
+
+        # Test lists of different lengths
+        list4 = [1, 2]
+        self.assertFalse(self.platform._compare_inputs(list1, list4))
+
+        # Test lists with File objects
+        list_files1 = [
+            {'class': 'File', 'location': 'keep:file1'},
+            {'class': 'File', 'location': 'keep:file2'}
+        ]
+        list_files2 = [
+            {'class': 'File', 'path': 'keep:file1'},
+            {'class': 'File', 'path': 'keep:file2'}
+        ]
+        self.assertTrue(self.platform._compare_inputs(list_files1, list_files2))
+
+        # Test lists with non-matching File objects
+        list_files3 = [
+            {'class': 'File', 'location': 'keep:file1'},
+            {'class': 'File', 'location': 'keep:different_file'}
+        ]
+        self.assertFalse(self.platform._compare_inputs(list_files1, list_files3))
+
+    def test_compare_inputs_nested_structures(self):
+        ''' Test the _compare_inputs helper method with nested structures '''
+        # Test matching nested dictionaries
+        nested1 = {
+            'a': 1,
+            'b': {
+                'c': 2,
+                'd': [3, 4]
+            }
+        }
+        nested2 = {
+            'a': 1,
+            'b': {
+                'c': 2,
+                'd': [3, 4]
+            }
+        }
+        self.assertTrue(self.platform._compare_inputs(nested1, nested2))
+
+        # Test nested dictionaries with different values
+        nested3 = {
+            'a': 1,
+            'b': {
+                'c': 2,
+                'd': [3, 5]  # Different value
+            }
+        }
+        self.assertFalse(self.platform._compare_inputs(nested1, nested3))
+
+        # This should now return False because we require dictionaries to have identical keys
+        self.assertFalse(self.platform._compare_inputs(nested1, {'a': 1}))
+
+        # Test nested structure with Directory objects
+        dir1 = {
+            'class': 'Directory',
+            'location': 'keep:dir1',
+            'listing': [
+                {'class': 'File', 'location': 'keep:file1'},
+                {'class': 'File', 'location': 'keep:file2'}
+            ]
+        }
+        dir2 = {
+            'class': 'Directory',
+            'path': 'keep:dir1',
+            'listing': [
+                {'class': 'File', 'path': 'keep:file1'},
+                {'class': 'File', 'path': 'keep:file2'}
+            ]
+        }
+        self.assertTrue(self.platform._compare_inputs(dir1, dir2))
+
+        # Test nested structure with non-matching Directory objects
+        dir3 = {
+            'class': 'Directory',
+            'path': 'keep:dir1',
+            'listing': [
+                {'class': 'File', 'path': 'keep:file1'},
+                {'class': 'File', 'path': 'keep:different_file'}
+            ]
+        }
+        self.assertFalse(self.platform._compare_inputs(dir1, dir3))
+
+    def test_submit_task(self):
+        ''' Test that submit_task returns an ArvadosTask object where container_request has a name and uuid '''
+        name = "test_task"
+        project = {'uuid': 'test_project_uuid'}
+        workflow = {'uuid': 'test_workflow_uuid'}
+        parameters = {'param1': 'value1', 'param2': 'value2'}
+
+        with mock.patch('subprocess.check_output') as mock_subprocess_check_output:
+            mock_subprocess_check_output.return_value = b"container_request_uuid"
+            # Test
+            task = self.platform.submit_task(name, project, workflow, parameters, execution_settings=None)
+
+        # Assert that the returned task is an instance of ArvadosTask
+        self.assertIsInstance(task, ArvadosTask)
+        # Assert that the container_request has a name and uuid
+        self.assertIn('name', task.container_request)
+        self.assertIn('uuid', task.container_request)
+        self.assertEqual(task.container_request['name'], name)
+        self.assertIsNotNone(task.container_request['uuid'])
+        # Assert that the container is None (as per the current implementation)
+        self.assertIsNone(task.container)
+
 
 if __name__ == '__main__':
     unittest.main()
