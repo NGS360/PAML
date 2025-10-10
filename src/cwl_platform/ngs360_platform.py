@@ -136,8 +136,7 @@ class NGS360Platform(Platform):
 
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
-        if self.auth:
-
+            
         response = requests.request(
             method=method,
             url=url,
