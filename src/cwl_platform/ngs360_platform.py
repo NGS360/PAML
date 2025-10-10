@@ -88,19 +88,15 @@ class NGS360Platform(Platform):
             - auth_token: Authentication token for the WES API
         """
         self.api_endpoint = kwargs.get("api_endpoint", os.environ.get("WES_API_ENDPOINT"))
-        self.auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
-        if not self.auth_token:
-            self.username = os.environ.get("WES_USERNAME")
-            self.password = os.environ.get("WES_PASSWORD")
-            if self.username and self.password:
-                # Basic auth token
-                import base64
-
-                token = f"{self.username}:{self.password}"
-                self.auth_token = base64.b64encode(token.encode()).decode()
-
         if not self.api_endpoint:
             raise ValueError("WES API endpoint URL is required")
+
+        # Set up auth token or username/password as auth
+        self.auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
+        if not self.auth_token:
+            username = os.environ.get("WES_USERNAME")
+            password = os.environ.get("WES_PASSWORD")
+            self.auth = (username, password)
 
         # Test connection by getting service info
         try:
@@ -140,6 +136,7 @@ class NGS360Platform(Platform):
 
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
+        if self.auth:
 
         response = requests.request(
             method=method,
@@ -148,6 +145,7 @@ class NGS360Platform(Platform):
             json=data,
             files=files,
             params=params,
+            auth=self.auth
         )
 
         response.raise_for_status()
