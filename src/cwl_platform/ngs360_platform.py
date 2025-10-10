@@ -90,8 +90,8 @@ class NGS360Platform(Platform):
         self.api_endpoint = kwargs.get("api_endpoint", os.environ.get("WES_API_ENDPOINT"))
         self.auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
         if not self.auth_token:
-            self.username = os.environ.get("USERNAME")
-            self.password = os.environ.get("PASSWORD")
+            self.username = os.environ.get("WES_USERNAME")
+            self.password = os.environ.get("WES_PASSWORD")
             if self.username and self.password:
                 # Basic auth token
                 import base64
