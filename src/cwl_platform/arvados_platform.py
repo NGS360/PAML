@@ -653,18 +653,30 @@ class ArvadosPlatform(Platform):
             task.container = arvados.api().containers().get( # pylint: disable=not-callable
                 uuid = task.container_request['container_uuid']
                 ).execute()
+        if task.container_request['state'] == "Uncommitted":
+            return 'Cancelled' # For consistency w/ SBG, where DRAFT state returns 'CANCELLED'
 
-        if task.container['exit_code'] == 0:
-            return 'Complete'
-        if task.container['exit_code'] == 1:
-            return 'Failed'
-        if task.container['state'] == 'Running':
-            return 'Running'
-        if task.container['state'] == 'Cancelled':
-            return 'Cancelled'
-        if task.container['state'] in ['Locked', 'Queued']:
-            return 'Queued'
-        raise ValueError(f"TODO: Unknown task state: {task.container['state']}")
+        if task.container_request['state'] == "Committed":
+            if task.container['state'] in ['Locked', 'Queued']:
+                return 'Queued'
+            if task.container['state'] == 'Running':
+                return 'Running'
+            if task.container['state'] == "Complete":
+                return 'Running' # task is complete but outputs not yet available
+
+        if task.container_request['state'] == "Final":
+            if task.container['state'] == 'Cancelled':
+                return 'Cancelled'
+            if task.container['state'] == 'Complete':
+                if task.container['exit_code'] == 0:
+                    return 'Complete'
+                if task.container['exit_code'] > 0:
+                    return 'Failed'
+
+        raise ValueError(
+            f"Unknown task state: Container request state is {task.container_request['state']}, \
+            container state is {task.container['state']}"
+        )
 
     def get_task_output(self, task: ArvadosTask, output_name):
         ''' Retrieve the output field of the task '''
