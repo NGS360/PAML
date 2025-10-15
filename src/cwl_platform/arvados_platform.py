@@ -655,11 +655,11 @@ class ArvadosPlatform(Platform):
 
         if task.container_request['state'] == "Uncommitted":
             return 'Cancelled' # For consistency w/ SBG, where DRAFT state returns 'CANCELLED'
-        if task.container['state'] == 'Cancelled':
-            return 'Cancelled'
 
         # container request state is always committed in these cases
-        if task.container['state'] in ['Locked', 'Queued']:
+        if task.container is None or \
+            'state' not in task.container or \
+            task.container['state'] in ['Locked', 'Queued']:
             return 'Queued'
         if task.container['state'] == 'Running':
             return 'Running'
@@ -672,6 +672,9 @@ class ArvadosPlatform(Platform):
                     return 'Complete'
                 if task.container['exit_code'] > 0:
                     return 'Failed'
+
+        if task.container['state'] == 'Cancelled':
+            return 'Cancelled'
 
         raise ValueError(
             f"Unknown task state: Container request state is {task.container_request['state']}, \
