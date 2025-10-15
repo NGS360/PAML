@@ -646,23 +646,23 @@ class ArvadosPlatform(Platform):
         '''
         if refresh:
             # On newly submitted jobs, we'll only have a container_request, uuid.
-            # pylint gives a warning that avvados.api is not callable, when in fact it is.
-            task.container_request = arvados.api().container_requests().get( # pylint: disable=not-callable
+            task.container_request = self.api.container_requests().get(
                 uuid = task.container_request['uuid']
             ).execute()
-            task.container = arvados.api().containers().get( # pylint: disable=not-callable
+            task.container = self.api.containers().get(
                 uuid = task.container_request['container_uuid']
                 ).execute()
+
         if task.container_request['state'] == "Uncommitted":
             return 'Cancelled' # For consistency w/ SBG, where DRAFT state returns 'CANCELLED'
+        if task.container['state'] == 'Cancelled':
+            return 'Cancelled'
 
         # container request state is always committed in these cases
         if task.container['state'] in ['Locked', 'Queued']:
             return 'Queued'
         if task.container['state'] == 'Running':
             return 'Running'
-        if task.container['state'] == 'Cancelled':
-            return 'Cancelled'
 
         if task.container['state'] == "Complete":
             if task.container_request['state'] == "Committed":
