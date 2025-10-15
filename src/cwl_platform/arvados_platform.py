@@ -639,9 +639,9 @@ class ArvadosPlatform(Platform):
         '''
         Get workflow/task state
 
-        :param project: The project to search
         :param task: The task to search for. Task is an ArvadosTask containing
         a container_request_uuid and container dictionary.
+        :param refresh: If True, refresh the task state from the server
         :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
         '''
         if refresh:
