@@ -658,7 +658,6 @@ class ArvadosPlatform(Platform):
 
         # container request state is always committed in these cases
         if task.container is None or \
-            'state' not in task.container or \
             task.container['state'] in ['Locked', 'Queued']:
             return 'Queued'
         if task.container['state'] == 'Running':
