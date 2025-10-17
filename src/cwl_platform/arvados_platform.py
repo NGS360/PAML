@@ -726,7 +726,7 @@ class ArvadosPlatform(Platform):
         )
 
     def get_tasks_by_name(self,
-                          project:str,
+                          project,
                           task_name:str=None,
                           inputs_to_compare:dict=None,
                           tasks:List[ArvadosTask]=None) -> List[ArvadosTask]:
