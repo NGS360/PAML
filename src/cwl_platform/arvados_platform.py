@@ -639,6 +639,9 @@ class ArvadosPlatform(Platform):
         '''
         Get workflow/task state
 
+        Possible states are discussed at:
+        https://doc.arvados.org/main/api/methods/container_requests.html#:~:text=Container%20request%20lifecycle
+
         :param task: The task to search for. Task is an ArvadosTask containing
         a container_request_uuid and container dictionary.
         :param refresh: If True, refresh the task state from the server
