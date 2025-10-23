@@ -607,8 +607,9 @@ class TestArvadosPlaform(unittest.TestCase):
 
     def test_get_tasks_by_name_with_new_task_added(self):
         '''
-        Test get_tasks_by_name method with a new task added to the project will still work correctly.
-        A new task may only have a uuid and not a name associated with it.
+        Test get_tasks_by_name method with a new task added to the project
+        will still work correctly. A new task may only have a uuid and not 
+        a name associated with it.
         '''
         project = {'uuid': 'project_uuid'}
 
@@ -768,7 +769,10 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertFalse(self.platform._compare_inputs(dir1, dir3))
 
     def test_submit_task(self):
-        ''' Test that submit_task returns an ArvadosTask object where container_request has a name and uuid '''
+        '''
+        Test that submit_task returns an ArvadosTask object where container_request 
+        has a name and uuid
+        '''
         name = "test_task"
         project = {'uuid': 'test_project_uuid'}
         workflow = {'uuid': 'test_workflow_uuid'}
@@ -777,7 +781,11 @@ class TestArvadosPlaform(unittest.TestCase):
         with mock.patch('subprocess.check_output') as mock_subprocess_check_output:
             mock_subprocess_check_output.return_value = b"container_request_uuid"
             # Test
-            task = self.platform.submit_task(name, project, workflow, parameters, execution_settings=None)
+            task = self.platform.submit_task(name,
+                                             project,
+                                             workflow,
+                                             parameters,
+                                             execution_settings=None)
 
         # Assert that the returned task is an instance of ArvadosTask
         self.assertIsInstance(task, ArvadosTask)
@@ -836,7 +844,9 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertEqual(result, 'Running')
 
     def test_get_task_state_complete_committed(self):
-        ''' Test get_task_state returns Running when container Complete but request still Committed '''
+        '''
+        Test get_task_state returns Running when container Complete but request still Committed
+        '''
         task = ArvadosTask(
             container_request={'state': 'Committed', 'uuid': 'test-uuid'},
             container={'state': 'Complete', 'exit_code': 0}
@@ -875,10 +885,12 @@ class TestArvadosPlaform(unittest.TestCase):
         ''' Test get_task_state with refresh=True fetches fresh state from API '''
         # Set up task with initial state
         task = ArvadosTask(
-            container_request={'state': 'Committed', 'uuid': 'test-uuid', 'container_uuid': 'container-uuid'},
+            container_request={'state': 'Committed',
+                               'uuid': 'test-uuid',
+                               'container_uuid': 'container-uuid'},
             container=None
         )
-        
+
         # Mock API responses
         updated_container_request = {
             'state': 'Final',
@@ -893,14 +905,14 @@ class TestArvadosPlaform(unittest.TestCase):
         mock_container_request_get = MagicMock()
         mock_container_request_get.execute.return_value = updated_container_request
         self.platform.api.container_requests().get.return_value = mock_container_request_get
-        
+
         mock_container_get = MagicMock()
         mock_container_get.execute.return_value = updated_container
         self.platform.api.containers().get.return_value = mock_container_get
-        
+
         # Test
         result = self.platform.get_task_state(task, refresh=True)
-        
+
         # Assert
         self.assertEqual(result, 'Complete')
         self.platform.api.container_requests().get.assert_called_once_with(uuid='test-uuid')
