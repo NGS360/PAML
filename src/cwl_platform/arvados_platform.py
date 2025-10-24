@@ -639,32 +639,49 @@ class ArvadosPlatform(Platform):
         '''
         Get workflow/task state
 
-        :param project: The project to search
+        Possible states are discussed at:
+        https://doc.arvados.org/main/api/methods/container_requests.html#:~:text=Container%20request%20lifecycle
+
         :param task: The task to search for. Task is an ArvadosTask containing
         a container_request_uuid and container dictionary.
+        :param refresh: If True, refresh the task state from the server
         :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
         '''
         if refresh:
             # On newly submitted jobs, we'll only have a container_request, uuid.
-            # pylint gives a warning that avvados.api is not callable, when in fact it is.
-            task.container_request = arvados.api().container_requests().get( # pylint: disable=not-callable
+            task.container_request = self.api.container_requests().get(
                 uuid = task.container_request['uuid']
             ).execute()
-            task.container = arvados.api().containers().get( # pylint: disable=not-callable
+            task.container = self.api.containers().get(
                 uuid = task.container_request['container_uuid']
                 ).execute()
 
-        if task.container['exit_code'] == 0:
-            return 'Complete'
-        if task.container['exit_code'] == 1:
-            return 'Failed'
+        if task.container_request['state'] == "Uncommitted":
+            return 'Cancelled' # For consistency w/ SBG, where DRAFT state returns 'CANCELLED'
+
+        # container request state is always committed in these cases
+        if task.container is None or \
+            task.container['state'] in ['Locked', 'Queued']:
+            return 'Queued'
         if task.container['state'] == 'Running':
             return 'Running'
+
+        if task.container['state'] == "Complete":
+            if task.container_request['state'] == "Committed":
+                return 'Running' # task is complete but outputs not yet available
+            if task.container_request['state'] == "Final":
+                if task.container['exit_code'] == 0:
+                    return 'Complete'
+                if task.container['exit_code'] > 0:
+                    return 'Failed'
+
         if task.container['state'] == 'Cancelled':
             return 'Cancelled'
-        if task.container['state'] in ['Locked', 'Queued']:
-            return 'Queued'
-        raise ValueError(f"TODO: Unknown task state: {task.container['state']}")
+
+        raise ValueError(
+            f"Unknown task state: Container request state is {task.container_request['state']}, \
+            container state is {task.container['state']}"
+        )
 
     def get_task_output(self, task: ArvadosTask, output_name):
         ''' Retrieve the output field of the task '''

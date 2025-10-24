@@ -607,8 +607,9 @@ class TestArvadosPlaform(unittest.TestCase):
 
     def test_get_tasks_by_name_with_new_task_added(self):
         '''
-        Test get_tasks_by_name method with a new task added to the project will still work correctly.
-        A new task may only have a uuid and not a name associated with it.
+        Test get_tasks_by_name method with a new task added to the project
+        will still work correctly. A new task may only have a uuid and not 
+        a name associated with it.
         '''
         project = {'uuid': 'project_uuid'}
 
@@ -768,7 +769,10 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertFalse(self.platform._compare_inputs(dir1, dir3))
 
     def test_submit_task(self):
-        ''' Test that submit_task returns an ArvadosTask object where container_request has a name and uuid '''
+        '''
+        Test that submit_task returns an ArvadosTask object where container_request 
+        has a name and uuid
+        '''
         name = "test_task"
         project = {'uuid': 'test_project_uuid'}
         workflow = {'uuid': 'test_workflow_uuid'}
@@ -777,7 +781,11 @@ class TestArvadosPlaform(unittest.TestCase):
         with mock.patch('subprocess.check_output') as mock_subprocess_check_output:
             mock_subprocess_check_output.return_value = b"container_request_uuid"
             # Test
-            task = self.platform.submit_task(name, project, workflow, parameters, execution_settings=None)
+            task = self.platform.submit_task(name,
+                                             project,
+                                             workflow,
+                                             parameters,
+                                             execution_settings=None)
 
         # Assert that the returned task is an instance of ArvadosTask
         self.assertIsInstance(task, ArvadosTask)
@@ -788,6 +796,137 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertIsNotNone(task.container_request['uuid'])
         # Assert that the container is None (as per the current implementation)
         self.assertIsNone(task.container)
+
+    # Tests for get_task_state method
+    def test_get_task_state_uncommitted(self):
+        ''' Test get_task_state returns Cancelled for Uncommitted state '''
+        task = ArvadosTask(
+            container_request={'state': 'Uncommitted', 'uuid': 'test-uuid'},
+            container={'state': 'Queued'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Cancelled')
+
+    def test_get_task_state_container_none(self):
+        ''' Test get_task_state returns Queued when container is None '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container=None
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Queued')
+
+    def test_get_task_state_locked(self):
+        ''' Test get_task_state returns Queued for Locked container state '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container={'state': 'Locked'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Queued')
+
+    def test_get_task_state_queued(self):
+        ''' Test get_task_state returns Queued for Queued container state '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container={'state': 'Queued'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Queued')
+
+    def test_get_task_state_running(self):
+        ''' Test get_task_state returns Running for Running container state '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container={'state': 'Running'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Running')
+
+    def test_get_task_state_complete_committed(self):
+        '''
+        Test get_task_state returns Running when container Complete but request still Committed
+        '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container={'state': 'Complete', 'exit_code': 0}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Running')
+
+    def test_get_task_state_complete_success(self):
+        ''' Test get_task_state returns Complete for successful completion '''
+        task = ArvadosTask(
+            container_request={'state': 'Final', 'uuid': 'test-uuid'},
+            container={'state': 'Complete', 'exit_code': 0}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Complete')
+
+    def test_get_task_state_complete_failed(self):
+        ''' Test get_task_state returns Failed for failed completion '''
+        task = ArvadosTask(
+            container_request={'state': 'Final', 'uuid': 'test-uuid'},
+            container={'state': 'Complete', 'exit_code': 1}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Failed')
+
+    def test_get_task_state_cancelled(self):
+        ''' Test get_task_state returns Cancelled for Cancelled container state '''
+        task = ArvadosTask(
+            container_request={'state': 'Final', 'uuid': 'test-uuid'},
+            container={'state': 'Cancelled'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Cancelled')
+
+    def test_get_task_state_with_refresh(self):
+        ''' Test get_task_state with refresh=True fetches fresh state from API '''
+        # Set up task with initial state
+        task = ArvadosTask(
+            container_request={'state': 'Committed',
+                               'uuid': 'test-uuid',
+                               'container_uuid': 'container-uuid'},
+            container=None
+        )
+
+        # Mock API responses
+        updated_container_request = {
+            'state': 'Final',
+            'uuid': 'test-uuid',
+            'container_uuid': 'container-uuid'
+        }
+        updated_container = {
+            'state': 'Complete',
+            'exit_code': 0
+        }
+
+        mock_container_request_get = MagicMock()
+        mock_container_request_get.execute.return_value = updated_container_request
+        self.platform.api.container_requests().get.return_value = mock_container_request_get
+
+        mock_container_get = MagicMock()
+        mock_container_get.execute.return_value = updated_container
+        self.platform.api.containers().get.return_value = mock_container_get
+
+        # Test
+        result = self.platform.get_task_state(task, refresh=True)
+
+        # Assert
+        self.assertEqual(result, 'Complete')
+        self.platform.api.container_requests().get.assert_called_once_with(uuid='test-uuid')
+        self.platform.api.containers().get.assert_called_once_with(uuid='container-uuid')
+
+    def test_get_task_state_unknown_state(self):
+        ''' Test get_task_state raises ValueError for unknown state combination '''
+        task = ArvadosTask(
+            container_request={'state': 'SomeUnknownState', 'uuid': 'test-uuid'},
+            container={'state': 'SomeOtherUnknownState'}
+        )
+        with self.assertRaises(ValueError) as context:
+            self.platform.get_task_state(task)
+        self.assertIn('Unknown task state', str(context.exception))
 
 
 if __name__ == '__main__':
