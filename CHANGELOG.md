@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.3.3](https://github.com/NGS360/PAML.git/releases/tag/v0.3.3) - 2025-10-28
+
+### Fixed
+
+- Address issue where a newly created task was added to the task list. submit_task was returning a task without a name in Arvados (PR #91)
+- Fix incorrect type hint for Arvados in get_task_by_name (PR #96)
+- Fix get_task_state for Arvados not properly checking container request status (PR #97)
+
 ## [v0.3.2](https://github.com/NGS360/PAML.git/releases/tag/v0.3.2) - 2025-07-12
 
 ### Fixed
