@@ -136,12 +136,12 @@ class NGS360Platform(Platform):
 
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
-            
+
         response = requests.request(
             method=method,
             url=url,
             headers=headers,
-            json=data,
+            data=data,
             files=files,
             params=params,
             auth=self.auth
@@ -423,7 +423,7 @@ class NGS360Platform(Platform):
 
         return str(output)
 
-    def get_tasks_by_name(self, project, task_name=None):
+    def get_tasks_by_name(self, project, task_name=None,inputs_to_compare=None,tasks=None):
         """
         Get all processes/tasks in a project with a specified name
 
@@ -432,10 +432,12 @@ class NGS360Platform(Platform):
         :return: List of tasks
         """
         try:
-            params = {}
+            tags = {"Project": project["name"]}
             if task_name:
-                params["name"] = task_name
-
+                tags["Name"] = task_name
+            params = {
+                "tags": json.dumps(tags)
+            }
             response = self._make_request("GET", "runs", params=params)
             tasks = []
 
@@ -504,7 +506,10 @@ class NGS360Platform(Platform):
             "workflow_type_version": workflow_type_version,
             "workflow_url": workflow_url,
             "workflow_engine": execution_settings.get("workflow_engine"),
-            "tags": {"name": name},
+            "tags": json.dumps({
+                "Name": name,
+                "Project": project["name"]
+            }),
         }
 
         try:
@@ -583,7 +588,7 @@ class NGS360Platform(Platform):
         for project in self.projects.values():
             if project["id"] == project_id:
                 return project
-        return None
+        return self.create_project(project_id, f"Virtual project for {project_id}")
 
     def get_project_cost(self, project):
         """
