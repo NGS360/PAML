@@ -223,7 +223,7 @@ class ArvadosPlatform(Platform):
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
         for source_file in source_files:
-            source_path = f"{source_file.stream_name()}/{source_file.name()}"
+            source_path = f"{source_file.stream_name()}{source_file.name()}"
             if source_path not in [f"{destination_file.stream_name()}/{destination_file.name()}"
                                 for destination_file in destination_files]:
                 target_collection.copy(source_path,
