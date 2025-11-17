@@ -223,8 +223,7 @@ class ArvadosPlatform(Platform):
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
         for source_file in source_files:
-
-            # check if there is any parent folders (source_file.stream_name() may contain subfolders)
+            # check if there is any parent folder (source_file.stream_name() may contain subfolders)
             if source_file.stream_name() and source_file.name():
                 source_path = f"{source_file.stream_name()}/{source_file.name()}"
             else:
@@ -255,7 +254,6 @@ class ArvadosPlatform(Platform):
                                                target_path=source_path,
                                                source_collection=source_collection)
         target_collection.save()
-
         self.logger.debug("Done copying folder.")
         return destination_collection
 
