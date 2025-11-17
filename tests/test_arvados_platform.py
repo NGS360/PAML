@@ -11,6 +11,19 @@ from mock import MagicMock
 
 from cwl_platform.arvados_platform import ArvadosPlatform, ArvadosTask, StreamFileReader
 
+class MockFile:
+    """Mock file object for testing."""
+    def __init__(self, stream, name):
+        """Initialize MockFile."""
+        self._stream = stream
+        self._name = name
+    def stream_name(self):
+        """Return stream name."""
+        return self._stream
+    def name(self):
+        """Return file name."""
+        return self._name
+
 class TestArvadosPlaform(unittest.TestCase):
     '''
     Test Class for Arvados Platform
@@ -421,19 +434,6 @@ class TestArvadosPlaform(unittest.TestCase):
             "name": "folderA",
             "description": "desc"
         }
-        # Mock files
-        class MockFile:
-            """Mock file object for testing."""
-            def __init__(self, stream, name):
-                """Initialize MockFile."""
-                self._stream = stream
-                self._name = name
-            def stream_name(self):
-                """Return stream name."""
-                return self._stream
-            def name(self):
-                """Return file name."""
-                return self._name
         mock_get_files_list.side_effect = [
             [MockFile("folderA", "file1.txt")],  # source files
             []  # destination files
@@ -462,18 +462,6 @@ class TestArvadosPlaform(unittest.TestCase):
         source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
         destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
         mock_lookup_folder_name.side_effect = [source_collection, destination_collection]
-        class MockFile:
-            """Mock file object for testing."""
-            def __init__(self, stream, name):
-                """Initialize MockFile."""
-                self._stream = stream
-                self._name = name
-            def stream_name(self):
-                """Return stream name."""
-                return self._stream
-            def name(self):
-                """Return file name."""
-                return self._name
         mock_get_files_list.side_effect = [
             [
                 MockFile("folderA", "file1.txt"),
@@ -511,18 +499,6 @@ class TestArvadosPlaform(unittest.TestCase):
         source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
         destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
         mock_lookup_folder_name.side_effect = [source_collection, destination_collection]
-        class MockFile:
-            """Mock file object for testing."""
-            def __init__(self, stream, name):
-                """Initialize MockFile."""
-                self._stream = stream
-                self._name = name
-            def stream_name(self):
-                """Return stream name."""
-                return self._stream
-            def name(self):
-                """Return file name."""
-                return self._name
         mock_get_files_list.side_effect = [
             [MockFile("folderA", "file1.txt"), MockFile("folderA/subfolder", "file2.txt")],  # source
             []  # destination
@@ -535,18 +511,17 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(mock_dest_coll.copy.call_count, 2)
         mock_dest_coll.save.assert_called_once()
-        filename = "file.txt"
-        project = {'uuid': 'aproject'}
-        dest_folder = '/inputs'
         # Set up supporting mocks
         self.platform.api.collections().create().execute.return_value = {
             'uuid': 'a_destination_collection'
         }
-        # Test
-        actual_result = self.platform.upload_file(
-            filename, project, dest_folder, destination_filename=None, overwrite=False)
-        # Check results
-        self.assertEqual(actual_result, "keep:a_destination_collection/file.txt")
+        # Test and check results in one step
+        self.assertEqual(
+            self.platform.upload_file(
+                "file.txt", {'uuid': 'aproject'}, '/inputs', destination_filename=None, overwrite=False
+            ),
+            "keep:a_destination_collection/file.txt"
+        )
 
     def test_get_tasks_by_name(self):
         ''' Test get_tasks_by_name method with task name only '''
