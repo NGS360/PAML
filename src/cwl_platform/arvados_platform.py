@@ -236,12 +236,17 @@ class ArvadosPlatform(Platform):
                                        source_collection=source_collection)
             else:
                 # if subfolders exist in destination collection
-                if all(destination_file.stream_name() and destination_file.name() for destination_file in destination_files):
-                    if source_path not in [f"{destination_file.stream_name()}/{destination_file.name()}"
-                        for destination_file in destination_files]:
-                        target_collection.copy(source_path,
-                                               target_path=source_path,
-                                               source_collection=source_collection)
+                if all(destination_file.stream_name() and destination_file.name()
+                       for destination_file in destination_files):
+                    if source_path not in [
+                        f"{destination_file.stream_name()}/{destination_file.name()}"
+                        for destination_file in destination_files
+                    ]:
+                        target_collection.copy(
+                            source_path,
+                            target_path=source_path,
+                            source_collection=source_collection
+                        )
                 # if no subfolders exist in destination collection
                 else:
                     if source_path not in [destination_file.name()
