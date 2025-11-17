@@ -423,9 +423,17 @@ class TestArvadosPlaform(unittest.TestCase):
         }
         # Mock files
         class MockFile:
-            def __init__(self, stream, name): self._stream, self._name = stream, name
-            def stream_name(self): return self._stream
-            def name(self): return self._name
+            """Mock file object for testing."""
+            def __init__(self, stream, name):
+                """Initialize MockFile."""
+                self._stream = stream
+                self._name = name
+            def stream_name(self):
+                """Return stream name."""
+                return self._stream
+            def name(self):
+                """Return file name."""
+                return self._name
         mock_get_files_list.side_effect = [
             [MockFile("folderA", "file1.txt")],  # source files
             []  # destination files
@@ -455,9 +463,17 @@ class TestArvadosPlaform(unittest.TestCase):
         destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
         mock_lookup_folder_name.side_effect = [source_collection, destination_collection]
         class MockFile:
-            def __init__(self, stream, name): self._stream, self._name = stream, name
-            def stream_name(self): return self._stream
-            def name(self): return self._name
+            """Mock file object for testing."""
+            def __init__(self, stream, name):
+                """Initialize MockFile."""
+                self._stream = stream
+                self._name = name
+            def stream_name(self):
+                """Return stream name."""
+                return self._stream
+            def name(self):
+                """Return file name."""
+                return self._name
         mock_get_files_list.side_effect = [
             [
                 MockFile("folderA", "file1.txt"),
@@ -496,9 +512,17 @@ class TestArvadosPlaform(unittest.TestCase):
         destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
         mock_lookup_folder_name.side_effect = [source_collection, destination_collection]
         class MockFile:
-            def __init__(self, stream, name): self._stream, self._name = stream, name
-            def stream_name(self): return self._stream
-            def name(self): return self._name
+            """Mock file object for testing."""
+            def __init__(self, stream, name):
+                """Initialize MockFile."""
+                self._stream = stream
+                self._name = name
+            def stream_name(self):
+                """Return stream name."""
+                return self._stream
+            def name(self):
+                """Return file name."""
+                return self._name
         mock_get_files_list.side_effect = [
             [MockFile("folderA", "file1.txt"), MockFile("folderA/subfolder", "file2.txt")],  # source
             []  # destination
