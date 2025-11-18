@@ -136,12 +136,12 @@ class NGS360Platform(Platform):
 
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
-            
+
         response = requests.request(
             method=method,
             url=url,
             headers=headers,
-            json=data,
+            data=data,
             files=files,
             params=params,
             auth=self.auth
@@ -230,8 +230,7 @@ class NGS360Platform(Platform):
 
         Note: WES API doesn't have a direct concept of folders, so this returns None
         """
-        self.logger.warning("WES API doesn't support folder operations")
-        return None
+        return folder_path
 
     def rename_file(self, fileid, new_filename):
         """
@@ -385,10 +384,16 @@ class NGS360Platform(Platform):
         :param output_name: Name of the output field
         :return: Value of the output field or None
         """
-        if not task or not hasattr(task, "outputs"):
+        if not task or not hasattr(task, "run_id"):
             return None
-
-        return task.outputs.get(output_name)
+        try:
+            response = self._make_request("GET", f"runs/{task.run_id}")
+            task.outputs = response.get("outputs", {})
+            task.output_mapping = task.outputs.get("output_mapping",{})
+            return task.output_mapping.get(output_name)
+        except Exception as e:
+            self.logger.error(f"Failed to get task output: {e}")
+            return None
 
     def get_task_outputs(self, task):
         """
@@ -397,10 +402,17 @@ class NGS360Platform(Platform):
         :param task: WESTask object
         :return: Dictionary of output fields
         """
-        if not task or not hasattr(task, "outputs"):
-            return {}
+        if not task or not hasattr(task, "run_id"):
+            return None
+        try:
+            response = self._make_request("GET", f"runs/{task.run_id}")
+            task.outputs = response.get("outputs", {}) 
+            task.output_mapping = task.outputs.get("output_mapping",{})
+        except Exception as e:
+            self.logger.error(f"Failed to get task outputs: {e}")
+            return []
 
-        return task.outputs
+        return list(task.output_mapping.keys())
 
     def get_task_output_filename(self, task, output_name):
         """
@@ -416,14 +428,12 @@ class NGS360Platform(Platform):
             return None
 
         # If output is a URL, extract the filename
-        if isinstance(output, str) and (
-            output.startswith("http") or output.startswith("file:")
-        ):
-            return os.path.basename(output)
+        if isinstance(output, list):
+            return [output_path.split('/')[-1] for output_path in output]
+        else:
+            return output.split('/')[-1]
 
-        return str(output)
-
-    def get_tasks_by_name(self, project, task_name=None):
+    def get_tasks_by_name(self, project, task_name=None,inputs_to_compare=None,tasks=None):
         """
         Get all processes/tasks in a project with a specified name
 
@@ -432,10 +442,12 @@ class NGS360Platform(Platform):
         :return: List of tasks
         """
         try:
-            params = {}
+            tags = {"Project": project["name"]}
             if task_name:
-                params["name"] = task_name
-
+                tags["Name"] = task_name
+            params = {
+                "tags": json.dumps(tags)
+            }
             response = self._make_request("GET", "runs", params=params)
             tasks = []
 
@@ -504,7 +516,10 @@ class NGS360Platform(Platform):
             "workflow_type_version": workflow_type_version,
             "workflow_url": workflow_url,
             "workflow_engine": execution_settings.get("workflow_engine"),
-            "tags": {"name": name},
+            "tags": json.dumps({
+                "Name": name,
+                "Project": project["name"]
+            }),
         }
 
         try:
@@ -583,7 +598,7 @@ class NGS360Platform(Platform):
         for project in self.projects.values():
             if project["id"] == project_id:
                 return project
-        return None
+        return self.create_project(project_id, f"Virtual project for {project_id}")
 
     def get_project_cost(self, project):
         """
