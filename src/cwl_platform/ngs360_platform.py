@@ -230,8 +230,7 @@ class NGS360Platform(Platform):
 
         Note: WES API doesn't have a direct concept of folders, so this returns None
         """
-        self.logger.warning("WES API doesn't support folder operations")
-        return None
+        return folder_path
 
     def rename_file(self, fileid, new_filename):
         """
@@ -385,10 +384,16 @@ class NGS360Platform(Platform):
         :param output_name: Name of the output field
         :return: Value of the output field or None
         """
-        if not task or not hasattr(task, "outputs"):
+        if not task or not hasattr(task, "run_id"):
             return None
-
-        return task.outputs.get(output_name)
+        try:
+            response = self._make_request("GET", f"runs/{task.run_id}")
+            task.outputs = response.get("outputs", {})
+            task.output_mapping = task.outputs.get("output_mapping",{})
+            return task.output_mapping.get(output_name)
+        except Exception as e:
+            self.logger.error(f"Failed to get task output: {e}")
+            return None
 
     def get_task_outputs(self, task):
         """
@@ -397,10 +402,17 @@ class NGS360Platform(Platform):
         :param task: WESTask object
         :return: Dictionary of output fields
         """
-        if not task or not hasattr(task, "outputs"):
-            return {}
+        if not task or not hasattr(task, "run_id"):
+            return None
+        try:
+            response = self._make_request("GET", f"runs/{task.run_id}")
+            task.outputs = response.get("outputs", {}) 
+            task.output_mapping = task.outputs.get("output_mapping",{})
+        except Exception as e:
+            self.logger.error(f"Failed to get task outputs: {e}")
+            return []
 
-        return task.outputs
+        return list(task.output_mapping.keys())
 
     def get_task_output_filename(self, task, output_name):
         """
@@ -416,12 +428,10 @@ class NGS360Platform(Platform):
             return None
 
         # If output is a URL, extract the filename
-        if isinstance(output, str) and (
-            output.startswith("http") or output.startswith("file:")
-        ):
-            return os.path.basename(output)
-
-        return str(output)
+        if isinstance(output, list):
+            return [output_path.split('/')[-1] for output_path in output]
+        else:
+            return output.split('/')[-1]
 
     def get_tasks_by_name(self, project, task_name=None,inputs_to_compare=None,tasks=None):
         """
