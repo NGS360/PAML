@@ -223,36 +223,19 @@ class ArvadosPlatform(Platform):
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
         for source_file in source_files:
-            # check if there is any parent folder (source_file.stream_name() may contain subfolders)
-            if source_file.stream_name() and source_file.name():
-                source_path = f"{source_file.stream_name()}/{source_file.name()}"
-            else:
-                source_path = source_file.name()
-            # check if file already exists in destination collection
-            if len(destination_files) == 0:
-                target_collection.copy(source_path,
-                                       target_path=source_path,
-                                       source_collection=source_collection)
-            else:
-                # if subfolders exist in destination collection
-                if all(destination_file.stream_name() and destination_file.name()
-                       for destination_file in destination_files):
-                    if source_path not in [
-                        f"{destination_file.stream_name()}/{destination_file.name()}"
-                        for destination_file in destination_files
-                    ]:
-                        target_collection.copy(
-                            source_path,
-                            target_path=source_path,
-                            source_collection=source_collection
-                        )
-                # if no subfolders exist in destination collection
-                else:
-                    if source_path not in [destination_file.name()
-                        for destination_file in destination_files]:
-                        target_collection.copy(source_path,
-                                               target_path=source_path,
-                                               source_collection=source_collection)
+            source_path = f"{source_file.stream_name()}/{source_file.name()}"
+            destination_paths = [
+                f"{dest_file.stream_name()}/{dest_file.name()}"
+                for dest_file in destination_files
+            ]
+            if source_path not in destination_paths:
+                # take out the leading slash if the reference file is in the collection root
+                source_path = source_path.lstrip('/')
+                target_collection.copy(
+                    source_path,
+                    target_path=source_path,
+                    source_collection=source_collection
+                )
         target_collection.save()
         self.logger.debug("Done copying folder.")
         return destination_collection
