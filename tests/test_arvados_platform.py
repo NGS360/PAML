@@ -11,6 +11,19 @@ from mock import MagicMock
 
 from cwl_platform.arvados_platform import ArvadosPlatform, ArvadosTask, StreamFileReader
 
+class MockFile:
+    """Mock file object for testing."""
+    def __init__(self, stream, name):
+        """Initialize MockFile."""
+        self._stream = stream
+        self._name = name
+    def stream_name(self):
+        """Return stream name."""
+        return self._stream
+    def name(self):
+        """Return file name."""
+        return self._name
+
 class TestArvadosPlaform(unittest.TestCase):
     '''
     Test Class for Arvados Platform
@@ -271,7 +284,7 @@ class TestArvadosPlaform(unittest.TestCase):
         }
 
         mock_lookup_folder_name.side_effect = [
-            source_collection, destination_collection
+            (source_collection, ''), (destination_collection, '')
         ]
 
         # Mock the source files
@@ -323,7 +336,7 @@ class TestArvadosPlaform(unittest.TestCase):
         # Mocking an empty source collection
         source_collection = None
 
-        mock_lookup_folder_name.side_effect = [source_collection]
+        mock_lookup_folder_name.side_effect = [(None, None)]
 
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
 
@@ -352,7 +365,7 @@ class TestArvadosPlaform(unittest.TestCase):
         destination_collection = None
 
         mock_lookup_folder_name.side_effect = [
-            source_collection, destination_collection
+            (source_collection, ''), (destination_collection, '')
         ]
 
         # Mock the source files
@@ -397,18 +410,118 @@ class TestArvadosPlaform(unittest.TestCase):
         Test that upload_file returns a keep id
         '''
         # Set up test parameters
-        filename = "file.txt"
-        project = {'uuid': 'aproject'}
-        dest_folder = '/inputs'
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
+    @mock.patch("arvados.collection.Collection")
+    def test_copy_folder_destination_collection_does_not_exist(
+        self,
+        mock_collection_cls,
+        mock_lookup_folder_name,
+        mock_get_files_list
+    ):
+        """Test copy_folder when destination collection does not exist."""
+        source_project = {"uuid": "source-uuid"}
+        destination_project = {"uuid": "dest-uuid"}
+        source_folder = "folderA"
+        source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
+        destination_collection = None  # Simulate not found
+
+        # Mock lookup: source found, destination not found
+        mock_lookup_folder_name.side_effect = [(source_collection, ''), (destination_collection, None)]
+        # Mock API create
+        self.platform.api.collections().create().execute.return_value = {
+            "uuid": "dest-coll-uuid",
+            "name": "folderA",
+            "description": "desc"
+        }
+        mock_get_files_list.side_effect = [
+            [MockFile("folderA", "file1.txt")],  # source files
+            []  # destination files
+        ]
+        mock_source_coll = MagicMock()
+        mock_dest_coll = MagicMock()
+        mock_collection_cls.side_effect = [mock_source_coll, mock_dest_coll]
+        result = self.platform.copy_folder(source_project, source_folder, destination_project)
+        self.assertIsNotNone(result)
+        mock_dest_coll.copy.assert_called_once()
+        mock_dest_coll.save.assert_called_once()
+
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
+    @mock.patch("arvados.collection.Collection")
+    def test_copy_folder_destination_not_up_to_date(
+        self,
+        mock_collection_cls,
+        mock_lookup_folder_name,
+        mock_get_files_list
+    ):
+        """Test copy_folder when destination collection exists but is missing files."""
+        source_project = {"uuid": "source-uuid"}
+        destination_project = {"uuid": "dest-uuid"}
+        source_folder = "folderA"
+        source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
+        destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
+        mock_lookup_folder_name.side_effect = [(source_collection, ''), (destination_collection, '')]
+        mock_get_files_list.side_effect = [
+            [
+                MockFile("folderA", "file1.txt"),
+                MockFile("folderA", "file2.txt")
+            ],  # source
+            [
+                MockFile("folderA", "file1.txt")
+            ]  # destination (missing file2.txt)
+        ]
+        mock_source_coll = MagicMock()
+        mock_dest_coll = MagicMock()
+        mock_collection_cls.side_effect = [mock_source_coll, mock_dest_coll]
+        result = self.platform.copy_folder(source_project, source_folder, destination_project)
+        self.assertIsNotNone(result)
+        mock_dest_coll.copy.assert_called_with(
+            "folderA/file2.txt",
+            target_path="folderA/file2.txt",
+            source_collection=mock_source_coll
+        )
+        mock_dest_coll.save.assert_called_once()
+
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
+    @mock.patch("arvados.collection.Collection")
+    def test_copy_folder_source_with_subfolders(
+        self,
+        mock_collection_cls,
+        mock_lookup_folder_name,
+        mock_get_files_list
+    ):
+        """Test copy_folder when source collection contains subfolders."""
+        source_project = {"uuid": "source-uuid"}
+        destination_project = {"uuid": "dest-uuid"}
+        source_folder = "folderA"
+        source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
+        destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
+        mock_lookup_folder_name.side_effect = [(source_collection, ''), (destination_collection, '')]
+        mock_get_files_list.side_effect = [
+            [MockFile("folderA", "file1.txt"), MockFile("folderA/subfolder", "file2.txt")],  # source
+            []  # destination
+        ]
+        mock_source_coll = MagicMock()
+        mock_dest_coll = MagicMock()
+        # Add extra mocks to avoid StopIteration if more calls are made
+        mock_collection_cls.side_effect = [mock_source_coll, mock_dest_coll, MagicMock(), MagicMock()]
+        result = self.platform.copy_folder(source_project, source_folder, destination_project)
+        self.assertIsNotNone(result)
+        self.assertEqual(mock_dest_coll.copy.call_count, 2)
+        mock_dest_coll.save.assert_called_once()
         # Set up supporting mocks
         self.platform.api.collections().create().execute.return_value = {
             'uuid': 'a_destination_collection'
         }
-        # Test
-        actual_result = self.platform.upload_file(
-            filename, project, dest_folder, destination_filename=None, overwrite=False)
-        # Check results
-        self.assertEqual(actual_result, "keep:a_destination_collection/file.txt")
+        # Test and check results in one step
+        self.assertEqual(
+            self.platform.upload_file(
+                "file.txt", {'uuid': 'aproject'}, '/inputs', destination_filename=None, overwrite=False
+            ),
+            "keep:a_destination_collection/file.txt"
+        )
 
     def test_get_tasks_by_name(self):
         ''' Test get_tasks_by_name method with task name only '''
@@ -607,8 +720,9 @@ class TestArvadosPlaform(unittest.TestCase):
 
     def test_get_tasks_by_name_with_new_task_added(self):
         '''
-        Test get_tasks_by_name method with a new task added to the project will still work correctly.
-        A new task may only have a uuid and not a name associated with it.
+        Test get_tasks_by_name method with a new task added to the project
+        will still work correctly. A new task may only have a uuid and not 
+        a name associated with it.
         '''
         project = {'uuid': 'project_uuid'}
 
@@ -768,7 +882,10 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertFalse(self.platform._compare_inputs(dir1, dir3))
 
     def test_submit_task(self):
-        ''' Test that submit_task returns an ArvadosTask object where container_request has a name and uuid '''
+        '''
+        Test that submit_task returns an ArvadosTask object where container_request 
+        has a name and uuid
+        '''
         name = "test_task"
         project = {'uuid': 'test_project_uuid'}
         workflow = {'uuid': 'test_workflow_uuid'}
@@ -777,7 +894,11 @@ class TestArvadosPlaform(unittest.TestCase):
         with mock.patch('subprocess.check_output') as mock_subprocess_check_output:
             mock_subprocess_check_output.return_value = b"container_request_uuid"
             # Test
-            task = self.platform.submit_task(name, project, workflow, parameters, execution_settings=None)
+            task = self.platform.submit_task(name,
+                                             project,
+                                             workflow,
+                                             parameters,
+                                             execution_settings=None)
 
         # Assert that the returned task is an instance of ArvadosTask
         self.assertIsInstance(task, ArvadosTask)
@@ -788,6 +909,137 @@ class TestArvadosPlaform(unittest.TestCase):
         self.assertIsNotNone(task.container_request['uuid'])
         # Assert that the container is None (as per the current implementation)
         self.assertIsNone(task.container)
+
+    # Tests for get_task_state method
+    def test_get_task_state_uncommitted(self):
+        ''' Test get_task_state returns Cancelled for Uncommitted state '''
+        task = ArvadosTask(
+            container_request={'state': 'Uncommitted', 'uuid': 'test-uuid'},
+            container={'state': 'Queued'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Cancelled')
+
+    def test_get_task_state_container_none(self):
+        ''' Test get_task_state returns Queued when container is None '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container=None
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Queued')
+
+    def test_get_task_state_locked(self):
+        ''' Test get_task_state returns Queued for Locked container state '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container={'state': 'Locked'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Queued')
+
+    def test_get_task_state_queued(self):
+        ''' Test get_task_state returns Queued for Queued container state '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container={'state': 'Queued'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Queued')
+
+    def test_get_task_state_running(self):
+        ''' Test get_task_state returns Running for Running container state '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container={'state': 'Running'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Running')
+
+    def test_get_task_state_complete_committed(self):
+        '''
+        Test get_task_state returns Running when container Complete but request still Committed
+        '''
+        task = ArvadosTask(
+            container_request={'state': 'Committed', 'uuid': 'test-uuid'},
+            container={'state': 'Complete', 'exit_code': 0}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Running')
+
+    def test_get_task_state_complete_success(self):
+        ''' Test get_task_state returns Complete for successful completion '''
+        task = ArvadosTask(
+            container_request={'state': 'Final', 'uuid': 'test-uuid'},
+            container={'state': 'Complete', 'exit_code': 0}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Complete')
+
+    def test_get_task_state_complete_failed(self):
+        ''' Test get_task_state returns Failed for failed completion '''
+        task = ArvadosTask(
+            container_request={'state': 'Final', 'uuid': 'test-uuid'},
+            container={'state': 'Complete', 'exit_code': 1}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Failed')
+
+    def test_get_task_state_cancelled(self):
+        ''' Test get_task_state returns Cancelled for Cancelled container state '''
+        task = ArvadosTask(
+            container_request={'state': 'Final', 'uuid': 'test-uuid'},
+            container={'state': 'Cancelled'}
+        )
+        result = self.platform.get_task_state(task)
+        self.assertEqual(result, 'Cancelled')
+
+    def test_get_task_state_with_refresh(self):
+        ''' Test get_task_state with refresh=True fetches fresh state from API '''
+        # Set up task with initial state
+        task = ArvadosTask(
+            container_request={'state': 'Committed',
+                               'uuid': 'test-uuid',
+                               'container_uuid': 'container-uuid'},
+            container=None
+        )
+
+        # Mock API responses
+        updated_container_request = {
+            'state': 'Final',
+            'uuid': 'test-uuid',
+            'container_uuid': 'container-uuid'
+        }
+        updated_container = {
+            'state': 'Complete',
+            'exit_code': 0
+        }
+
+        mock_container_request_get = MagicMock()
+        mock_container_request_get.execute.return_value = updated_container_request
+        self.platform.api.container_requests().get.return_value = mock_container_request_get
+
+        mock_container_get = MagicMock()
+        mock_container_get.execute.return_value = updated_container
+        self.platform.api.containers().get.return_value = mock_container_get
+
+        # Test
+        result = self.platform.get_task_state(task, refresh=True)
+
+        # Assert
+        self.assertEqual(result, 'Complete')
+        self.platform.api.container_requests().get.assert_called_once_with(uuid='test-uuid')
+        self.platform.api.containers().get.assert_called_once_with(uuid='container-uuid')
+
+    def test_get_task_state_unknown_state(self):
+        ''' Test get_task_state raises ValueError for unknown state combination '''
+        task = ArvadosTask(
+            container_request={'state': 'SomeUnknownState', 'uuid': 'test-uuid'},
+            container={'state': 'SomeOtherUnknownState'}
+        )
+        with self.assertRaises(ValueError) as context:
+            self.platform.get_task_state(task)
+        self.assertIn('Unknown task state', str(context.exception))
 
 
 if __name__ == '__main__':
