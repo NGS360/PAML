@@ -760,9 +760,9 @@ class ArvadosPlatform(Platform):
 
     def get_tasks_by_name(self,
                           project,
-                          task_name:str=None,
-                          inputs_to_compare:dict=None,
-                          tasks:List[ArvadosTask]=None) -> List[ArvadosTask]:
+                          task_name: str = None,
+                          inputs_to_compare: dict = None,
+                          tasks: List[ArvadosTask] = None) -> List[ArvadosTask]:
         '''
         Get all processes/tasks in a project with a specified name, or all tasks
         if no name is specified. Optionally, compare task inputs to ensure
