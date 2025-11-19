@@ -11,6 +11,19 @@ from mock import MagicMock
 
 from cwl_platform.arvados_platform import ArvadosPlatform, ArvadosTask, StreamFileReader
 
+class MockFile:
+    """Mock file object for testing."""
+    def __init__(self, stream, name):
+        """Initialize MockFile."""
+        self._stream = stream
+        self._name = name
+    def stream_name(self):
+        """Return stream name."""
+        return self._stream
+    def name(self):
+        """Return file name."""
+        return self._name
+
 class TestArvadosPlaform(unittest.TestCase):
     '''
     Test Class for Arvados Platform
@@ -271,7 +284,7 @@ class TestArvadosPlaform(unittest.TestCase):
         }
 
         mock_lookup_folder_name.side_effect = [
-            source_collection, destination_collection
+            (source_collection, ''), (destination_collection, '')
         ]
 
         # Mock the source files
@@ -323,7 +336,7 @@ class TestArvadosPlaform(unittest.TestCase):
         # Mocking an empty source collection
         source_collection = None
 
-        mock_lookup_folder_name.side_effect = [source_collection]
+        mock_lookup_folder_name.side_effect = [(None, None)]
 
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
 
@@ -352,7 +365,7 @@ class TestArvadosPlaform(unittest.TestCase):
         destination_collection = None
 
         mock_lookup_folder_name.side_effect = [
-            source_collection, destination_collection
+            (source_collection, ''), (destination_collection, '')
         ]
 
         # Mock the source files
@@ -397,18 +410,118 @@ class TestArvadosPlaform(unittest.TestCase):
         Test that upload_file returns a keep id
         '''
         # Set up test parameters
-        filename = "file.txt"
-        project = {'uuid': 'aproject'}
-        dest_folder = '/inputs'
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
+    @mock.patch("arvados.collection.Collection")
+    def test_copy_folder_destination_collection_does_not_exist(
+        self,
+        mock_collection_cls,
+        mock_lookup_folder_name,
+        mock_get_files_list
+    ):
+        """Test copy_folder when destination collection does not exist."""
+        source_project = {"uuid": "source-uuid"}
+        destination_project = {"uuid": "dest-uuid"}
+        source_folder = "folderA"
+        source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
+        destination_collection = None  # Simulate not found
+
+        # Mock lookup: source found, destination not found
+        mock_lookup_folder_name.side_effect = [(source_collection, ''), (destination_collection, None)]
+        # Mock API create
+        self.platform.api.collections().create().execute.return_value = {
+            "uuid": "dest-coll-uuid",
+            "name": "folderA",
+            "description": "desc"
+        }
+        mock_get_files_list.side_effect = [
+            [MockFile("folderA", "file1.txt")],  # source files
+            []  # destination files
+        ]
+        mock_source_coll = MagicMock()
+        mock_dest_coll = MagicMock()
+        mock_collection_cls.side_effect = [mock_source_coll, mock_dest_coll]
+        result = self.platform.copy_folder(source_project, source_folder, destination_project)
+        self.assertIsNotNone(result)
+        mock_dest_coll.copy.assert_called_once()
+        mock_dest_coll.save.assert_called_once()
+
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
+    @mock.patch("arvados.collection.Collection")
+    def test_copy_folder_destination_not_up_to_date(
+        self,
+        mock_collection_cls,
+        mock_lookup_folder_name,
+        mock_get_files_list
+    ):
+        """Test copy_folder when destination collection exists but is missing files."""
+        source_project = {"uuid": "source-uuid"}
+        destination_project = {"uuid": "dest-uuid"}
+        source_folder = "folderA"
+        source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
+        destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
+        mock_lookup_folder_name.side_effect = [(source_collection, ''), (destination_collection, '')]
+        mock_get_files_list.side_effect = [
+            [
+                MockFile("folderA", "file1.txt"),
+                MockFile("folderA", "file2.txt")
+            ],  # source
+            [
+                MockFile("folderA", "file1.txt")
+            ]  # destination (missing file2.txt)
+        ]
+        mock_source_coll = MagicMock()
+        mock_dest_coll = MagicMock()
+        mock_collection_cls.side_effect = [mock_source_coll, mock_dest_coll]
+        result = self.platform.copy_folder(source_project, source_folder, destination_project)
+        self.assertIsNotNone(result)
+        mock_dest_coll.copy.assert_called_with(
+            "folderA/file2.txt",
+            target_path="folderA/file2.txt",
+            source_collection=mock_source_coll
+        )
+        mock_dest_coll.save.assert_called_once()
+
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")
+    @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
+    @mock.patch("arvados.collection.Collection")
+    def test_copy_folder_source_with_subfolders(
+        self,
+        mock_collection_cls,
+        mock_lookup_folder_name,
+        mock_get_files_list
+    ):
+        """Test copy_folder when source collection contains subfolders."""
+        source_project = {"uuid": "source-uuid"}
+        destination_project = {"uuid": "dest-uuid"}
+        source_folder = "folderA"
+        source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
+        destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
+        mock_lookup_folder_name.side_effect = [(source_collection, ''), (destination_collection, '')]
+        mock_get_files_list.side_effect = [
+            [MockFile("folderA", "file1.txt"), MockFile("folderA/subfolder", "file2.txt")],  # source
+            []  # destination
+        ]
+        mock_source_coll = MagicMock()
+        mock_dest_coll = MagicMock()
+        # Add extra mocks to avoid StopIteration if more calls are made
+        mock_collection_cls.side_effect = [mock_source_coll, mock_dest_coll, MagicMock(), MagicMock()]
+        result = self.platform.copy_folder(source_project, source_folder, destination_project)
+        self.assertIsNotNone(result)
+        self.assertEqual(mock_dest_coll.copy.call_count, 2)
+        mock_dest_coll.save.assert_called_once()
         # Set up supporting mocks
         self.platform.api.collections().create().execute.return_value = {
             'uuid': 'a_destination_collection'
         }
-        # Test
-        actual_result = self.platform.upload_file(
-            filename, project, dest_folder, destination_filename=None, overwrite=False)
-        # Check results
-        self.assertEqual(actual_result, "keep:a_destination_collection/file.txt")
+        # Test and check results in one step
+        self.assertEqual(
+            self.platform.upload_file(
+                "file.txt", {'uuid': 'aproject'}, '/inputs', destination_filename=None, overwrite=False
+            ),
+            "keep:a_destination_collection/file.txt"
+        )
 
     def test_get_tasks_by_name(self):
         ''' Test get_tasks_by_name method with task name only '''
