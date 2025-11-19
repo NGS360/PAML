@@ -284,7 +284,7 @@ class TestArvadosPlaform(unittest.TestCase):
         }
 
         mock_lookup_folder_name.side_effect = [
-            source_collection, destination_collection
+            (source_collection, ''), (destination_collection, '')
         ]
 
         # Mock the source files
@@ -336,7 +336,7 @@ class TestArvadosPlaform(unittest.TestCase):
         # Mocking an empty source collection
         source_collection = None
 
-        mock_lookup_folder_name.side_effect = [source_collection]
+        mock_lookup_folder_name.side_effect = [(None, None)]
 
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
 
@@ -365,7 +365,7 @@ class TestArvadosPlaform(unittest.TestCase):
         destination_collection = None
 
         mock_lookup_folder_name.side_effect = [
-            source_collection, destination_collection
+            (source_collection, ''), (destination_collection, '')
         ]
 
         # Mock the source files
@@ -427,7 +427,7 @@ class TestArvadosPlaform(unittest.TestCase):
         destination_collection = None  # Simulate not found
 
         # Mock lookup: source found, destination not found
-        mock_lookup_folder_name.side_effect = [source_collection, destination_collection]
+        mock_lookup_folder_name.side_effect = [(source_collection, ''), (destination_collection, None)]
         # Mock API create
         self.platform.api.collections().create().execute.return_value = {
             "uuid": "dest-coll-uuid",
@@ -461,7 +461,7 @@ class TestArvadosPlaform(unittest.TestCase):
         source_folder = "folderA"
         source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
         destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
-        mock_lookup_folder_name.side_effect = [source_collection, destination_collection]
+        mock_lookup_folder_name.side_effect = [(source_collection, ''), (destination_collection, '')]
         mock_get_files_list.side_effect = [
             [
                 MockFile("folderA", "file1.txt"),
@@ -498,7 +498,7 @@ class TestArvadosPlaform(unittest.TestCase):
         source_folder = "folderA"
         source_collection = {"uuid": "source-coll-uuid", "name": "folderA", "description": "desc"}
         destination_collection = {"uuid": "dest-coll-uuid", "name": "folderA", "description": "desc"}
-        mock_lookup_folder_name.side_effect = [source_collection, destination_collection]
+        mock_lookup_folder_name.side_effect = [(source_collection, ''), (destination_collection, '')]
         mock_get_files_list.side_effect = [
             [MockFile("folderA", "file1.txt"), MockFile("folderA/subfolder", "file2.txt")],  # source
             []  # destination
