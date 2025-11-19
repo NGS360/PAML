@@ -196,7 +196,7 @@ class ArvadosPlatform(Platform):
         :return: The destination folder or None if not found
         '''
         self.logger.debug("Copying folder %s from project %s to project %s",
-                     source_folder, source_project["uuid"], destination_project["uuid"])
+                          source_folder, source_project["uuid"], destination_project["uuid"])
 
         source_collection = self._lookup_collection_from_foldername(source_project, source_folder)
         if not source_collection:
@@ -222,12 +222,12 @@ class ArvadosPlatform(Platform):
         source_collection = arvados.collection.Collection(source_collection["uuid"])
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
+        destination_paths = [
+            f"{dest_file.stream_name()}/{dest_file.name()}"
+            for dest_file in destination_files
+        ]
         for source_file in source_files:
             source_path = f"{source_file.stream_name()}/{source_file.name()}"
-            destination_paths = [
-                f"{dest_file.stream_name()}/{dest_file.name()}"
-                for dest_file in destination_files
-            ]
             if source_path not in destination_paths:
                 # take out the leading slash if the reference file is in the collection root
                 source_path = source_path.lstrip('/')
