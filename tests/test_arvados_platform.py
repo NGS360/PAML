@@ -333,9 +333,6 @@ class TestArvadosPlaform(unittest.TestCase):
         destination_project = {"uuid": "destination-project-uuid"}
 
         # Set up mocks
-        # Mocking an empty source collection
-        source_collection = None
-
         mock_lookup_folder_name.side_effect = [(None, None)]
 
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
