@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.3.4](https://github.com/NGS360/PAML.git/releases/tag/v0.3.4) - 2025-11-19
+
+### Fixed
+
+- Add check for container_uuid when called get_tasks_by_name.
+- Fix copy_folder to handle directories better in Arvados and only copy the specified folder instead of the whole collection.
+
 ## [v0.3.3](https://github.com/NGS360/PAML.git/releases/tag/v0.3.3) - 2025-10-28
 
 ### Fixed
