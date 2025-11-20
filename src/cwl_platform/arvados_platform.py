@@ -778,8 +778,10 @@ class ArvadosPlatform(Platform):
         # Fetch tasks if not provided
         if tasks is None:
             # Filter out cancelled jobs (priority=0)
-            filters = [['owner_uuid', '=', project['uuid']],
-                       ['priority', '>', 0]]
+            filters = [
+                ['owner_uuid', '=', project['uuid']],
+                ['priority', '>', 0]
+            ]
 
             # Add name filter if specified
             if task_name:
