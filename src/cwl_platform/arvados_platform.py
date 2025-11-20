@@ -758,31 +758,40 @@ class ArvadosPlatform(Platform):
             f"Output {output_name} does not exist for task {task.container_request['uuid']}."
         )
 
-    def get_tasks_by_name(self,
-                          project,
-                          task_name:str=None,
-                          inputs_to_compare:dict=None,
-                          tasks:List[ArvadosTask]=None) -> List[ArvadosTask]:
+    def get_tasks_by_name(
+        self,
+        project,
+        task_name: str = None,
+        inputs_to_compare: dict = None,
+        tasks: List[ArvadosTask] = None
+    ) -> List[ArvadosTask]:
         '''
-        Get all processes/tasks in a project with a specified name, or all tasks
-        if no name is specified. Optionally, compare task inputs to ensure
-        equivalency (eg for reuse).
+        Get all processes/tasks in a project with a specified name, or all
+        tasks if no name is specified. Optionally, compare task inputs to
+        ensure equivalency (eg for reuse).
         :param project: The project to search
-        :param task_name: The name of the process to search for (if None return all tasks)
+        :param task_name: The name of the process to search for
+            (if None return all tasks)
         :param inputs_to_compare: Inputs to compare to ensure task equivalency
-        :param tasks: List of tasks to search in (if None, query all tasks in project)
+        :param tasks: List of tasks to search in
+            (if None, query all tasks in project)
         :return: List of tasks
         '''
         # Fetch tasks if not provided
         if tasks is None:
             # Filter out cancelled jobs (priority=0)
-            filters = [['owner_uuid', '=', project['uuid']], ['priority', '>', 0]]
+            filters = [
+                ['owner_uuid', '=', project['uuid']],
+                ['priority', '>', 0]
+            ]
 
             # Add name filter if specified
             if task_name:
                 filters.append(["name", '=', task_name])
 
-            container_requests = arvados.util.keyset_list_all(self.api.container_requests().list, filters=filters)
+            container_requests = arvados.util.keyset_list_all(
+                self.api.container_requests().list, filters=filters
+            )
         else:
             # Use provided tasks
             container_requests = [task.container_request for task in tasks]
@@ -794,9 +803,15 @@ class ArvadosPlatform(Platform):
             if task_name and container_request['name'] != task_name:
                 continue
 
+            # Skip is container_request does not have a container_uuid
+            # in the case a task was cancelled or never executed?
+            if container_request['container_uuid'] is None:
+                continue
+
             # Get the container
             container = self.api.containers().get(
-                uuid=container_request['container_uuid']).execute()
+                uuid=container_request['container_uuid']
+            ).execute()
             task = ArvadosTask(container_request, container)
 
             # If no input comparison needed, add task to results
@@ -807,12 +822,18 @@ class ArvadosPlatform(Platform):
             # Get task inputs from either properties or mounts
             task_inputs = self._get_task_inputs(container_request, container)
             if not task_inputs:
-                self.logger.debug("Task %s has no cwl_input property", container_request['uuid'])
+                self.logger.debug(
+                    "Task %s has no cwl_input property",
+                    container_request['uuid']
+                )
                 continue
 
             # Check if inputs match
-            if self._inputs_match(task_inputs, inputs_to_compare, container_request['uuid']):
-                self.logger.debug("Task %s matches inputs", container_request['uuid'])
+            if self._inputs_match(
+                task_inputs, inputs_to_compare, container_request['uuid']
+            ):
+                self.logger.debug(
+                    "Task %s matches inputs", container_request['uuid'])
                 matching_tasks.append(task)
 
         return matching_tasks

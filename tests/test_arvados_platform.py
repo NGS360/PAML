@@ -333,9 +333,6 @@ class TestArvadosPlaform(unittest.TestCase):
         destination_project = {"uuid": "destination-project-uuid"}
 
         # Set up mocks
-        # Mocking an empty source collection
-        source_collection = None
-
         mock_lookup_folder_name.side_effect = [(None, None)]
 
         result = self.platform.copy_folder(source_project, source_folder, destination_project)
@@ -741,6 +738,31 @@ class TestArvadosPlaform(unittest.TestCase):
 
         # Assert
         self.assertListEqual(result, [])
+
+    def test_get_tasks_by_name_container_request_missing_uuid(self):
+        ''' Test get_tasks_by_name method when a container_request is missing uuid '''
+        project = {'uuid': 'project_uuid'}
+
+        # Mock container requests and containers
+        mock_container_request1 = {
+            'name': 'task1',
+            'container_uuid': None
+        }
+        mock_tasks = [
+            ArvadosTask(
+                container_request=mock_container_request1,
+                container=None
+            )
+        ]
+        # Test
+        result = self.platform.get_tasks_by_name(
+            project=project,
+            task_name='task1',
+            inputs_to_compare=None,
+            tasks=mock_tasks)
+
+        # Assert
+        self.assertEqual(len(result), 0)
 
     def test_compare_inputs_simple_values(self):
         ''' Test the _compare_inputs helper method with simple values '''
