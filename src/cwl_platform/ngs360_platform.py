@@ -510,12 +510,18 @@ class NGS360Platform(Platform):
             files = None
 
         # Prepare the request data
+        workflow_engine_params = {}
+        workflow_engine_params["name"] = name
+        if execution_settings and "cacheId" in execution_settings:
+            workflow_engine_params["cacheId"] = execution_settings["cacheId"]
+
         data = {
             "workflow_params": json.dumps(parameters),
             "workflow_type": workflow_type,
             "workflow_type_version": workflow_type_version,
             "workflow_url": workflow_url,
             "workflow_engine": execution_settings.get("workflow_engine"),
+            "workflow_engine_parameters": json.dumps(workflow_engine_params),
             "tags": json.dumps({
                 "Name": name,
                 "Project": project["name"]
