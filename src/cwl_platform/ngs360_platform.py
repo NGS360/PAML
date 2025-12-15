@@ -8,10 +8,9 @@ The WES API provides a standard way to submit and manage workflows across differ
 import os
 import json
 import logging
-import time
 import uuid
-import requests
 from urllib.parse import urljoin
+import requests
 
 from .base_platform import Platform
 
@@ -103,7 +102,8 @@ class NGS360Platform(Platform):
         try:
             response = self._make_request("GET", "service-info")
             self.logger.info(
-                f"Connected to WES API: {response.get('workflow_type_versions', {})}"
+                "Connected to WES API: %s",
+                response.get('workflow_type_versions', {})
             )
             self.connected = True
             return True
@@ -189,7 +189,7 @@ class NGS360Platform(Platform):
 
             return dest_path
         else:
-            self.logger.error(f"Unsupported file format: {file}")
+            self.logger.error("Unsupported file format: %s", file)
             return None
 
     def export_file(self, file, bucket_name, prefix):
@@ -322,7 +322,7 @@ class NGS360Platform(Platform):
             self._make_request("DELETE", f"runs/{task.run_id}")
             return True
         except Exception as e:
-            self.logger.error(f"Failed to delete task: {e}")
+            self.logger.error("Failed to delete task: %s", e)
             return False
 
     def get_current_task(self):
@@ -372,7 +372,7 @@ class NGS360Platform(Platform):
                 task.state = self.STATE_MAP.get(wes_state, "Unknown")
                 task.outputs = response.get("outputs", {})
             except Exception as e:
-                self.logger.error(f"Failed to refresh task state: {e}")
+                self.logger.error("Failed to refresh task state: %s", e)
                 return "Unknown"
 
         return task.state or "Unknown"
@@ -393,7 +393,7 @@ class NGS360Platform(Platform):
             task.output_mapping = task.outputs.get("output_mapping",{})
             return task.output_mapping.get(output_name)
         except Exception as e:
-            self.logger.error(f"Failed to get task output: {e}")
+            self.logger.error("Failed to get task output: %s", e)
             return None
 
     def get_task_outputs(self, task):
@@ -407,10 +407,10 @@ class NGS360Platform(Platform):
             return None
         try:
             response = self._make_request("GET", f"runs/{task.run_id}")
-            task.outputs = response.get("outputs", {}) 
+            task.outputs = response.get("outputs", {})
             task.output_mapping = task.outputs.get("output_mapping",{})
         except Exception as e:
-            self.logger.error(f"Failed to get task outputs: {e}")
+            self.logger.error("Failed to get task output: %s", e)
             return []
 
         return list(task.output_mapping.keys())
@@ -462,7 +462,7 @@ class NGS360Platform(Platform):
 
             return tasks
         except Exception as e:
-            self.logger.error(f"Failed to get tasks: {e}")
+            self.logger.error("Failed to get tasks: %s", e)
             return []
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
@@ -541,7 +541,7 @@ class NGS360Platform(Platform):
 
             return task
         except Exception as e:
-            self.logger.error(f"Failed to submit task: {e}")
+            self.logger.error("Failed to submit task: %s", e)
             return None
 
     # Project methods
