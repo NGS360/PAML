@@ -185,7 +185,7 @@ class NGS360Platform(Platform):
             filename = os.path.basename(file)
             dest_path = os.path.join(dest_folder, filename)
 
-            response = requests.get(file, stream=True)
+            response = requests.get(file, stream=True, timeout=120)
             response.raise_for_status()
 
             with open(dest_path, "wb") as f:
@@ -193,9 +193,9 @@ class NGS360Platform(Platform):
                     f.write(chunk)
 
             return dest_path
-        else:
-            self.logger.error("Unsupported file format: %s", file)
-            return None
+
+        self.logger.error("Unsupported file format: %s", file)
+        return None
 
     def export_file(self, file, bucket_name, prefix):
         """
