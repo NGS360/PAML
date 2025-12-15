@@ -75,6 +75,7 @@ class NGS360Platform(Platform):
         self.logger = logging.getLogger(__name__)
         self.api_endpoint = None
         self.auth_token = None
+        self.auth = None
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
         self.files = {}  # Map file paths to file objects
@@ -520,14 +521,13 @@ class NGS360Platform(Platform):
             "workflow_type": workflow_type,
             "workflow_type_version": workflow_type_version,
             "workflow_url": workflow_url,
-            "workflow_engine": execution_settings.get("workflow_engine"),
+            "workflow_engine": "CWL",
             "workflow_engine_parameters": json.dumps(workflow_engine_params),
             "tags": json.dumps({
                 "Name": name,
                 "Project": project["name"]
             }),
         }
-
         try:
             response = self._make_request("POST", "runs", data=data, files=files)
             run_id = response.get("run_id")
