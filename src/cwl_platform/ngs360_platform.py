@@ -107,8 +107,12 @@ class NGS360Platform(Platform):
             )
             self.connected = True
             return True
-        except Exception as e:
-            self.logger.error(f"Failed to connect to WES API: {e}")
+        except requests.RequestException as e:
+            self.logger.error("Failed to connect to WES API: %s", e)
+            self.connected = False
+            return False
+        except (ValueError, KeyError) as e:
+            self.logger.error("Invalid response from WES API: %s", e)
             self.connected = False
             return False
 
@@ -145,13 +149,15 @@ class NGS360Platform(Platform):
             data=data,
             files=files,
             params=params,
-            auth=self.auth
+            auth=self.auth,
+            timeout=120
         )
 
         response.raise_for_status()
 
         if response.content:
             return response.json()
+
         return {}
 
     # File methods
@@ -162,7 +168,6 @@ class NGS360Platform(Platform):
         Note: WES API doesn't have a direct concept of folders, so this is a no-op
         """
         self.logger.warning("WES API doesn't support folder operations directly")
-        return None
 
     def download_file(self, file, dest_folder):
         """
@@ -202,7 +207,6 @@ class NGS360Platform(Platform):
         :return: s3 file path or None
         """
         self.logger.warning("WES API doesn't support direct S3 export")
-        return None
 
     def get_file_id(self, project, file_path):
         """
@@ -240,7 +244,6 @@ class NGS360Platform(Platform):
         Note: WES API doesn't have a direct concept of files, so this is a no-op
         """
         self.logger.warning("WES API doesn't support file operations")
-        return None
 
     def roll_file(self, project, file_name):
         """
@@ -249,7 +252,6 @@ class NGS360Platform(Platform):
         Note: WES API doesn't have a direct concept of files, so this is a no-op
         """
         self.logger.warning("WES API doesn't support file operations")
-        return None
 
     def stage_output_files(self, project, output_files):
         """
@@ -258,7 +260,6 @@ class NGS360Platform(Platform):
         Note: WES API doesn't have a direct concept of files, so this is a no-op
         """
         self.logger.warning("WES API doesn't support file staging operations")
-        return None
 
     def upload_file(
         self,
@@ -321,7 +322,7 @@ class NGS360Platform(Platform):
         try:
             self._make_request("DELETE", f"runs/{task.run_id}")
             return True
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error("Failed to delete task: %s", e)
             return False
 
@@ -371,8 +372,11 @@ class NGS360Platform(Platform):
                 wes_state = response.get("state", "UNKNOWN")
                 task.state = self.STATE_MAP.get(wes_state, "Unknown")
                 task.outputs = response.get("outputs", {})
-            except Exception as e:
+            except requests.RequestException as e:
                 self.logger.error("Failed to refresh task state: %s", e)
+                return "Unknown"
+            except (ValueError, KeyError) as e:
+                self.logger.error("Invalid response format for task state: %s", e)
                 return "Unknown"
 
         return task.state or "Unknown"
@@ -392,8 +396,11 @@ class NGS360Platform(Platform):
             task.outputs = response.get("outputs", {})
             task.output_mapping = task.outputs.get("output_mapping",{})
             return task.output_mapping.get(output_name)
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error("Failed to get task output: %s", e)
+            return None
+        except (ValueError, KeyError, AttributeError) as e:
+            self.logger.error("Invalid response format for task output: %s", e)
             return None
 
     def get_task_outputs(self, task):
@@ -409,8 +416,11 @@ class NGS360Platform(Platform):
             response = self._make_request("GET", f"runs/{task.run_id}")
             task.outputs = response.get("outputs", {})
             task.output_mapping = task.outputs.get("output_mapping",{})
-        except Exception as e:
-            self.logger.error("Failed to get task output: %s", e)
+        except requests.RequestException as e:
+            self.logger.error("Failed to get task outputs: %s", e)
+            return []
+        except (ValueError, KeyError, AttributeError) as e:
+            self.logger.error("Invalid response format for task outputs: %s", e)
             return []
 
         return list(task.output_mapping.keys())
@@ -431,8 +441,8 @@ class NGS360Platform(Platform):
         # If output is a URL, extract the filename
         if isinstance(output, list):
             return [output_path.split('/')[-1] for output_path in output]
-        else:
-            return output.split('/')[-1]
+
+        return output.split('/')[-1]
 
     def get_tasks_by_name(self, project, task_name=None,inputs_to_compare=None,tasks=None):
         """
@@ -461,8 +471,11 @@ class NGS360Platform(Platform):
                 tasks.append(task)
 
             return tasks
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error("Failed to get tasks: %s", e)
+            return []
+        except (ValueError, KeyError, TypeError) as e:
+            self.logger.error("Invalid response format for tasks: %s", e)
             return []
 
     def stage_task_output(self, task, project, output_to_export, output_directory_name):
@@ -474,7 +487,6 @@ class NGS360Platform(Platform):
         Note: WES API doesn't have a direct concept of files, so this is a no-op
         """
         self.logger.warning("WES API doesn't support file staging operations")
-        return None
 
     def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         """
@@ -540,8 +552,11 @@ class NGS360Platform(Platform):
             task = WESTask(run_id=run_id, name=name, state="Queued", inputs=parameters)
 
             return task
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error("Failed to submit task: %s", e)
+            return None
+        except (ValueError, KeyError, IOError) as e:
+            self.logger.error("Failed to prepare or parse task submission: %s", e)
             return None
 
     # Project methods
@@ -638,7 +653,6 @@ class NGS360Platform(Platform):
         Note: WES API doesn't have a concept of projects, so this is a no-op
         """
         self.logger.warning("WES API doesn't support user management")
-        return None
 
     def get_user(self, user):
         """
