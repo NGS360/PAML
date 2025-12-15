@@ -40,6 +40,7 @@ class TestNGS360Platform(unittest.TestCase):
             data=None,
             files=None,
             params=None,
+            timeout=120,
             auth=None
         )
         self.assertEqual(result, {'key': 'value'})
@@ -108,6 +109,7 @@ class TestNGS360Platform(unittest.TestCase):
             },
             files=None,
             params=None,
+            timeout=120,
             auth=None
         )
 
@@ -154,6 +156,7 @@ class TestNGS360Platform(unittest.TestCase):
             data=None,
             files=None,
             params=None,
+            timeout=120,
             auth=None
         )
 
@@ -271,6 +274,7 @@ class TestNGS360Platform(unittest.TestCase):
             data=None,
             files=None,
             params={'tags': '{"Project": "Test Project"}'},
+            timeout=120,
             auth=None
         )
 
@@ -308,6 +312,7 @@ class TestNGS360Platform(unittest.TestCase):
             data=None,
             files=None,
             params=None,
+            timeout=120,
             auth=None
         )
 
