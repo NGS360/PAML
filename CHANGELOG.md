@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.3.4](https://github.com/NGS360/PAML.git/releases/tag/v0.3.4) - 2025-11-19
+
+### Fixed
+
+- Add check for container_uuid when called get_tasks_by_name.
+- Fix copy_folder to handle directories better in Arvados and only copy the specified folder instead of the whole collection.
+
+## [v0.3.3](https://github.com/NGS360/PAML.git/releases/tag/v0.3.3) - 2025-10-28
+
+### Fixed
+
+- Address issue where a newly created task was added to the task list. submit_task was returning a task without a name in Arvados (PR #91)
+- Fix incorrect type hint for Arvados in get_task_by_name (PR #96)
+- Fix get_task_state for Arvados not properly checking container request status (PR #97)
+
+## [v0.3.2](https://github.com/NGS360/PAML.git/releases/tag/v0.3.2) - 2025-07-12
+
+### Fixed
+
+- ArvadosPlatform::get_tasks_by_name was not properly handling list of tasks provided
+
+## [v0.3.1](https://github.com/NGS360/PAML.git/releases/tag/v0.3.1) - 2025-06-09
+
+### Added
+
+- get_tasks_by_name can now return all tasks in a project, to assist with caching
+
+### Changed
+
+- Update Arvados Python Client requirement to use >=3.0.0 and <3.2.0
+
+## [v0.3](https://github.com/NGS360/PAML.git/releases/tag/v0.3) - 2025-06-02
+
+### Added
+
+- Added get_costs method
+- Added get_projects method
+
+### Changed
+
+- Update Arvados Python Client to 3.1.1
+- get_task_by_name now checks for equilevant input values 
+- Remove SevenBridges Endpoint and make that a parameter to connect()
+- Update get_task_input to handle list of files
+- Resolve failing SBG integration test
+
+## [v0.2.5](https://github.com/NGS360/PAML.git/releases/tag/v0.2.5) - 2025-03-11
+
+### Added
+
+- Added get_files() method along with associated integration tests
+- Added various other method to support project loading/exporting including:
+    add_user_to_project()
+    delete_project_by_name()
+    get_workflows()
+    get_project_users()
+
+### Changed
+
+- Remove support for Python 3.8 and Python 3.13, so only supporting 3.9 - 3.12
+- Rename upload_file_to_project to upload_file
+
+### Fixed
+
+- Fixed get_user method to ignore case sensitivity
+
 ## [v0.2.4](https://github.com/NGS360/PAML.git/releases/tag/v0.2.4) - 2025-02-14
 
 - Fix get_task_output for optional fields when queried in Arvados
