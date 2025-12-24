@@ -5,9 +5,9 @@ import json
 import unittest
 from unittest.mock import patch, MagicMock
 
-from src.cwl_platform.wes_platform import WESPlatform, WESTask
+from src.cwl_platform.ngs360_platform import NGS360Platform, WESTask
 
-class TestWESPlatform(unittest.TestCase):
+class TestNGS360Platform(unittest.TestCase):
     '''
     Test WES Platform implementation
     '''
@@ -15,7 +15,7 @@ class TestWESPlatform(unittest.TestCase):
         '''
         Set up test environment
         '''
-        self.platform = WESPlatform('WES')
+        self.platform = NGS360Platform('WES')
         self.platform.api_endpoint = 'https://wes.example.com/ga4gh/wes/v1'
         self.platform.auth_token = 'test_token'
         self.platform.connected = True
@@ -37,9 +37,11 @@ class TestWESPlatform(unittest.TestCase):
             method='GET',
             url='https://wes.example.com/ga4gh/wes/v1/service-info',
             headers={'Authorization': 'Bearer test_token'},
-            json=None,
+            data=None,
             files=None,
-            params=None
+            params=None,
+            timeout=120,
+            auth=None
         )
         self.assertEqual(result, {'key': 'value'})
 
@@ -63,7 +65,7 @@ class TestWESPlatform(unittest.TestCase):
         mock_request.return_value = mock_response
 
         # Test connect
-        platform = WESPlatform('WES')
+        platform = NGS360Platform('WES')
         result = platform.connect(api_endpoint='https://wes.example.com/ga4gh/wes/v1', auth_token='test_token')
         self.assertTrue(result)
         self.assertTrue(platform.connected)
@@ -87,8 +89,8 @@ class TestWESPlatform(unittest.TestCase):
         task = self.platform.submit_task(
             name='Test Task',
             project=project,
-            workflow='https://example.com/workflow.cwl',
-            parameters=parameters
+            workflow='1234567',
+            parameters=parameters,
         )
 
         # Verify request
@@ -96,15 +98,19 @@ class TestWESPlatform(unittest.TestCase):
             method='POST',
             url='https://wes.example.com/ga4gh/wes/v1/runs',
             headers={'Authorization': 'Bearer test_token'},
-            json={
+            data={
                 'workflow_params': json.dumps(parameters),
                 'workflow_type': 'CWL',
                 'workflow_type_version': 'v1.0',
-                'workflow_url': 'https://example.com/workflow.cwl',
-                'tags': {'name': 'Test Task'}
+                'workflow_engine': 'CWL',
+                'workflow_engine_parameters': '{"name": "Test Task"}',
+                'workflow_url': '1234567',
+                'tags': '{"Name": "Test Task", "Project": "Test Project"}'
             },
             files=None,
-            params=None
+            params=None,
+            timeout=120,
+            auth=None
         )
 
         # Verify task
@@ -147,17 +153,38 @@ class TestWESPlatform(unittest.TestCase):
             method='GET',
             url='https://wes.example.com/ga4gh/wes/v1/runs/test_run_id',
             headers={'Authorization': 'Bearer test_token'},
-            json=None,
+            data=None,
             files=None,
-            params=None
+            params=None,
+            timeout=120,
+            auth=None
         )
 
-    def test_get_task_output(self):
+    @patch('requests.request')
+    def test_get_task_output(self, mock_request):
         '''
         Test get_task_output method
         '''
+        # Mock response
+        mock_response = MagicMock()
+        mock_response.content  = json.dumps({
+            "outputs": {
+                "output_mapping":  {
+                    'output': 'value'
+                }
+            }
+        }).encode('utf-8')
+        mock_response.json.return_value = {
+            "outputs": {
+                "output_mapping":  {
+                    'output': 'value'
+                }
+            }
+        }
+        mock_request.return_value = mock_response
+
         # Create task with outputs
-        task = WESTask('test_run_id', 'Test Task', outputs={'output': 'value'})
+        task = WESTask('test_run_id', 'Test Task')
 
         # Test get_task_output
         output = self.platform.get_task_output(task, 'output')
@@ -167,16 +194,36 @@ class TestWESPlatform(unittest.TestCase):
         output = self.platform.get_task_output(task, 'non_existent')
         self.assertIsNone(output)
 
-    def test_get_task_outputs(self):
+    @patch('requests.request')
+    def test_get_task_outputs(self, mock_request):
         '''
         Test get_task_outputs method
         '''
+        # Mock response
+        mock_response = MagicMock()
+        mock_response.content  = json.dumps({
+            "outputs": {
+                "output_mapping":  {
+                    'output1': 'value1',
+                    'output2': 'value2'
+                }
+            }
+        }).encode('utf-8')
+        mock_response.json.return_value = {
+            "outputs": {
+                "output_mapping":  {
+                    'output1': 'value1',
+                    'output2': 'value2'
+                }
+            }
+        }
+        mock_request.return_value = mock_response
         # Create task with outputs
         task = WESTask('test_run_id', 'Test Task', outputs={'output1': 'value1', 'output2': 'value2'})
 
         # Test get_task_outputs
         outputs = self.platform.get_task_outputs(task)
-        self.assertEqual(outputs, {'output1': 'value1', 'output2': 'value2'})
+        self.assertEqual(outputs, ['output1', 'output2'])
 
     @patch('requests.request')
     def test_get_tasks_by_name(self, mock_request):
@@ -224,9 +271,11 @@ class TestWESPlatform(unittest.TestCase):
             method='GET',
             url='https://wes.example.com/ga4gh/wes/v1/runs',
             headers={'Authorization': 'Bearer test_token'},
-            json=None,
+            data=None,
             files=None,
-            params={}
+            params={'tags': '{"Project": "Test Project"}'},
+            timeout=120,
+            auth=None
         )
 
         # Verify tasks
@@ -260,9 +309,11 @@ class TestWESPlatform(unittest.TestCase):
             method='DELETE',
             url='https://wes.example.com/ga4gh/wes/v1/runs/test_run_id',
             headers={'Authorization': 'Bearer test_token'},
-            json=None,
+            data=None,
             files=None,
-            params=None
+            params=None,
+            timeout=120,
+            auth=None
         )
 
     def test_project_methods(self):
