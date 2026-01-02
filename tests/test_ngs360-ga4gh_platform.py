@@ -83,9 +83,11 @@ class TestNGS360Platform(unittest.TestCase):
         mock_response.json.return_value = {'run_id': 'test_run_id'}
         mock_request.return_value = mock_response
 
-        # Test submit_task
+        # Set up parameters
         project = {'id': 'test_project', 'name': 'Test Project'}
         parameters = {'input': 'value'}
+        
+        # Test
         task = self.platform.submit_task(
             name='Test Task',
             project=project,
