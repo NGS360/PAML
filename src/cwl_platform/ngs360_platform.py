@@ -117,7 +117,7 @@ class NGS360Platform(Platform):
             self.connected = False
             return False
 
-    def _make_request(self, method, path, data=None, files=None, params=None):
+    def _make_request(self, method, path, **kwargs):
         """
         Make a request to the WES API
 
@@ -150,9 +150,9 @@ class NGS360Platform(Platform):
             method=method,
             url=url,
             headers=headers,
-            data=data,
-            files=files,
-            params=params,
+            data=kwargs.get('data'),
+            files=kwargs.get('files'),
+            params=kwargs.get('params'),
             auth=auth,
             timeout=120
         )
