@@ -17,7 +17,7 @@ class TestNGS360Platform(unittest.TestCase):
         '''
         self.platform = NGS360Platform('WES')
         self.platform.api_endpoint = 'https://wes.example.com/ga4gh/wes/v1'
-        self.platform.auth_token = 'test_token'
+        self.platform._auth_config['token'] = 'test_token'
         self.platform.connected = True
 
     @patch('requests.request')
