@@ -569,7 +569,7 @@ class NGS360Platform(Platform):
         :return: Project object
         """
         project = {
-            "id": str(uuid.uuid4()),
+            # "id": str(uuid.uuid4()),
             "name": project_name,
             "description": project_description,
         }
