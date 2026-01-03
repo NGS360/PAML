@@ -20,13 +20,12 @@ class WESTask:
     WES Task class to encapsulate task functionality
     """
 
-    # * separator forces optional parameters to be keyword-only:
-    def __init__(self, run_id, name, *, state=None, outputs=None, inputs=None):
+    def __init__(self, run_id, name, **kwargs):
         self.run_id = run_id
         self.name = name
-        self.state = state
-        self.outputs = outputs or {}
-        self.inputs = inputs or {}
+        self.state = kwargs.get("state")
+        self.outputs = kwargs.get("outputs") or {}
+        self.inputs = kwargs.get("inputs") or {}
 
     def to_dict(self):
         """Convert to dictionary"""
