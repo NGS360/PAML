@@ -20,7 +20,8 @@ class WESTask:
     WES Task class to encapsulate task functionality
     """
 
-    def __init__(self, run_id, name, state=None, outputs=None, inputs=None):
+    # * separator forces optional parameters to be keyword-only:
+    def __init__(self, run_id, name, *, state=None, outputs=None, inputs=None):
         self.run_id = run_id
         self.name = name
         self.state = state
@@ -43,9 +44,9 @@ class WESTask:
         return cls(
             task_dict["run_id"],
             task_dict["name"],
-            task_dict.get("state"),
-            task_dict.get("outputs"),
-            task_dict.get("inputs"),
+            state=task_dict.get("state"),
+            outputs=task_dict.get("outputs"),
+            inputs=task_dict.get("inputs"),
         )
 
 
