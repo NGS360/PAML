@@ -8,7 +8,6 @@ The WES API provides a standard way to submit and manage workflows across differ
 import os
 import json
 import logging
-import uuid
 from urllib.parse import urljoin
 import requests
 
