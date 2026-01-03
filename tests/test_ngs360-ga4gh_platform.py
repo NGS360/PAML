@@ -75,39 +75,37 @@ class TestNGS360Platform(unittest.TestCase):
     @patch('requests.request')
     def test_submit_task(self, mock_request):
         '''
-        Test submit_task method
+        Test submit_task method calls the GA4GH API correctly
         '''
-        # Mock response
+        # Set up parameters
+        workflow_url = 'workflow_id'
+        workflow_parameters = {'input': 'value'}
+
+        # Mock the GA4GH response for submit_task
         mock_response = MagicMock()
-        mock_response.content = json.dumps({'run_id': 'test_run_id'}).encode('utf-8')
         mock_response.json.return_value = {'run_id': 'test_run_id'}
         mock_request.return_value = mock_response
 
-        # Set up parameters
-        project = {'id': 'test_project', 'name': 'Test Project'}
-        parameters = {'input': 'value'}
-        
         # Test
         task = self.platform.submit_task(
             name='Test Task',
-            project=project,
-            workflow='1234567',
-            parameters=parameters,
+            project={'id': "P-1234567", 'name': 'Test Project'},
+            workflow=workflow_url,
+            parameters=workflow_parameters,
+            execution_settings={"use_spot_instance": False}
         )
 
-        # Verify request
+        # Verify GA4GH API request withing submit_task was made correctly
         mock_request.assert_called_with(
             method='POST',
             url='https://wes.example.com/ga4gh/wes/v1/runs',
             headers={'Authorization': 'Bearer test_token'},
             data={
-                'workflow_params': json.dumps(parameters),
+                'workflow_params': json.dumps(workflow_parameters),
                 'workflow_type': 'CWL',
                 'workflow_type_version': 'v1.0',
-                'workflow_engine': 'CWL',
-                'workflow_engine_parameters': '{"name": "Test Task"}',
-                'workflow_url': '1234567',
-                'tags': '{"Name": "Test Task", "Project": "Test Project"}'
+                'workflow_url': workflow_url,
+                'tags': '{"ProjectName": "Test Project", "TaskName": "Test Task"}'
             },
             files=None,
             params=None,
@@ -120,7 +118,7 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertEqual(task.run_id, 'test_run_id')
         self.assertEqual(task.name, 'Test Task')
         self.assertEqual(task.state, 'Queued')
-        self.assertEqual(task.inputs, parameters)
+        self.assertEqual(task.inputs, workflow_parameters)
 
     @patch('requests.request')
     def test_get_task_state(self, mock_request):

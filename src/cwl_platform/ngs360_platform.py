@@ -490,13 +490,13 @@ class NGS360Platform(Platform):
 
     def submit_task(self, name, project, workflow, parameters, execution_settings=None):
         """
-        Submit a workflow on the platform
+        Submit a workflow to the GA4GH WES API
 
         :param name: Name of the task to submit
-        :param project: Project to submit the task to (not used in WES)
-        :param workflow: Workflow to submit (URL or file path to the workflow)
+        :param project: Project to submit the task to
+        :param workflow: Workflow to submit (ID, URL or file path to the workflow)
         :param parameters: Parameters for the workflow
-        :param execution_settings: {use_spot_instance: True/False} (not used in WES)
+        :param execution_settings: Not used in NGS360 WES API (yet)
         :return: WESTask object or None
         """
         if not workflow:
@@ -523,21 +523,14 @@ class NGS360Platform(Platform):
             files = None
 
         # Prepare the request data
-        workflow_engine_params = {}
-        workflow_engine_params["name"] = name
-        if execution_settings and "cacheId" in execution_settings:
-            workflow_engine_params["cacheId"] = execution_settings["cacheId"]
-
         data = {
             "workflow_params": json.dumps(parameters),
             "workflow_type": workflow_type,
             "workflow_type_version": workflow_type_version,
             "workflow_url": workflow_url,
-            "workflow_engine": "CWL",
-            "workflow_engine_parameters": json.dumps(workflow_engine_params),
             "tags": json.dumps({
-                "Name": name,
-                "Project": project["name"]
+                "ProjectName": project["name"],
+                "TaskName": name,
             }),
         }
         try:
