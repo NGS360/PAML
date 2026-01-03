@@ -73,8 +73,7 @@ class NGS360Platform(Platform):
         super().__init__(name)
         self.logger = logging.getLogger(__name__)
         self.api_endpoint = None
-        self.auth_token = None
-        self.auth = None
+        self._auth_config = {}
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
         self.files = {}  # Map file paths to file objects
@@ -92,11 +91,13 @@ class NGS360Platform(Platform):
             raise ValueError("WES API endpoint URL is required")
 
         # Set up auth token or username/password as auth
-        self.auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
-        if not self.auth_token:
+        auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
+        if auth_token:
+            self._auth_config['token'] = auth_token
+        else:
             username = os.environ.get("WES_USERNAME")
             password = os.environ.get("WES_PASSWORD")
-            self.auth = (username, password)
+            self._auth_config['credentials'] = (username, password)
 
         # Test connection by getting service info
         try:
@@ -138,9 +139,12 @@ class NGS360Platform(Platform):
 
         url = urljoin(endpoint, path)
         headers = {}
+        auth = None
 
-        if self.auth_token:
-            headers["Authorization"] = f"Bearer {self.auth_token}"
+        if 'token' in self._auth_config:
+            headers["Authorization"] = f"Bearer {self._auth_config['token']}"
+        elif 'credentials' in self._auth_config:
+            auth = self._auth_config['credentials']
 
         response = requests.request(
             method=method,
@@ -149,7 +153,7 @@ class NGS360Platform(Platform):
             data=data,
             files=files,
             params=params,
-            auth=self.auth,
+            auth=auth,
             timeout=120
         )
 
