@@ -448,7 +448,7 @@ class NGS360Platform(Platform):
 
         return output.split('/')[-1]
 
-    def get_tasks_by_name(self, project, task_name=None,inputs_to_compare=None,tasks=None):
+    def get_tasks_by_name(self, project, task_name=None, inputs_to_compare=None, tasks=None):
         """
         Get all processes/tasks in a project with a specified name
 
@@ -457,9 +457,9 @@ class NGS360Platform(Platform):
         :return: List of tasks
         """
         try:
-            tags = {"Project": project["name"]}
+            tags = {"ProjectName": project["name"]}
             if task_name:
-                tags["Name"] = task_name
+                tags["TaskName"] = task_name
             params = {
                 "tags": json.dumps(tags)
             }
