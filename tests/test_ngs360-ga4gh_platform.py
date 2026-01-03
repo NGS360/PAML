@@ -70,7 +70,7 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertTrue(result)
         self.assertTrue(platform.connected)
         self.assertEqual(platform.api_endpoint, 'https://wes.example.com/ga4gh/wes/v1')
-        self.assertEqual(platform.auth_token, 'test_token')
+        self.assertEqual(platform._auth_config['token'], 'test_token')
 
     @patch('requests.request')
     def test_submit_task(self, mock_request):
