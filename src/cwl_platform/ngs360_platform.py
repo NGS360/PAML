@@ -47,9 +47,18 @@ class WESTask:
             inputs=task_dict.get("inputs"),
         )
 
+class NGS360Project():
+    """
+    NGS360 Project class to encapsulate project functionality
+    """
+
+    def __init__(self, project_id, name):
+        self.project_id = project_id
+        self.name = name
+
 
 class NGS360Platform(Platform):
-    """GA4GH WES Platform class"""
+    """ NGS360 + GA4GH WES Platform class """
 
     # WES API state mapping to Platform states
     STATE_MAP = {
@@ -106,13 +115,29 @@ class NGS360Platform(Platform):
                 response.get('workflow_type_versions', {})
             )
             self.connected = True
-            return True
+            # return True
         except requests.RequestException as e:
             self.logger.error("Failed to connect to WES API: %s", e)
             self.connected = False
             return False
         except (ValueError, KeyError) as e:
             self.logger.error("Invalid response from WES API: %s", e)
+            self.connected = False
+            return False
+
+        self.ngs360_endpoint = kwargs.get("ngs360_endpoint", os.environ.get("NGS360_API_ENDPOINT"))
+        if not self.ngs360_endpoint:
+            raise ValueError("NGS360 API endpoint URL is required")
+        try:
+            response = requests.get(
+                f"{self.ngs360_endpoint}/",
+                timeout=30
+            )
+            response.raise_for_status()
+            self.logger.info("Connected to NGS360 API")
+            return True
+        except requests.RequestException as e:
+            self.logger.error("Failed to connect to NGS360 API: %s", e)
             self.connected = False
             return False
 
@@ -284,8 +309,27 @@ class NGS360Platform(Platform):
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
         """
-        self.logger.warning("WES API doesn't support file upload operations directly")
-        return filename
+        with open(filename, "rb") as f:
+            response = requests.post(
+                f"{self.ngs360_endpoint}/api/v1/files",
+                data={
+                    "filename": filename,
+                    "entity_type": 'project',
+                    "entity_id": project["project_id"],
+                    "relative_path": dest_folder,
+                    "destination_filename": destination_filename or os.path.basename(filename),
+                    "overwrite": overwrite,
+                },
+                files={"content": f},
+            )
+
+        if response.status_code == 201:
+            file_info = response.json()
+            return f"ngs360://{file_info['file_id']}"
+        else:
+            self.logger.error(f"Error uploading file: {response.status_code}")
+            self.logger.error(response.json())
+            return None
 
     # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
@@ -456,7 +500,7 @@ class NGS360Platform(Platform):
         :return: List of tasks
         """
         try:
-            tags = {"ProjectName": project["name"]}
+            tags = {"ProjectId": project["project_id"]}
             if task_name:
                 tags["TaskName"] = task_name
             params = {
@@ -532,7 +576,7 @@ class NGS360Platform(Platform):
             "workflow_type_version": workflow_type_version,
             "workflow_url": workflow_url,
             "tags": json.dumps({
-                "ProjectName": project["name"],
+                "ProjectId": project["project_id"],
                 "TaskName": name,
             }),
         }
@@ -597,25 +641,34 @@ class NGS360Platform(Platform):
     def get_project_by_name(self, project_name):
         """
         Get a project by its name
-
-        Note: WES API doesn't have a concept of projects, so this returns the virtual project
         """
-        if project_name in self.projects:
-            return self.projects[project_name]
-
-        # Create a new project if it doesn't exist
-        return self.create_project(project_name, f"Virtual project for {project_name}")
+        response = requests.get(
+            f"{self.ngs360_endpoint}/api/v1/projects/search?query={project_name}",
+            timeout=30
+        )
+        if response.status_code == 200:
+            projects = response.json().get("data", [])
+            for project in projects:
+                if project.get("name") == project_name:
+                    return project
+            self.logger.error(f"Project '{project_name}' not found")
+            return None
 
     def get_project_by_id(self, project_id):
         """
         Get a project by its id
 
-        Note: WES API doesn't have a concept of projects, so this returns the virtual project
         """
-        for project in self.projects.values():
-            if project["id"] == project_id:
-                return project
-        return self.create_project(project_id, f"Virtual project for {project_id}")
+        response = requests.get(
+            f"{self.ngs360_endpoint}/api/v1/projects/{project_id}",
+            timeout=30
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            self.logger.error(f"Error retrieving project: {response.status_code}")
+            self.logger.error(response.json())
+            return None
 
     def get_project_cost(self, project):
         """
