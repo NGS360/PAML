@@ -1008,12 +1008,17 @@ class ArvadosPlatform(Platform):
                 cmd_spot_instance = "--enable-preemptible"
             else:
                 cmd_spot_instance = "--disable-preemptible"
+            priority = execution_settings.get(
+                'priority', 500) if execution_settings else 500
+            if priority < 0 or priority > 1000:
+                priority=500
 
             cmd_str = ['arvados-cwl-runner', '--no-wait',
                     '--defer-download',
                     '--varying-url-params=AWSAccessKeyId,Signature,Expires',
                     '--prefer-cached-downloads',
                     '--debug',
+                    '--priority', str(priority),
                     cmd_spot_instance,
                     '--project-uuid', project['uuid'],
                     '--name', name,
