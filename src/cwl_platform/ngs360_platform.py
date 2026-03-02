@@ -550,6 +550,20 @@ class NGS360Platform(Platform):
             self.logger.error("Workflow is required")
             return None
 
+        output_bucket = os.environ.get("OMICS_OUTPUT_BUCKET")
+        if not output_bucket:
+            self.logger.error("Environmental variable OMICS_OUTPUT_BUCKET is required.")
+            return None
+
+        if not output_bucket.endswith('/'):
+            output_bucket = output_bucket + '/'
+        output_uri = output_bucket + 'Project/' + project['project_id']+'/'
+        workflow_engine_parameters = {
+            "outputUri": output_uri,
+        }
+        if "cacheId" in execution_settings:
+            workflow_engine_parameters["cacheId"] = execution_settings["cacheId"]
+
         # Prepare the request data
         workflow_url = workflow
         workflow_type = "CWL"  # Default to CWL
@@ -579,6 +593,9 @@ class NGS360Platform(Platform):
                 "ProjectId": project["project_id"],
                 "TaskName": name,
             }),
+            "workflow_engine_parameters": json.dumps(
+                workflow_engine_parameters
+            ),
         }
         try:
             response = self._make_request("POST", "runs", data=data, files=files)
