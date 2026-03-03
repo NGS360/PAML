@@ -555,9 +555,9 @@ class NGS360Platform(Platform):
             self.logger.error("Workflow is required")
             return None
 
-        output_bucket = os.environ.get("OMICS_OUTPUT_BUCKET")
+        output_bucket = os.environ.get("OMICS_OUTPUT_URI")
         if not output_bucket:
-            self.logger.error("Environmental variable OMICS_OUTPUT_BUCKET is required.")
+            self.logger.error("Environmental variable OMICS_OUTPUT_URI is required.")
             return None
 
         if not output_bucket.endswith('/'):
