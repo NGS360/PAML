@@ -309,9 +309,14 @@ class NGS360Platform(Platform):
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
         """
+
+        if dest_folder.startswith('/'):
+            dest_folder = dest_folder[1:]
+
         with open(filename, "rb") as f:
+            logging.info(f)
             response = requests.post(
-                f"{self.ngs360_endpoint}/api/v1/files",
+                f"{self.ngs360_endpoint}/api/v1/files/upload",
                 data={
                     "filename": filename,
                     "entity_type": 'project',
