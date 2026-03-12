@@ -569,6 +569,8 @@ class NGS360Platform(Platform):
         # }
         if execution_settings and "cacheId" in execution_settings:
             workflow_engine_parameters["cacheId"] = execution_settings["cacheId"]
+        if execution_settings and "workflowVersionName" in execution_settings:
+            workflow_engine_parameters["workflowVersionName"] = execution_settings["workflowVersionName"]
 
         # Prepare the request data
         workflow_url = workflow
