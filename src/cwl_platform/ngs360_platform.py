@@ -556,9 +556,21 @@ class NGS360Platform(Platform):
             return None
 
         workflow_engine_parameters = {}
-
+        
+        # output_bucket = os.environ.get("OMICS_OUTPUT_URI")
+        # if not output_bucket:
+        #     self.logger.error("Environmental variable OMICS_OUTPUT_URI is required.")
+        #    return None
+        # if not output_bucket.endswith('/'):
+        #     output_bucket = output_bucket + '/'
+        # output_uri = output_bucket + 'Project/' + project['project_id']+'/'
+        # workflow_engine_parameters = {
+        #     "outputUri": output_uri,
+        # }
         if execution_settings and "cacheId" in execution_settings:
             workflow_engine_parameters["cacheId"] = execution_settings["cacheId"]
+        if execution_settings and "workflowVersionName" in execution_settings:
+            workflow_engine_parameters["workflowVersionName"] = execution_settings["workflowVersionName"]
 
         # Prepare the request data
         workflow_url = workflow
