@@ -85,6 +85,7 @@ class NGS360Platform(Platform):
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
         self.files = {}  # Map file paths to file objects
+        self.ngs360_endpoint = None
 
     def connect(self, **kwargs):
         """
@@ -326,15 +327,16 @@ class NGS360Platform(Platform):
                     "overwrite": overwrite,
                 },
                 files={"content": f},
+                timeout=120,
             )
 
         if response.status_code == 201:
             file_info = response.json()
             return f"ngs360://{file_info['file_id']}"
-        else:
-            self.logger.error(f"Error uploading file: {response.status_code}")
-            self.logger.error(response.json())
-            return None
+
+        self.logger.error("Error uploading file: %s", response.status_code)
+        self.logger.error(response.json())
+        return None
 
     # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
@@ -556,7 +558,7 @@ class NGS360Platform(Platform):
             return None
 
         workflow_engine_parameters = {}
-        
+
         # output_bucket = os.environ.get("OMICS_OUTPUT_URI")
         # if not output_bucket:
         #     self.logger.error("Environmental variable OMICS_OUTPUT_URI is required.")
@@ -676,8 +678,8 @@ class NGS360Platform(Platform):
             for project in projects:
                 if project.get("name") == project_name:
                     return project
-            self.logger.error(f"Project '{project_name}' not found")
-            return None
+        self.logger.error("Project '%s' not found", project_name)
+        return None
 
     def get_project_by_id(self, project_id):
         """
@@ -690,10 +692,10 @@ class NGS360Platform(Platform):
         )
         if response.status_code == 200:
             return response.json()
-        else:
-            self.logger.error(f"Error retrieving project: {response.status_code}")
-            self.logger.error(response.json())
-            return None
+
+        self.logger.error("Error retrieving project: %s", response.status_code)
+        self.logger.error(response.json())
+        return None
 
     def get_project_cost(self, project):
         """
