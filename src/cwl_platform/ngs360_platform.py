@@ -309,9 +309,14 @@ class NGS360Platform(Platform):
         :param overwrite: Overwrite the file if it already exists.
         :return: ID of uploaded file.
         """
+
+        if dest_folder.startswith('/'):
+            dest_folder = dest_folder[1:]
+
         with open(filename, "rb") as f:
+            logging.info(f)
             response = requests.post(
-                f"{self.ngs360_endpoint}/api/v1/files",
+                f"{self.ngs360_endpoint}/api/v1/files/upload",
                 data={
                     "filename": filename,
                     "entity_type": 'project',
@@ -550,6 +555,23 @@ class NGS360Platform(Platform):
             self.logger.error("Workflow is required")
             return None
 
+        workflow_engine_parameters = {}
+        
+        # output_bucket = os.environ.get("OMICS_OUTPUT_URI")
+        # if not output_bucket:
+        #     self.logger.error("Environmental variable OMICS_OUTPUT_URI is required.")
+        #    return None
+        # if not output_bucket.endswith('/'):
+        #     output_bucket = output_bucket + '/'
+        # output_uri = output_bucket + 'Project/' + project['project_id']+'/'
+        # workflow_engine_parameters = {
+        #     "outputUri": output_uri,
+        # }
+        if execution_settings and "cacheId" in execution_settings:
+            workflow_engine_parameters["cacheId"] = execution_settings["cacheId"]
+        if execution_settings and "workflowVersionName" in execution_settings:
+            workflow_engine_parameters["workflowVersionName"] = execution_settings["workflowVersionName"]
+
         # Prepare the request data
         workflow_url = workflow
         workflow_type = "CWL"  # Default to CWL
@@ -579,6 +601,9 @@ class NGS360Platform(Platform):
                 "ProjectId": project["project_id"],
                 "TaskName": name,
             }),
+            "workflow_engine_parameters": json.dumps(
+                workflow_engine_parameters
+            ),
         }
         try:
             response = self._make_request("POST", "runs", data=data, files=files)
