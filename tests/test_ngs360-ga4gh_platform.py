@@ -1,12 +1,13 @@
 '''
 Test WES Platform implementation
 '''
+# pylint: disable=protected-access
 import json
 import unittest
 from unittest.mock import patch, MagicMock
 import requests
 
-from src.cwl_platform.ngs360_platform import NGS360Platform, WESTask
+from cwl_platform.ngs360_platform import NGS360Platform, WESTask
 
 class TestNGS360Platform(unittest.TestCase):
     '''
@@ -393,7 +394,7 @@ class TestNGS360Platform(unittest.TestCase):
 
         # Verify API call
         mock_post.assert_called_once()
-        args, kwargs = mock_post.call_args
+        _, kwargs = mock_post.call_args
         self.assertIn('files', kwargs)
         self.assertIn('data', kwargs)
         self.assertEqual(kwargs['data']['entity_id'], 'test_project_id')
