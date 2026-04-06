@@ -351,7 +351,7 @@ class ArvadosPlatform(Platform):
         :param file_path: The full path of the file to search for
         :return: The file id or None if not found
         '''
-        if file_path.startswith('http') or file_path.startswith('keep'):
+        if file_path.startswith('http') or file_path.startswith('keep') or file_path.startswith('s3'):
             return file_path
 
         # Get the collection
