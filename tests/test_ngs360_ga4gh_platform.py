@@ -455,8 +455,7 @@ class TestNGS360Platform(unittest.TestCase):
         '''
         Test export_file method (not supported in WES)
         '''
-        result = self.platform.export_file('file_id', 'bucket', 'prefix')
-        self.assertIsNone(result)
+        self.assertIsNone(self.platform.export_file('file_id', 'bucket', 'prefix'))
 
     @patch('requests.request')
     def test_connect_username_password_auth(self, mock_request):
@@ -595,12 +594,10 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertEqual(result, 'test/folder')
 
         # Test rename_file
-        result = self.platform.rename_file('file_id', 'new_name.txt')
-        self.assertIsNone(result)
+        self.assertIsNone(self.platform.rename_file('file_id', 'new_name.txt'))
 
         # Test roll_file
-        result = self.platform.roll_file(project, 'file_name.txt')
-        self.assertIsNone(result)
+        self.assertIsNone(self.platform.roll_file(project, 'file_name.txt'))
 
     def test_task_methods_edge_cases(self):
         '''
@@ -664,12 +661,10 @@ class TestNGS360Platform(unittest.TestCase):
         project = {'project_id': 'test_project'}
 
         # Test add_user_to_project
-        result = self.platform.add_user_to_project('user_id', project, 'READ')
-        self.assertIsNone(result)
+        self.assertIsNone(self.platform.add_user_to_project('user_id', project, 'READ'))
 
         # Test get_user
-        result = self.platform.get_user('user_id')
-        self.assertIsNone(result)
+        self.assertIsNone(self.platform.get_user('user_id'))
 
     def test_cost_methods(self):
         '''
@@ -679,12 +674,10 @@ class TestNGS360Platform(unittest.TestCase):
         task = WESTask('test_run_id', 'Test Task')
 
         # Test get_project_cost
-        result = self.platform.get_project_cost(project)
-        self.assertIsNone(result)
+        self.assertIsNone(self.platform.get_project_cost(project))
 
         # Test get_task_cost
-        result = self.platform.get_task_cost(task)
-        self.assertIsNone(result)
+        self.assertIsNone(self.platform.get_task_cost(task))
 
     def test_current_task_and_users(self):
         '''
@@ -693,8 +686,7 @@ class TestNGS360Platform(unittest.TestCase):
         project = {'project_id': 'test_project'}
 
         # Test get_current_task
-        result = self.platform.get_current_task()
-        self.assertIsNone(result)
+        self.assertIsNone(self.platform.get_current_task())
 
         # Test get_project_users
         result = self.platform.get_project_users(project)
