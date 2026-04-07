@@ -498,7 +498,7 @@ class NGS360Platform(Platform):
 
         return output.split('/')[-1]
 
-    def get_tasks_by_name(self, project, task_name=None, inputs_to_compare=None, tasks=None):
+    def get_tasks_by_name(self, project, task_name=None, workflow=None,inputs_to_compare=None, tasks=None):
         """
         Get all processes/tasks in a project with a specified name
 
@@ -510,8 +510,11 @@ class NGS360Platform(Platform):
             tags = {"ProjectId": project["project_id"]}
             if task_name:
                 tags["TaskName"] = task_name
+            filters = {"tags": tags}
+            if workflow:
+                filters["workflow_url"] = workflow
             params = {
-                "tags": json.dumps(tags)
+                "filters": json.dumps(filters)
             }
             response = self._make_request("GET", "runs", params=params)
             tasks = []
