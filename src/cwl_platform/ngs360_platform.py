@@ -507,17 +507,24 @@ class NGS360Platform(Platform):
         :return: List of tasks
         """
         try:
-            tags = {"ProjectId": project["project_id"]}
-            if task_name:
-                tags["TaskName"] = task_name
-            filters = {"tags": tags}
-            if workflow:
-                filters["workflow_url"] = workflow
+            # The ** syntax in Python is called dictionary unpacking. 
+            # It lets you take the key/value pairs from one dictionary and “spread” them into another.
+            tags = {
+                "ProjectId": project["project_id"],
+                **({"TaskName": task_name} if task_name else {}),
+            }
+
+            filters = {
+                "tags": tags,
+                **({"workflow_url": workflow} if workflow else {}),
+            }
+
             params = {
                 "filters": json.dumps(filters)
             }
+
             response = self._make_request("GET", "runs", params=params)
-            tasks = []
+            matching_tasks = []
 
             for run in response.get("runs", []):
                 task = WESTask(
@@ -525,9 +532,9 @@ class NGS360Platform(Platform):
                     name=run.get("name", ""),
                     state=self.STATE_MAP.get(run.get("state", "UNKNOWN"), "Unknown"),
                 )
-                tasks.append(task)
+                matching_tasks.append(task)
 
-            return tasks
+            return matching_tasks
         except requests.RequestException as e:
             self.logger.error("Failed to get tasks: %s", e)
             return []
