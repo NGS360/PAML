@@ -1,7 +1,7 @@
 build
 
 pytest
+pytest-cov
 mock
-coverage
 
 pylint
