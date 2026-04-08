@@ -1,8 +1,8 @@
 """
 NGS360 / GA4GH WES Platform class
 
-This module implements the Platform abstract base class using the GA4GH Workflow Execution Service (WES) API.
-The WES API provides a standard way to submit and manage workflows across different workflow execution systems.
+This module implements the Platform abstract base class using the GA4GH
+Workflow Execution Service (WES) API.
 """
 
 import os
@@ -46,6 +46,7 @@ class WESTask:
             outputs=task_dict.get("outputs"),
             inputs=task_dict.get("inputs"),
         )
+
 
 class NGS360Project():
     """
@@ -95,7 +96,8 @@ class NGS360Platform(Platform):
             - api_endpoint: WES API endpoint URL
             - auth_token: Authentication token for the WES API
         """
-        self.api_endpoint = kwargs.get("api_endpoint", os.environ.get("WES_API_ENDPOINT"))
+        self.api_endpoint = kwargs.get(
+            "api_endpoint", os.environ.get("WES_API_ENDPOINT"))
         if not self.api_endpoint:
             raise ValueError("WES API endpoint URL is required")
 
@@ -115,8 +117,6 @@ class NGS360Platform(Platform):
                 "Connected to WES API: %s",
                 response.get('workflow_type_versions', {})
             )
-            self.connected = True
-            # return True
         except requests.RequestException as e:
             self.logger.error("Failed to connect to WES API: %s", e)
             self.connected = False
@@ -126,7 +126,8 @@ class NGS360Platform(Platform):
             self.connected = False
             return False
 
-        self.ngs360_endpoint = kwargs.get("ngs360_endpoint", os.environ.get("NGS360_API_ENDPOINT"))
+        self.ngs360_endpoint = kwargs.get(
+            "ngs360_endpoint", os.environ.get("NGS360_API_ENDPOINT"))
         if not self.ngs360_endpoint:
             raise ValueError("NGS360 API endpoint URL is required")
         try:
@@ -136,6 +137,7 @@ class NGS360Platform(Platform):
             )
             response.raise_for_status()
             self.logger.info("Connected to NGS360 API")
+            self.connected = True
             return True
         except requests.RequestException as e:
             self.logger.error("Failed to connect to NGS360 API: %s", e)
