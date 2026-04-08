@@ -498,7 +498,7 @@ class NGS360Platform(Platform):
 
         return output.split('/')[-1]
 
-    def get_tasks_by_name(self, project, task_name=None, workflow=None,inputs_to_compare=None, tasks=None):
+    def get_tasks_by_name(self, project, task_name=None, workflow=None, inputs_to_compare=None, tasks=None):
         """
         Get all processes/tasks in a project with a specified name
 
