@@ -288,7 +288,7 @@ class TestNGS360Platform(unittest.TestCase):
             headers={'Authorization': 'Bearer test_token'},
             data=None,
             files=None,
-            params={'tags': '{"ProjectId": "test_project"}'},
+            params={"filters": '{"tags": {"ProjectId": "test_project"}}'},
             timeout=120,
             auth=None
         )
