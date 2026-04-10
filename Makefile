@@ -12,10 +12,8 @@ install: build
 	python3 -m pip install --upgrade dist/*.whl
 
 test:
-	PYTHONPATH=src coverage run --source=src -m pytest -v --log-cli-level=INFO
-	coverage report
-	coverage html
+	PYTHONPATH=src pytest --cov=src --cov-report=term --cov-report=html:htmlcov -v --log-cli-level=INFO
 
 lint:
-	find . -name "*.py" | xargs pylint --max-line-length=120 --ignore-imports=y
+	pylint src tests scripts--max-line-length=120 --ignore-imports=y
 

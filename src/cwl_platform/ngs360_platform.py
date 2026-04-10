@@ -1,8 +1,8 @@
 """
 NGS360 / GA4GH WES Platform class
 
-This module implements the Platform abstract base class using the GA4GH Workflow Execution Service (WES) API.
-The WES API provides a standard way to submit and manage workflows across different workflow execution systems.
+This module implements the Platform abstract base class using the GA4GH
+Workflow Execution Service (WES) API.
 """
 
 import os
@@ -46,6 +46,7 @@ class WESTask:
             outputs=task_dict.get("outputs"),
             inputs=task_dict.get("inputs"),
         )
+
 
 class NGS360Project():
     """
@@ -95,7 +96,8 @@ class NGS360Platform(Platform):
             - api_endpoint: WES API endpoint URL
             - auth_token: Authentication token for the WES API
         """
-        self.api_endpoint = kwargs.get("api_endpoint", os.environ.get("WES_API_ENDPOINT"))
+        self.api_endpoint = kwargs.get(
+            "api_endpoint", os.environ.get("WES_API_ENDPOINT"))
         if not self.api_endpoint:
             raise ValueError("WES API endpoint URL is required")
 
@@ -115,8 +117,6 @@ class NGS360Platform(Platform):
                 "Connected to WES API: %s",
                 response.get('workflow_type_versions', {})
             )
-            self.connected = True
-            # return True
         except requests.RequestException as e:
             self.logger.error("Failed to connect to WES API: %s", e)
             self.connected = False
@@ -126,7 +126,8 @@ class NGS360Platform(Platform):
             self.connected = False
             return False
 
-        self.ngs360_endpoint = kwargs.get("ngs360_endpoint", os.environ.get("NGS360_API_ENDPOINT"))
+        self.ngs360_endpoint = kwargs.get(
+            "ngs360_endpoint", os.environ.get("NGS360_API_ENDPOINT"))
         if not self.ngs360_endpoint:
             raise ValueError("NGS360 API endpoint URL is required")
         try:
@@ -136,6 +137,7 @@ class NGS360Platform(Platform):
             )
             response.raise_for_status()
             self.logger.info("Connected to NGS360 API")
+            self.connected = True
             return True
         except requests.RequestException as e:
             self.logger.error("Failed to connect to NGS360 API: %s", e)
@@ -507,16 +509,24 @@ class NGS360Platform(Platform):
         :return: List of tasks
         """
         try:
-            tags = {"ProjectId": project["project_id"]}
-            if task_name:
-                tags["TaskName"] = task_name
-            params = {
-                "tags": json.dumps(tags)
+            # The ** syntax in Python is called dictionary unpacking. 
+            # It lets you take the key/value pairs from one dictionary and “spread” them into another.
+            tags = {
+                "ProjectId": project["project_id"],
+                **({"TaskName": task_name} if task_name else {}),
             }
-            if workflow:
-                params["workflow"] = workflow
+
+            filters = {
+                "tags": tags,
+                **({"workflow_url": workflow} if workflow else {}),
+            }
+
+            params = {
+                "filters": json.dumps(filters)
+            }
+
             response = self._make_request("GET", "runs", params=params)
-            tasks = []
+            matching_tasks = []
 
             for run in response.get("runs", []):
                 task = WESTask(
@@ -524,9 +534,9 @@ class NGS360Platform(Platform):
                     name=run.get("name", ""),
                     state=self.STATE_MAP.get(run.get("state", "UNKNOWN"), "Unknown"),
                 )
-                tasks.append(task)
+                matching_tasks.append(task)
 
-            return tasks
+            return matching_tasks
         except requests.RequestException as e:
             self.logger.error("Failed to get tasks: %s", e)
             return []
@@ -561,16 +571,6 @@ class NGS360Platform(Platform):
 
         workflow_engine_parameters = {}
 
-        # output_bucket = os.environ.get("OMICS_OUTPUT_URI")
-        # if not output_bucket:
-        #     self.logger.error("Environmental variable OMICS_OUTPUT_URI is required.")
-        #    return None
-        # if not output_bucket.endswith('/'):
-        #     output_bucket = output_bucket + '/'
-        # output_uri = output_bucket + 'Project/' + project['project_id']+'/'
-        # workflow_engine_parameters = {
-        #     "outputUri": output_uri,
-        # }
         if execution_settings and "cacheId" in execution_settings:
             workflow_engine_parameters["cacheId"] = execution_settings["cacheId"]
         if execution_settings and "workflowVersionName" in execution_settings:
@@ -609,7 +609,8 @@ class NGS360Platform(Platform):
                 workflow_engine_parameters
             ),
         }
-        with open("parameters.json", "w") as f:
+        # AWS Omics can't handle inputs greater than 50,000 bytes.
+        with open(f"{project['project_id']}-{name}.parameters.json", mode="w") as f:
             json.dump(parameters, f, indent=4)
         try:
             response = self._make_request("POST", "runs", data=data, files=files)
