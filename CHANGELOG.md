@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.4](https://github.com/NGS360/PAML.git/releases/tag/v0.4) - 2026-04-10
+
+### Added
+
+- get_tasks_by_name now supports filtering tasks by workflow
+
 ## [v0.3.4](https://github.com/NGS360/PAML.git/releases/tag/v0.3.4) - 2025-11-19
 
 ### Fixed
