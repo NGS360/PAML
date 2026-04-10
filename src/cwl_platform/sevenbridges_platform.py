@@ -656,7 +656,7 @@ class SevenBridgesPlatform(Platform):
         return platform_object == input_to_compare
 
     def get_tasks_by_name(self,
-                          project:str,
+                          project,
                           task_name:str=None,
                           inputs_to_compare:dict=None,
                           tasks:list=None) -> list: # -> list(sevenbridges.Task)
