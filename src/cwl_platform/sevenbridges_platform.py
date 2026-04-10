@@ -658,6 +658,7 @@ class SevenBridgesPlatform(Platform):
     def get_tasks_by_name(self,
                           project,
                           task_name:str=None,
+                          workflow:str=None,
                           inputs_to_compare:dict=None,
                           tasks:list=None) -> list: # -> list(sevenbridges.Task)
         '''

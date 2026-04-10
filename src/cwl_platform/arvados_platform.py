@@ -203,12 +203,14 @@ class ArvadosPlatform(Platform):
         self.logger.debug("Copying folder %s from project %s to project %s",
                           source_folder, source_project["uuid"], destination_project["uuid"])
 
-        source_collection, subfolder = self._lookup_collection_from_foldername(source_project, source_folder)
+        source_collection, subfolder = self._lookup_collection_from_foldername(
+            source_project, source_folder)
         if not source_collection:
             return None
 
         # 2. Get the destination project collection
-        destination_collection, _ = self._lookup_collection_from_foldername(destination_project, source_folder)
+        destination_collection, _ = self._lookup_collection_from_foldername(
+            destination_project, source_folder)
         # If the destination collection does not exist, create it
         if not destination_collection:
             destination_collection = self.api.collections().create(body={
@@ -758,13 +760,12 @@ class ArvadosPlatform(Platform):
             f"Output {output_name} does not exist for task {task.container_request['uuid']}."
         )
 
-    def get_tasks_by_name(
-        self,
-        project,
-        task_name: str = None,
-        inputs_to_compare: dict = None,
-        tasks: List[ArvadosTask] = None
-    ) -> List[ArvadosTask]:
+    def get_tasks_by_name(self,
+                          project:dict,
+                          task_name:str=None,
+                          workflow:str=None,
+                          inputs_to_compare:dict=None,
+                          tasks:List[ArvadosTask]=None) -> List[ArvadosTask]:
         '''
         Get all processes/tasks in a project with a specified name, or all
         tasks if no name is specified. Optionally, compare task inputs to
