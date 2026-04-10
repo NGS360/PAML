@@ -496,7 +496,7 @@ class NGS360Platform(Platform):
 
         return output.split('/')[-1]
 
-    def get_tasks_by_name(self, project, task_name=None, inputs_to_compare=None, tasks=None):
+    def get_tasks_by_name(self, project, task_name=None, workflow=None, inputs_to_compare=None, tasks=None):
         """
         Get all processes/tasks in a project with a specified name
 
@@ -511,6 +511,8 @@ class NGS360Platform(Platform):
             params = {
                 "tags": json.dumps(tags)
             }
+            if workflow:
+                params["workflow"] = workflow
             response = self._make_request("GET", "runs", params=params)
             tasks = []
 
@@ -605,6 +607,8 @@ class NGS360Platform(Platform):
                 workflow_engine_parameters
             ),
         }
+        with open("parameters.json", "w") as f:
+            json.dump(parameters, f, indent=4)
         try:
             response = self._make_request("POST", "runs", data=data, files=files)
             run_id = response.get("run_id")
