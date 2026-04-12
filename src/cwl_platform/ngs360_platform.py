@@ -527,7 +527,6 @@ class NGS360Platform(Platform):
 
             response = self._make_request("GET", "runs", params=params)
             matching_tasks = []
-
             for run in response.get("runs", []):
                 task = WESTask(
                     run_id=run.get("run_id"),
@@ -536,7 +535,16 @@ class NGS360Platform(Platform):
                 )
                 matching_tasks.append(task)
 
-            return matching_tasks
+            if inputs_to_compare:
+                matching_tasks_inputs=[]
+                for task in matching_tasks:
+                    run_details = self._make_request("GET", f"runs/{task.run_id}")
+                    if inputs_to_compare == run_details.get("request",{}).get("workflow_params",{}):
+                        matching_tasks_inputs.append(task)
+                return matching_tasks_inputs
+            else:
+                return matching_tasks
+
         except requests.RequestException as e:
             self.logger.error("Failed to get tasks: %s", e)
             return []
