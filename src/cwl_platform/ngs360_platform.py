@@ -499,7 +499,9 @@ class NGS360Platform(Platform):
 
         return output.split('/')[-1]
 
-    def get_tasks_by_name(self, project, task_name=None, workflow=None, inputs_to_compare=None, tasks=None):
+    def get_tasks_by_name(
+        self, project, task_name=None, workflow=None, inputs_to_compare=None, tasks=None
+    ):
         """
         Get all processes/tasks in a project with a specified name
 
@@ -508,7 +510,7 @@ class NGS360Platform(Platform):
         :return: List of tasks
         """
         try:
-            # The ** syntax in Python is called dictionary unpacking. 
+            # The ** syntax in Python is called dictionary unpacking.
             # It lets you take the key/value pairs from one dictionary and “spread” them into another.
             tags = {
                 "ProjectId": project["project_id"],
@@ -541,8 +543,8 @@ class NGS360Platform(Platform):
                     if inputs_to_compare == run_details.get("request",{}).get("workflow_params",{}):
                         matching_tasks_inputs.append(task)
                 return matching_tasks_inputs
-            else:
-                return matching_tasks
+
+            return matching_tasks
 
         except requests.RequestException as e:
             self.logger.error("Failed to get tasks: %s", e)
@@ -577,17 +579,6 @@ class NGS360Platform(Platform):
             return None
 
         workflow_engine_parameters = {}
-
-        # output_bucket = os.environ.get("OMICS_OUTPUT_URI")
-        # if not output_bucket:
-        #     self.logger.error("Environmental variable OMICS_OUTPUT_URI is required.")
-        #    return None
-        # if not output_bucket.endswith('/'):
-        #     output_bucket = output_bucket + '/'
-        # output_uri = output_bucket + 'Project/' + project['project_id']+'/'
-        # workflow_engine_parameters = {
-        #     "outputUri": output_uri,
-        # }
         if execution_settings and "cacheId" in execution_settings:
             workflow_engine_parameters["cacheId"] = execution_settings["cacheId"]
         if execution_settings and "workflowVersionName" in execution_settings:
