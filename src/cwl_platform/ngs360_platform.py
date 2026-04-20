@@ -579,6 +579,7 @@ class NGS360Platform(Platform):
             return None
 
         workflow_engine_parameters = {}
+
         if execution_settings and "cacheId" in execution_settings:
             workflow_engine_parameters["cacheId"] = execution_settings["cacheId"]
         if execution_settings and "workflowVersionName" in execution_settings:
@@ -617,6 +618,9 @@ class NGS360Platform(Platform):
                 workflow_engine_parameters
             ),
         }
+        # AWS Omics can't handle inputs greater than 50,000 bytes.
+        with open(f"{project['project_id']}-{name}.parameters.json", mode="w") as f:
+            json.dump(parameters, f, indent=4)
         try:
             response = self._make_request("POST", "runs", data=data, files=files)
             run_id = response.get("run_id")

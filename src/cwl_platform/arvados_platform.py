@@ -161,17 +161,22 @@ class ArvadosPlatform(Platform):
         Give a folder path, return the corresponding collection in the project.
         
         :param project: The arvados project
-        :param folder: The "file path" of the folder e.g. /rootfolder
-        :return: Collection object for folder
+        :param folder: The "file path" of the folder e.g. /rootfolder or /rootfolder/subfolder
+        :return: Tuple of (collection object, subfolder path) or (None, None) if not found
         '''
-        # 1. Get the source collection
-        # The first element of the source_folder path is the name of the collection.
+        # 1. Split the folder path into collection_name and subfolder
+        # Handle whether or not a leading slash is included
         if folder.startswith('/'):
-            collection_name = folder.split('/')[1]
-        else:
-            collection_name = folder.split('/')[0]
+            folder = folder.lstrip('/')
 
-        # Look up the collect
+        # Split into parts
+        folder_parts = folder.split('/')
+        collection_name = folder_parts[0]
+
+        # Everything after the collection name is the subfolder
+        subfolder = '/'.join(folder_parts[1:]) if len(folder_parts) > 1 else ''
+
+        # 2. Look up the collection
         search_result = self.api.collections().list(filters=[
             ["owner_uuid", "=", project["uuid"]],
             ["name", "=", collection_name]
@@ -179,11 +184,11 @@ class ArvadosPlatform(Platform):
         if len(search_result['items']) > 0:
             self.logger.debug("Found source collection %s in project %s",
                               collection_name, project["uuid"])
-            return search_result['items'][0]
+            return search_result['items'][0], subfolder
 
         self.logger.error("Source collection %s not found in project %s",
                           collection_name, project["uuid"])
-        return None
+        return None, None
 
     # File methods
     def copy_folder(self, source_project, source_folder, destination_project):
@@ -191,30 +196,37 @@ class ArvadosPlatform(Platform):
         Copy folder to destination project
 
         :param source_project: The source project
-        :param source_folder: The source folder
+        :param source_folder: The source folder 
         :param destination_project: The destination project
         :return: The destination folder or None if not found
         '''
         self.logger.debug("Copying folder %s from project %s to project %s",
-                     source_folder, source_project["uuid"], destination_project["uuid"])
+                          source_folder, source_project["uuid"], destination_project["uuid"])
 
-        source_collection = self._lookup_collection_from_foldername(source_project, source_folder)
+        source_collection, subfolder = self._lookup_collection_from_foldername(
+            source_project, source_folder)
         if not source_collection:
             return None
 
         # 2. Get the destination project collection
-        destination_collection = self._lookup_collection_from_foldername(
+        destination_collection, _ = self._lookup_collection_from_foldername(
             destination_project, source_folder)
+        # If the destination collection does not exist, create it
         if not destination_collection:
             destination_collection = self.api.collections().create(body={
                 "owner_uuid": destination_project["uuid"],
                 "name": source_collection['name'],
                 "description": source_collection["description"],
-                "preserve_version":True}).execute()
+                "preserve_version": True}).execute()
 
         # Copy the files from the reference project to the destination project
         self.logger.debug("Get list of files in source collection, %s", source_collection["uuid"])
-        source_files = self._get_files_list_in_collection(source_collection["uuid"])
+        # The subfolder is now extracted from _lookup_collection_from_foldername
+        # subfolder can be:
+        # '' (empty - root of collection)
+        # 'GRCh38ERCC.ensembl91.star-2.6.0c-index-archive'
+        # 'GRCh38ERCC.ensembl91.star-2.6.0c-index-archive/athirdlevelfolder'
+        source_files = self._get_files_list_in_collection(source_collection["uuid"], subfolder)
         self.logger.debug("Getting list of files in destination collection, %s",
                           destination_collection["uuid"])
         destination_files = self._get_files_list_in_collection(destination_collection["uuid"])
@@ -222,15 +234,21 @@ class ArvadosPlatform(Platform):
         source_collection = arvados.collection.Collection(source_collection["uuid"])
         target_collection = arvados.collection.Collection(destination_collection['uuid'])
 
+        destination_paths = [
+            f"{dest_file.stream_name()}/{dest_file.name()}"
+            for dest_file in destination_files
+        ]
         for source_file in source_files:
             source_path = f"{source_file.stream_name()}/{source_file.name()}"
-            if source_path not in [f"{destination_file.stream_name()}/{destination_file.name()}"
-                                for destination_file in destination_files]:
-                target_collection.copy(source_path,
-                                       target_path=source_path,
-                                       source_collection=source_collection)
+            if source_path not in destination_paths:
+                # take out the leading slash if the reference file is in the collection root
+                source_path = source_path.lstrip('/')
+                target_collection.copy(
+                    source_path,
+                    target_path=source_path,
+                    source_collection=source_collection
+                )
         target_collection.save()
-
         self.logger.debug("Done copying folder.")
         return destination_collection
 
@@ -335,7 +353,7 @@ class ArvadosPlatform(Platform):
         :param file_path: The full path of the file to search for
         :return: The file id or None if not found
         '''
-        if file_path.startswith('http') or file_path.startswith('keep'):
+        if file_path.startswith('http') or file_path.startswith('keep') or file_path.startswith('s3'):
             return file_path
 
         # Get the collection
@@ -639,32 +657,49 @@ class ArvadosPlatform(Platform):
         '''
         Get workflow/task state
 
-        :param project: The project to search
+        Possible states are discussed at:
+        https://doc.arvados.org/main/api/methods/container_requests.html#:~:text=Container%20request%20lifecycle
+
         :param task: The task to search for. Task is an ArvadosTask containing
         a container_request_uuid and container dictionary.
+        :param refresh: If True, refresh the task state from the server
         :return: The state of the task (Queued, Running, Complete, Failed, Cancelled)
         '''
         if refresh:
             # On newly submitted jobs, we'll only have a container_request, uuid.
-            # pylint gives a warning that avvados.api is not callable, when in fact it is.
-            task.container_request = arvados.api().container_requests().get( # pylint: disable=not-callable
+            task.container_request = self.api.container_requests().get(
                 uuid = task.container_request['uuid']
             ).execute()
-            task.container = arvados.api().containers().get( # pylint: disable=not-callable
+            task.container = self.api.containers().get(
                 uuid = task.container_request['container_uuid']
                 ).execute()
 
-        if task.container['exit_code'] == 0:
-            return 'Complete'
-        if task.container['exit_code'] == 1:
-            return 'Failed'
+        if task.container_request['state'] == "Uncommitted":
+            return 'Cancelled' # For consistency w/ SBG, where DRAFT state returns 'CANCELLED'
+
+        # container request state is always committed in these cases
+        if task.container is None or \
+            task.container['state'] in ['Locked', 'Queued']:
+            return 'Queued'
         if task.container['state'] == 'Running':
             return 'Running'
+
+        if task.container['state'] == "Complete":
+            if task.container_request['state'] == "Committed":
+                return 'Running' # task is complete but outputs not yet available
+            if task.container_request['state'] == "Final":
+                if task.container['exit_code'] == 0:
+                    return 'Complete'
+                if task.container['exit_code'] > 0:
+                    return 'Failed'
+
         if task.container['state'] == 'Cancelled':
             return 'Cancelled'
-        if task.container['state'] in ['Locked', 'Queued']:
-            return 'Queued'
-        raise ValueError(f"TODO: Unknown task state: {task.container['state']}")
+
+        raise ValueError(
+            f"Unknown task state: Container request state is {task.container_request['state']}, \
+            container state is {task.container['state']}"
+        )
 
     def get_task_output(self, task: ArvadosTask, output_name):
         ''' Retrieve the output field of the task '''
@@ -726,31 +761,38 @@ class ArvadosPlatform(Platform):
         )
 
     def get_tasks_by_name(self,
-                          project:str,
+                          project:dict,
                           task_name:str=None,
                           workflow:str=None,
                           inputs_to_compare:dict=None,
                           tasks:List[ArvadosTask]=None) -> List[ArvadosTask]:
         '''
-        Get all processes/tasks in a project with a specified name, or all tasks
-        if no name is specified. Optionally, compare task inputs to ensure
-        equivalency (eg for reuse).
+        Get all processes/tasks in a project with a specified name, or all
+        tasks if no name is specified. Optionally, compare task inputs to
+        ensure equivalency (eg for reuse).
         :param project: The project to search
-        :param task_name: The name of the process to search for (if None return all tasks)
+        :param task_name: The name of the process to search for
+            (if None return all tasks)
         :param inputs_to_compare: Inputs to compare to ensure task equivalency
-        :param tasks: List of tasks to search in (if None, query all tasks in project)
+        :param tasks: List of tasks to search in
+            (if None, query all tasks in project)
         :return: List of tasks
         '''
         # Fetch tasks if not provided
         if tasks is None:
             # Filter out cancelled jobs (priority=0)
-            filters = [['owner_uuid', '=', project['uuid']], ['priority', '>', 0]]
+            filters = [
+                ['owner_uuid', '=', project['uuid']],
+                ['priority', '>', 0]
+            ]
 
             # Add name filter if specified
             if task_name:
                 filters.append(["name", '=', task_name])
 
-            container_requests = arvados.util.keyset_list_all(self.api.container_requests().list, filters=filters)
+            container_requests = arvados.util.keyset_list_all(
+                self.api.container_requests().list, filters=filters
+            )
         else:
             # Use provided tasks
             container_requests = [task.container_request for task in tasks]
@@ -762,9 +804,15 @@ class ArvadosPlatform(Platform):
             if task_name and container_request['name'] != task_name:
                 continue
 
+            # Skip is container_request does not have a container_uuid
+            # in the case a task was cancelled or never executed?
+            if container_request['container_uuid'] is None:
+                continue
+
             # Get the container
             container = self.api.containers().get(
-                uuid=container_request['container_uuid']).execute()
+                uuid=container_request['container_uuid']
+            ).execute()
             task = ArvadosTask(container_request, container)
 
             # If no input comparison needed, add task to results
@@ -775,12 +823,18 @@ class ArvadosPlatform(Platform):
             # Get task inputs from either properties or mounts
             task_inputs = self._get_task_inputs(container_request, container)
             if not task_inputs:
-                self.logger.debug("Task %s has no cwl_input property", container_request['uuid'])
+                self.logger.debug(
+                    "Task %s has no cwl_input property",
+                    container_request['uuid']
+                )
                 continue
 
             # Check if inputs match
-            if self._inputs_match(task_inputs, inputs_to_compare, container_request['uuid']):
-                self.logger.debug("Task %s matches inputs", container_request['uuid'])
+            if self._inputs_match(
+                task_inputs, inputs_to_compare, container_request['uuid']
+            ):
+                self.logger.debug(
+                    "Task %s matches inputs", container_request['uuid'])
                 matching_tasks.append(task)
 
         return matching_tasks
@@ -955,12 +1009,17 @@ class ArvadosPlatform(Platform):
                 cmd_spot_instance = "--enable-preemptible"
             else:
                 cmd_spot_instance = "--disable-preemptible"
+            priority = execution_settings.get(
+                'priority', 500) if execution_settings else 500
+            if priority < 0 or priority > 1000:
+                priority=500
 
             cmd_str = ['arvados-cwl-runner', '--no-wait',
                     '--defer-download',
                     '--varying-url-params=AWSAccessKeyId,Signature,Expires',
                     '--prefer-cached-downloads',
                     '--debug',
+                    '--priority', str(priority),
                     cmd_spot_instance,
                     '--project-uuid', project['uuid'],
                     '--name', name,
