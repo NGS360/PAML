@@ -317,7 +317,6 @@ class NGS360Platform(Platform):
             dest_folder = dest_folder[1:]
 
         with open(filename, "rb") as f:
-            logging.info(f)
             response = requests.post(
                 f"{self.ngs360_endpoint}/api/v1/files/upload",
                 data={
@@ -640,7 +639,11 @@ class NGS360Platform(Platform):
 
             return task
         except requests.RequestException as e:
-            self.logger.error("Failed to submit task: %s", e)
+            try:
+                error_details = e.response.json().get('msg')
+            except:
+                error_details = str(e)
+            self.logger.error("Failed to submit task: %s", error_details)
             return None
         except (ValueError, KeyError, IOError) as e:
             self.logger.error("Failed to prepare or parse task submission: %s", e)
