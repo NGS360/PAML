@@ -317,7 +317,6 @@ class NGS360Platform(Platform):
             dest_folder = dest_folder[1:]
 
         with open(filename, "rb") as f:
-            logging.info(f)
             response = requests.post(
                 f"{self.ngs360_endpoint}/api/v1/files/upload",
                 data={
@@ -500,7 +499,9 @@ class NGS360Platform(Platform):
 
         return output.split('/')[-1]
 
-    def get_tasks_by_name(self, project, task_name=None, workflow=None, inputs_to_compare=None, tasks=None):
+    def get_tasks_by_name(
+        self, project, task_name=None, workflow=None, inputs_to_compare=None, tasks=None
+    ):
         """
         Get all processes/tasks in a project with a specified name
 
@@ -509,7 +510,7 @@ class NGS360Platform(Platform):
         :return: List of tasks
         """
         try:
-            # The ** syntax in Python is called dictionary unpacking. 
+            # The ** syntax in Python is called dictionary unpacking.
             # It lets you take the key/value pairs from one dictionary and “spread” them into another.
             tags = {
                 "ProjectId": project["project_id"],
@@ -527,7 +528,6 @@ class NGS360Platform(Platform):
 
             response = self._make_request("GET", "runs", params=params)
             matching_tasks = []
-
             for run in response.get("runs", []):
                 task = WESTask(
                     run_id=run.get("run_id"),
@@ -536,7 +536,16 @@ class NGS360Platform(Platform):
                 )
                 matching_tasks.append(task)
 
+            if inputs_to_compare:
+                matching_tasks_inputs=[]
+                for task in matching_tasks:
+                    run_details = self._make_request("GET", f"runs/{task.run_id}")
+                    if inputs_to_compare == run_details.get("request",{}).get("workflow_params",{}):
+                        matching_tasks_inputs.append(task)
+                return matching_tasks_inputs
+
             return matching_tasks
+
         except requests.RequestException as e:
             self.logger.error("Failed to get tasks: %s", e)
             return []
@@ -625,7 +634,11 @@ class NGS360Platform(Platform):
 
             return task
         except requests.RequestException as e:
-            self.logger.error("Failed to submit task: %s", e)
+            try:
+                error_details = e.response.json().get('msg')
+            except:
+                error_details = str(e)
+            self.logger.error("Failed to submit task: %s", error_details)
             return None
         except (ValueError, KeyError, IOError) as e:
             self.logger.error("Failed to prepare or parse task submission: %s", e)
