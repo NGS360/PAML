@@ -717,7 +717,7 @@ class ArvadosPlatform(Platform):
             # If the output is a list, return a list of file locations
             output_files = []
             for output in output_field:
-                if 'location' in output:
+                if output and 'location' in output:
                     output_file = output['location']
                     output_files.append(
                         f"keep:{task.container_request['output_uuid']}/{output_file}"
