@@ -584,6 +584,8 @@ class NGS360Platform(Platform):
             workflow_engine_parameters["cacheId"] = execution_settings["cacheId"]
         if execution_settings and "workflowVersionName" in execution_settings:
             workflow_engine_parameters["workflowVersionName"] = execution_settings["workflowVersionName"]
+        if execution_settings and "storageType" in execution_settings:
+            workflow_engine_parameters["storageType"] = execution_settings["storageType"]
 
         # Prepare the request data
         workflow_url = workflow
