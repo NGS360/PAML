@@ -586,6 +586,8 @@ class NGS360Platform(Platform):
             workflow_engine_parameters["workflowVersionName"] = execution_settings["workflowVersionName"]
         if execution_settings and "storageType" in execution_settings:
             workflow_engine_parameters["storageType"] = execution_settings["storageType"]
+        if execution_settings and "storageCapacity" in execution_settings:
+            workflow_engine_parameters["storageCapacity"] = execution_settings["storageCapacity"]
 
         # Prepare the request data
         workflow_url = workflow
