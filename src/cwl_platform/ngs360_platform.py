@@ -90,7 +90,7 @@ class NGS360Platform(Platform):
 
     def connect(self, **kwargs):
         """
-        Connect to the WES API
+        Connect to the GA4GH WES API
 
         :param kwargs: Connection parameters
             - api_endpoint: WES API endpoint URL
@@ -108,7 +108,8 @@ class NGS360Platform(Platform):
         else:
             username = os.environ.get("WES_USERNAME")
             password = os.environ.get("WES_PASSWORD")
-            self._auth_config['credentials'] = (username, password)
+            if username and password:
+                self._auth_config['credentials'] = (username, password)
 
         # Test connection by getting service info
         try:

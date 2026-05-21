@@ -15,5 +15,5 @@ test:
 	PYTHONPATH=src pytest --cov=src --cov-report=term --cov-report=html:htmlcov -v --log-cli-level=INFO
 
 lint:
-	pylint src tests scripts--max-line-length=120 --ignore-imports=y
+	pylint src tests scripts --max-line-length=120 --ignore-imports=y
 
