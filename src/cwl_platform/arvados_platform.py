@@ -191,6 +191,48 @@ class ArvadosPlatform(Platform):
         return None, None
 
     # File methods
+    def copy_file(self, file, destination_project):
+        """
+        Copy a single file from one project to another.
+
+        For Arvados, 'file' is a keep URI string (e.g. keep:uuid/path/to/file).
+        This copies the file into a 'shared' collection in the destination project.
+
+        :param file: The keep URI of the file to copy
+        :param destination_project: The destination project to copy the file to
+        :return: The keep URI of the copied file in the destination project
+        """
+        # Parse the source file keep URI
+        source_collection_uuid, source_file_path = find_collection_file_path(file)
+
+        # Find or create a 'shared' collection in the destination project
+        collection_name = "shared"
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", destination_project["uuid"]],
+            ["name", "=", collection_name]
+        ]).execute()
+        if len(search_result['items']) > 0:
+            dest_collection = search_result['items'][0]
+        else:
+            dest_collection = self.api.collections().create(body={
+                "owner_uuid": destination_project["uuid"],
+                "name": collection_name
+            }).execute()
+
+        # Copy the file
+        source_collection = arvados.collection.Collection(source_collection_uuid, api_client=self.api)
+        target_collection = arvados.collection.Collection(dest_collection['uuid'], api_client=self.api)
+
+        target_path = os.path.basename(source_file_path) if source_file_path else ""
+        target_collection.copy(
+            source_file_path or ".",
+            target_path=target_path,
+            source_collection=source_collection
+        )
+        target_collection.save()
+
+        return f"keep:{dest_collection['uuid']}/{target_path}"
+
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy folder to destination project
@@ -1144,6 +1186,24 @@ class ArvadosPlatform(Platform):
         return list(all_projects)
 
     ### User Methods
+    def get_current_user(self):
+        """
+        Get the currently authenticated user's profile information.
+
+        :return: Dictionary with user info: {'username': str, 'first_name': str,
+                 'last_name': str, 'email': str} or None if unavailable
+        """
+        try:
+            user = self.api.users().current().execute()
+            return {
+                'username': user.get('username', ''),
+                'first_name': user.get('first_name', ''),
+                'last_name': user.get('last_name', ''),
+                'email': user.get('email', ''),
+            }
+        except Exception:
+            return None
+
     def add_user_to_project(self, platform_user, project, permission):
         """
         Add a user to a project on the platform

@@ -145,6 +145,17 @@ class SevenBridgesPlatform(Platform):
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
+    def copy_file(self, file, destination_project):
+        """
+        Copy a single file from one project to another.
+
+        :param file: The SevenBridges file object to copy
+        :param destination_project: The destination project to copy the file to
+        :return: The file ID of the copied file in the destination project
+        """
+        copied = file.copy(project=destination_project)
+        return copied.id
+
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy reference folder to destination project
@@ -854,6 +865,24 @@ class SevenBridgesPlatform(Platform):
         return projects
 
     ### User Methods
+    def get_current_user(self):
+        """
+        Get the currently authenticated user's profile information.
+
+        :return: Dictionary with user info: {'username': str, 'first_name': str,
+                 'last_name': str, 'email': str} or None if unavailable
+        """
+        try:
+            user = self.api.users.me()
+            return {
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+            }
+        except Exception:
+            return None
+
     def add_user_to_project(self, platform_user, project, permission):
         """
         Add a user to a project on the platform

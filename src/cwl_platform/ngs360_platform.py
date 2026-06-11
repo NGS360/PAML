@@ -193,6 +193,19 @@ class NGS360Platform(Platform):
         return {}
 
     # File methods
+    def copy_file(self, file, destination_project):
+        """
+        Copy a single file from one project to another.
+
+        Note: WES/NGS360 API doesn't support direct file copy operations.
+
+        :param file: The file to copy
+        :param destination_project: The destination project to copy the file to
+        :return: The file path (unchanged) since WES doesn't manage files directly
+        """
+        self.logger.warning("WES API doesn't support direct file copy operations")
+        return file
+
     def copy_folder(self, source_project, source_folder, destination_project):
         """
         Copy source folder to destination project
@@ -745,6 +758,18 @@ class NGS360Platform(Platform):
         return list(self.projects.values())
 
     # User methods
+    def get_current_user(self):
+        """
+        Get the currently authenticated user's profile information.
+
+        Note: WES/NGS360 API doesn't have a concept of authenticated users in the
+        same way as SevenBridges or Arvados.
+
+        :return: Dictionary with user info or None if unavailable
+        """
+        self.logger.warning("WES API doesn't support retrieving current user info")
+        return None
+
     def add_user_to_project(self, platform_user, project, permission):
         """
         Add a user to a project on the platform

@@ -11,6 +11,16 @@ class Platform(ABC):
 
     # File methods
     @abstractmethod
+    def copy_file(self, file, destination_project):
+        """
+        Copy a single file from one project to another.
+
+        :param file: The file object to copy (as returned in get_files tuples)
+        :param destination_project: The destination project to copy the file to
+        :return: The file ID of the copied file in the destination project
+        """
+
+    @abstractmethod
     def copy_folder(self, source_project, source_folder, destination_project):
         ''' Copy source folder to destination project '''
 
@@ -270,6 +280,15 @@ class Platform(ABC):
         :param platform_user: platform user (from get_user)
         :param project: platform project
         :param permission: permission (permission="read|write|execute|admin")
+        """
+
+    @abstractmethod
+    def get_current_user(self):
+        """
+        Get the currently authenticated user's profile information.
+
+        :return: Dictionary with user info: {'username': str, 'first_name': str,
+                 'last_name': str, 'email': str} or None if unavailable
         """
 
     @abstractmethod
