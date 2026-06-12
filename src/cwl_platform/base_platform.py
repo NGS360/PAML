@@ -65,6 +65,30 @@ class Platform(ABC):
         """
 
     @abstractmethod
+    def get_files_fullpath(self, project, filters=None):
+        """
+        Retrieve files in a project with their full internal paths preserved.
+
+        Unlike get_files(), this method preserves subdirectory paths within
+        collections (Arvados) or folders (SevenBridges).
+
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+            {
+                'name': 'file_name',
+                'prefix': 'file_prefix',
+                'suffix': 'file_suffix',
+                'folder': 'folder_name',
+                'recursive': True/False
+            }
+        :return: List of tuples (full_path, file_id) matching filter criteria.
+            full_path: The complete path including collection/folder and subdirectories
+                       e.g., "/CollectionName/subdir/file.fastq.gz"
+            file_id: Platform-native file identifier
+                     (keep URI on Arvados, file ID on SevenBridges)
+        """
+
+    @abstractmethod
     def get_folder_id(self, project, folder_path):
         ''' Get a folder id by its full path name '''
 

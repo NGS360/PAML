@@ -267,15 +267,24 @@ class SevenBridgesPlatform(Platform):
 
         raise ValueError(f"File not found in specified folder: {file_path}")
 
-    def find_matching_files(self, project, look_for):
-        '''
-        Find all files in project with name matching a regexp
-        Return list of full paths of all such files
-        '''
-        allfiles = self._get_project_files(project.id)
-        needfiles = [i[1] + '/' + i[0].name for i in allfiles if re.match(look_for, i[0].name)]
-        return needfiles
-    
+    def get_files_fullpath(self, project, filters=None):
+        """
+        Retrieve files in a project with their full internal paths preserved.
+
+        On SevenBridges, get_files() already preserves the full folder structure,
+        so this delegates to get_files() and extracts the file ID.
+
+        :param project: Project to search for files
+        :param filters: Dictionary containing filter criteria
+        :return: List of tuples (full_path, file_id) matching filter criteria.
+            full_path: The complete path including folders
+                       e.g., "/folder/subfolder/file.fastq.gz"
+            file_id: SevenBridges file ID string
+        """
+        files = self.get_files(project, filters=filters)
+        # get_files returns (path, file_object) - convert to (path, file_id)
+        return [(path, f.id) for path, f in files]
+
     def _get_folder_contents(self, path, folder, filters):
         '''
         Recusivelly returns all the files in a directory and subdirectories
