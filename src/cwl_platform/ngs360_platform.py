@@ -193,7 +193,7 @@ class NGS360Platform(Platform):
         return {}
 
     # File methods
-    def copy_file(self, file, destination_project):
+    def copy_file(self, file, destination_project, file_path=None):
         """
         Copy a single file from one project to another.
 
@@ -201,6 +201,7 @@ class NGS360Platform(Platform):
 
         :param file: The file to copy
         :param destination_project: The destination project to copy the file to
+        :param file_path: Optional destination folder path in the destination project
         :return: The file path (unchanged) since WES doesn't manage files directly
         """
         self.logger.warning("WES API doesn't support direct file copy operations")

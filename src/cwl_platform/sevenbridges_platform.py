@@ -145,15 +145,20 @@ class SevenBridgesPlatform(Platform):
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
 
-    def copy_file(self, file, destination_project):
+    def copy_file(self, file, destination_project, file_path=None):
         """
         Copy a single file from one project to another.
 
         :param file: The SevenBridges file object to copy
         :param destination_project: The destination project to copy the file to
+        :param file_path: Optional destination folder path in the destination project
         :return: The file ID of the copied file in the destination project
         """
-        copied = file.copy(project=destination_project)
+        if file_path:
+            dest_folder = self._find_or_create_path(destination_project, file_path)
+            copied = file.copy_to_folder(parent=dest_folder)
+        else:
+            copied = file.copy(project=destination_project)
         return copied.id
 
     def copy_folder(self, source_project, source_folder, destination_project):
@@ -262,6 +267,15 @@ class SevenBridgesPlatform(Platform):
 
         raise ValueError(f"File not found in specified folder: {file_path}")
 
+    def find_matching_files(self, project, look_for):
+        '''
+        Find all files in project with name matching a regexp
+        Return list of full paths of all such files
+        '''
+        allfiles = self._get_project_files(project.id)
+        needfiles = [i[1] + '/' + i[0].name for i in allfiles if re.match(look_for, i[0].name)]
+        return needfiles
+    
     def _get_folder_contents(self, path, folder, filters):
         '''
         Recusivelly returns all the files in a directory and subdirectories

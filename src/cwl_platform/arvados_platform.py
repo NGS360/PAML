@@ -191,22 +191,30 @@ class ArvadosPlatform(Platform):
         return None, None
 
     # File methods
-    def copy_file(self, file, destination_project):
+    def copy_file(self, file, destination_project, file_path=None):
         """
         Copy a single file from one project to another.
 
         For Arvados, 'file' is a keep URI string (e.g. keep:uuid/path/to/file).
-        This copies the file into a 'shared' collection in the destination project.
+        This copies the file into a collection in the destination project.
 
         :param file: The keep URI of the file to copy
         :param destination_project: The destination project to copy the file to
+        :param file_path: Optional destination folder path in the destination project.
+            On Arvados, the first component of the path is used as the collection name.
         :return: The keep URI of the copied file in the destination project
         """
         # Parse the source file keep URI
         source_collection_uuid, source_file_path = find_collection_file_path(file)
 
-        # Find or create a 'shared' collection in the destination project
-        collection_name = "shared"
+        # Determine the destination collection name from file_path or default to 'shared'
+        if file_path:
+            path_parts = file_path.strip('/').split('/')
+            collection_name = path_parts[0]
+        else:
+            collection_name = "shared"
+
+        # Find or create the destination collection in the destination project
         search_result = self.api.collections().list(filters=[
             ["owner_uuid", "=", destination_project["uuid"]],
             ["name", "=", collection_name]
@@ -421,6 +429,25 @@ class ArvadosPlatform(Platform):
         # Lets see if this comes up before implementing it.
         return f"keep:{collection['portable_data_hash']}/{'/'.join(folder_tree[1:])}"
 
+    def find_matching_files(self, project, look_for):
+        ''' 
+        Find all files in project with name matching a regexp 
+        Return list of full paths of all such files 
+        '''
+        # Do not look for files in intermediate or log collections
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", project["uuid"]],
+            ['properties.type', '!=', 'log'],
+            ['properties.type', '!=', 'intermediate']
+            ]).execute()
+
+        # loop through the containers and gather a list of relevant file names
+        needfiles=[]
+        for i in search_result['items']:
+            files = arvados.collection.CollectionReader(i['current_version_uuid']).all_files()
+            needfiles += [ i['name'] + j.stream_name()[1:] + '/' + j.name for j in files if re.match(look_for, j.name)]
+        return needfiles
+    
     def get_folder_id(self, project, folder_path):
         '''
         Get the folder id in a project

@@ -11,12 +11,13 @@ class Platform(ABC):
 
     # File methods
     @abstractmethod
-    def copy_file(self, file, destination_project):
+    def copy_file(self, file, destination_project, file_path=None):
         """
         Copy a single file from one project to another.
 
         :param file: The file object to copy (as returned in get_files tuples)
         :param destination_project: The destination project to copy the file to
+        :param file_path: Optional destination folder path in the destination project
         :return: The file ID of the copied file in the destination project
         """
 
