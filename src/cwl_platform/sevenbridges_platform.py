@@ -64,10 +64,9 @@ class SevenBridgesPlatform(Platform):
         :param project: `sevenbridges.Project` entity
         :return: `sevenbridges.File` entity of type folder to which path indicates
         """
-        folders = path.split("/")
-        # If there is a leading slash, remove it
-        if not folders[0]:
-            folders = folders[1:]
+        folders = [f for f in path.split("/") if f]
+        if not folders:
+            return None
 
         parent = self.api.files.query(project=project, names=[folders[0]])
         if len(parent) == 0:
@@ -137,6 +136,8 @@ class SevenBridgesPlatform(Platform):
             path=folder,
             project=project
         )
+        if parent is None:
+            return list(self.api.files.query(project=project).all())
         if recursive:
             file_list = self._list_all_files(
                 files=[parent]
@@ -156,7 +157,10 @@ class SevenBridgesPlatform(Platform):
         """
         if file_path:
             dest_folder = self._find_or_create_path(destination_project, file_path)
-            copied = file.copy_to_folder(parent=dest_folder)
+            if dest_folder is None:
+                copied = file.copy(project=destination_project)
+            else:
+                copied = file.copy_to_folder(parent=dest_folder)
         else:
             copied = file.copy(project=destination_project)
         return copied.id
@@ -480,10 +484,13 @@ class SevenBridgesPlatform(Platform):
             destination_filename = filename.split('/')[-1]
 
         if dest_folder is not None:
-            if dest_folder[-1] == '/': # remove slash at the end
+            if dest_folder[-1] == '/':
                 dest_folder = dest_folder[:-1]
-            parent_folder = self._find_or_create_path(project, dest_folder)
-            parent_folder_id = parent_folder.id
+            if dest_folder:
+                parent_folder = self._find_or_create_path(project, dest_folder)
+                parent_folder_id = parent_folder.id if parent_folder else None
+            else:
+                parent_folder_id = None
         else:
             parent_folder_id = None
 
