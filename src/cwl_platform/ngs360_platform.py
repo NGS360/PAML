@@ -197,7 +197,7 @@ class NGS360Platform(Platform):
         """
         Copy a single file from one project to another.
 
-        Note: WES/NGS360 API doesn't support direct file copy operations.
+        Note: GA4GH WES/NGS360 API doesn't support direct file copy operations.
 
         :param file: The file to copy
         :param destination_project: The destination project to copy the file to
@@ -777,7 +777,7 @@ class NGS360Platform(Platform):
         Get the currently authenticated user's profile information.
 
         Note: WES/NGS360 API doesn't have a concept of authenticated users in the
-        same way as SevenBridges or Arvados.
+        same way as SevenBridges or Arvados. This redirects to get the user from the NGS360 API.
 
         :return: Dictionary with user info or None if unavailable
         """

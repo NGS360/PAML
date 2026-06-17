@@ -67,10 +67,7 @@ class Platform(ABC):
     @abstractmethod
     def get_files_fullpath(self, project, filters=None):
         """
-        Retrieve files in a project with their full internal paths preserved.
-
-        Unlike get_files(), this method preserves subdirectory paths within
-        collections (Arvados) or folders (SevenBridges).
+        Retrieve files in a project with their full paths
 
         :param project: Project to search for files
         :param filters: Dictionary containing filter criteria
