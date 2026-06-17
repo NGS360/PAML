@@ -740,6 +740,12 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.assertEqual(actual_result, [test_file1_id, test_file2_id])
 
+    def test_find_or_create_path_root_returns_none(self):
+        '''Test that _find_or_create_path returns None for root path'''
+        project = MagicMock()
+        result = self.platform._find_or_create_path(project, '/')
+        self.assertIsNone(result)
+
     @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
     def test_upload_file(self, mock_find_or_create_path):
         '''
