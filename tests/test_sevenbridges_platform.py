@@ -741,8 +741,10 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.assertEqual(actual_result, [test_file1_id, test_file2_id])
 
     def test_find_or_create_path_root_returns_none(self):
-        '''Test that _find_or_create_path returns None for root path'''
+        '''Test _find_or_create_path'''
         project = MagicMock()
+
+        ## root path should return None
         result = self.platform._find_or_create_path(project, '/')
         self.assertIsNone(result)
 
