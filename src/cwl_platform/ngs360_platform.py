@@ -781,7 +781,23 @@ class NGS360Platform(Platform):
 
         :return: Dictionary with user info or None if unavailable
         """
-        self.logger.warning("WES API doesn't support retrieving current user info")
+        headers = {}
+        if 'token' in self._auth_config:
+            headers["Authorization"] = f"Bearer {self._auth_config['token']}"
+
+        response = requests.get(
+            f"{self.ngs360_endpoint}/api/v1/auth/me",
+            headers=headers,
+            timeout=30
+        )
+        if response.status_code == 200:
+            userinfo = response.json()
+            full_name = userinfo.get('full_name') or ''
+            name_parts = full_name.split(' ', 1)
+            return {'username': userinfo.get('username'),
+                    'first_name': name_parts[0],
+                    'last_name': name_parts[1] if len(name_parts) > 1 else '',
+                    'email': userinfo.get('email')}
         return None
 
     def add_user_to_project(self, platform_user, project, permission):
