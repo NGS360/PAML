@@ -36,7 +36,7 @@ class TestGetFilesVsGetFilesFullpath(unittest.TestCase):
             self.skipTest("Skipping live test. Set INTEGRATION_TEST=1 to run live tests")
 
         self.platforms = {}
-        for platform_name in SUPPORTED_PLATFORMS:
+        for platform_name in ['Arvados', 'SevenBridges']:
             platform = PlatformFactory().get_platform(platform_name)
             platform.connect()
             self.platforms[platform_name] = platform
