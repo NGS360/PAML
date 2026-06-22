@@ -81,9 +81,13 @@ class NGS360Platform(Platform):
         """
         super().__init__(name)
         self.logger = logging.getLogger(__name__)
+
         self.ga4gh_api_endpoint = None
-        self.ngs360_endpoint = None
         self._ga4gh_auth_config = {}
+
+        self.ngs360_endpoint = None
+        self._ngs360_auth_config = {}
+
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
         self.files = {}  # Map file paths to file objects
@@ -121,11 +125,9 @@ class NGS360Platform(Platform):
             )
         except requests.RequestException as e:
             self.logger.error("Failed to connect to WES API: %s", e)
-            self.connected = False
             return False
         except (ValueError, KeyError) as e:
             self.logger.error("Invalid response from WES API: %s", e)
-            self.connected = False
             return False
 
         # Get the endpoint from the kwargs or environment variable
@@ -135,19 +137,22 @@ class NGS360Platform(Platform):
             raise ValueError("NGS360 API endpoint URL is required")
 
         # Set up auth token for auth
+        auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
+        if auth_token:
+            self._ngs360_auth_config['token'] = auth_token
 
+        # Test connection by getting current user info
         try:
             response = requests.get(
-                f"{self.ngs360_endpoint}/",
+                f"{self.ngs360_endpoint}/auth/me",
+                headers={"Authorization": f"Bearer {self._ngs360_auth_config['token']}"} if 'token' in self._ngs360_auth_config else None,
                 timeout=30
             )
             response.raise_for_status()
             self.logger.info("Connected to NGS360 API")
-            self.connected = True
             return True
         except requests.RequestException as e:
             self.logger.error("Failed to connect to NGS360 API: %s", e)
-            self.connected = False
             return False
 
     def _make_request(self, method, path, **kwargs):
