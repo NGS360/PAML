@@ -81,12 +81,12 @@ class NGS360Platform(Platform):
         """
         super().__init__(name)
         self.logger = logging.getLogger(__name__)
-        self.api_endpoint = None
+        self.ga4gh_api_endpoint = None
+        self.ngs360_endpoint = None
         self._auth_config = {}
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
         self.files = {}  # Map file paths to file objects
-        self.ngs360_endpoint = None
 
     def connect(self, **kwargs):
         """
@@ -96,9 +96,9 @@ class NGS360Platform(Platform):
             - api_endpoint: WES API endpoint URL
             - auth_token: Authentication token for the WES API
         """
-        self.api_endpoint = kwargs.get(
+        self.ga4gh_api_endpoint = kwargs.get(
             "api_endpoint", os.environ.get("WES_API_ENDPOINT"))
-        if not self.api_endpoint:
+        if not self.ga4gh_api_endpoint:
             raise ValueError("WES API endpoint URL is required")
 
         # Set up auth token or username/password as auth
@@ -161,7 +161,7 @@ class NGS360Platform(Platform):
             path = path[1:]
 
         # Make sure the API endpoint ends with a slash for proper joining
-        endpoint = self.api_endpoint
+        endpoint = self.ga4gh_api_endpoint
         if not endpoint.endswith("/"):
             endpoint = endpoint + "/"
 
