@@ -83,7 +83,7 @@ class NGS360Platform(Platform):
         self.logger = logging.getLogger(__name__)
         self.ga4gh_api_endpoint = None
         self.ngs360_endpoint = None
-        self._auth_config = {}
+        self._ga4gh_auth_config = {}
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
         self.files = {}  # Map file paths to file objects
@@ -96,6 +96,7 @@ class NGS360Platform(Platform):
             - api_endpoint: WES API endpoint URL
             - auth_token: Authentication token for the WES API
         """
+        # Get the endpoint from the kwargs or environment variable
         self.ga4gh_api_endpoint = kwargs.get(
             "api_endpoint", os.environ.get("WES_API_ENDPOINT"))
         if not self.ga4gh_api_endpoint:
@@ -104,12 +105,12 @@ class NGS360Platform(Platform):
         # Set up auth token or username/password as auth
         auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
         if auth_token:
-            self._auth_config['token'] = auth_token
+            self._ga4gh_auth_config['token'] = auth_token
         else:
             username = os.environ.get("WES_USERNAME")
             password = os.environ.get("WES_PASSWORD")
             if username and password:
-                self._auth_config['credentials'] = (username, password)
+                self._ga4gh_auth_config['credentials'] = (username, password)
 
         # Test connection by getting service info
         try:
@@ -127,10 +128,14 @@ class NGS360Platform(Platform):
             self.connected = False
             return False
 
+        # Get the endpoint from the kwargs or environment variable
         self.ngs360_endpoint = kwargs.get(
             "ngs360_endpoint", os.environ.get("NGS360_API_ENDPOINT"))
         if not self.ngs360_endpoint:
             raise ValueError("NGS360 API endpoint URL is required")
+
+        # Set up auth token for auth
+
         try:
             response = requests.get(
                 f"{self.ngs360_endpoint}/",
@@ -169,10 +174,10 @@ class NGS360Platform(Platform):
         headers = {}
         auth = None
 
-        if 'token' in self._auth_config:
-            headers["Authorization"] = f"Bearer {self._auth_config['token']}"
-        elif 'credentials' in self._auth_config:
-            auth = self._auth_config['credentials']
+        if 'token' in self._ga4gh_auth_config:
+            headers["Authorization"] = f"Bearer {self._ga4gh_auth_config['token']}"
+        elif 'credentials' in self._ga4gh_auth_config:
+            auth = self._ga4gh_auth_config['credentials']
 
         response = requests.request(
             method=method,
