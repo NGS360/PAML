@@ -62,11 +62,11 @@ class Platform(ABC):
                 'folder': 'folder_name',
                 'recursive': True/False
             }
-        :return: List of tuples (full_path, file_id) matching filter criteria.
+        :return: List of tuples (full_path, file_ref) matching filter criteria.
             full_path: The complete path including collection/folder and subdirectories
                        e.g., "/CollectionName/subdir/file.fastq.gz"
-            file_id: Platform-native file identifier
-                     (keep URI on Arvados, file ID on SevenBridges)
+            file_ref: Platform-native file reference
+                      (keep URI string on Arvados, file object on SevenBridges)
         """
 
     @abstractmethod

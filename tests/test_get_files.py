@@ -1,9 +1,9 @@
 '''
 Integration Test for PAML.get_files() to ensure all platforms work in the same way.
 
-get_files() returns List[(full_path, file_id)] where:
+get_files() returns List[(full_path, file_ref)] where:
 - full_path preserves the complete directory structure
-- file_id is a platform-native identifier (SB file ID or Arvados keep URI)
+- file_ref is a platform-native reference (SB file object or Arvados keep URI)
 '''
 import unittest
 
@@ -77,11 +77,10 @@ class TestGetFiles(unittest.TestCase):
                     len(files), 1,
                     f"Expected 1 file but found {len(files)}")
 
-                actual_name, file_id = files[0]
+                actual_name, _ = files[0]
                 self.assertEqual(
                     actual_name, f"/{self.random_file}",
                     f"Expected to find /{self.random_file}")
-                self.assertIsInstance(file_id, str)
 
     def test_get_files_returns_files_in_subfolder(self):
         '''
@@ -101,11 +100,10 @@ class TestGetFiles(unittest.TestCase):
                 len(files), 1,
                 f"Expected 1 file but found {len(files)} on {platform_name}")
 
-            actual_name, file_id = files[0]
+            actual_name, _ = files[0]
             self.assertEqual(
                 actual_name, f"/inputs/{self.random_file}",
                 f"Expected to find /inputs/{self.random_file} on {platform_name} but found {actual_name} instead")
-            self.assertIsInstance(file_id, str)
 
     def test_get_files_preserves_nested_subdirectories(self):
         '''
@@ -127,26 +125,6 @@ class TestGetFiles(unittest.TestCase):
                 expected_path, fullpaths,
                 f"[{platform_name}] get_files should preserve nested path. "
                 f"Expected {expected_path}, got {fullpaths}")
-
-    def test_get_files_returns_string_file_ids(self):
-        '''
-        Test that get_files() returns string file IDs on all platforms.
-        '''
-        self.random_file = generate_random_file()
-
-        for platform_name, platform in self.platforms.items():
-            project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
-            self.assertIsNotNone(project, "Expected an empty project")
-
-            platform.upload_file(self.random_file, project, dest_folder='/data')
-
-            files = platform.get_files(project)
-
-            for path, file_id in files:
-                self.assertIsInstance(
-                    file_id, str,
-                    f"[{platform_name}] get_files should return string file IDs, "
-                    f"got {type(file_id)} for {path}")
 
     def test_get_files_filter_by_prefix(self):
         '''Test filtering by prefix'''
@@ -188,12 +166,11 @@ class TestGetFiles(unittest.TestCase):
                 f"[{platform_name}] Expected 1 file but found {len(files)}: "
                 f"{[p for p, _ in files]}")
 
-            actual_path, file_id = files[0]
+            actual_path, _ = files[0]
             self.assertEqual(
                 actual_path, f"/inputs/run1/sample1/{self.random_file}",
                 f"[{platform_name}] Expected /inputs/run1/sample1/{self.random_file} "
                 f"but got {actual_path}")
-            self.assertIsInstance(file_id, str)
 
 if __name__ == '__main__':
     unittest.main()

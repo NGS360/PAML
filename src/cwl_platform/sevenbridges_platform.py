@@ -280,14 +280,14 @@ class SevenBridgesPlatform(Platform):
 
         :param path: path of file
         :param folder: SBG Folder reference
-        :return: List of tuples (file path, file_id) matching filter criteria
+        :return: List of tuples (file path, file object) matching filter criteria
         '''
         files = []
         for f in folder.list_files().all():
             if f.type == 'folder':
                 files += self._get_folder_contents(f"{path}/{f.name}", f, filters)
             else:
-                files.append((f"{path}/{f.name}", f.id))
+                files.append((f"{path}/{f.name}", f))
         return files
 
     def get_files(self, project, filters=None):
@@ -303,18 +303,18 @@ class SevenBridgesPlatform(Platform):
                 'folder': 'folder_name',
                 'recursive': True/False
             }
-        :return: List of tuples (file path, file_id) matching filter criteria
+        :return: List of tuples (file path, file object) matching filter criteria
         """
         files = []
         for f in self.api.files.query(project, limit=1000, cont_token='init').all():
             if f.type == 'folder':
                 files += self._get_folder_contents(f'/{f.name}', f, filters)
             else:
-                files.append((f'/{f.name}', f.id))
+                files.append((f'/{f.name}', f))
 
         if filters:
             matching_files = []
-            for filepath, file_id in files:
+            for filepath, file in files:
                 filename = os.path.basename(filepath)
                 if 'name' in filters and filters['name'] != filename:
                     continue
@@ -324,7 +324,7 @@ class SevenBridgesPlatform(Platform):
                     continue
                 if 'folder' in filters and filters['folder'] != os.path.dirname(filepath):
                     continue
-                matching_files.append((filepath, file_id))
+                matching_files.append((filepath, file))
         else:
             matching_files = files
 
