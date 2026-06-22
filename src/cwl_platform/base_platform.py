@@ -15,7 +15,7 @@ class Platform(ABC):
         """
         Copy a single file from one project to another.
 
-        :param file: The file object to copy (as returned in get_files tuples)
+        :param file: The file ID to copy (as returned in get_files tuples)
         :param destination_project: The destination project to copy the file to
         :param file_path: Optional destination folder path in the destination project
         :return: The file ID of the copied file in the destination project
@@ -52,22 +52,6 @@ class Platform(ABC):
     def get_files(self, project, filters=None):
         """
         Retrieve files in a project matching the filter criteria
-        :param project: Project to search for files
-        :param filters: Dictionary containing filter criteria
-            {
-                'name': 'file_name',
-                'prefix': 'file_prefix',
-                'suffix': 'file_suffix',
-                'folder': 'folder_name',
-                'recursive': True/False
-            }
-        :return: List of tuples (file path, file object) matching filter criteria
-        """
-
-    @abstractmethod
-    def get_files_fullpath(self, project, filters=None):
-        """
-        Retrieve files in a project with their full paths
 
         :param project: Project to search for files
         :param filters: Dictionary containing filter criteria

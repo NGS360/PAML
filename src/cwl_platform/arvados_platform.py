@@ -316,84 +316,32 @@ class ArvadosPlatform(Platform):
                 'folder': 'folder_name',  # Here, a root folder is the name of the collection.
                 'recursive': True/False
             }
-        :return: List of tuples (file path, file object) matching filter criteria
-        """
-        # Iterate over all collections and find collections matching filter criteria.
-        collection_filter = [["owner_uuid", "=", project["uuid"]]]
-        if filters and "folder" in filters:
-            folder = filters['folder'].lstrip('/')
-            collection_filter.append(["name", "=", folder])
-        matching_collections = []
-        search_result = self.api.collections().list(filters=collection_filter).execute()
-        if len(search_result['items']) > 0:
-            matching_collections = search_result['items']
-
-        # Iterate over the collections an find files matching filter criteria
-        matching_files = []
-        for _, collection in enumerate(matching_collections):
-            collection_name = collection['name']
-            files = self._get_files_list_in_collection(
-                collection["uuid"]
-            )
-            # files is a list of StreamReaders, but get_files is suppose to return file objects.
-            for f in files:
-                file_id = f"keep:{collection['uuid']}/{f.name}"
-                if filters:
-                    if 'name' in filters and filters['name'] != f.name:
-                        continue
-                    if 'prefix' in filters and not f.name.startswith(filters['prefix']):
-                        continue
-                    if 'suffix' in filters and not f.name.endswith(filters['suffix']):
-                        continue
-                matching_files.append((f'/{collection_name}/{f.name}', file_id))
-        self.logger.debug("Return list of %d files", len(matching_files))
-        return matching_files
-
-    def get_files_fullpath(self, project, filters=None):
-        """
-        Retrieve files in a project with full internal paths preserved.
-
-        Unlike get_files(), this method preserves subdirectory paths within
-        collections by using stream_name() to capture the full path.
-
-        :param project: Project to search for files
-        :param filters: Dictionary containing filter criteria
-            {
-                'name': 'file_name',
-                'prefix': 'file_prefix',
-                'suffix': 'file_suffix',
-                'folder': 'folder_name',
-                'recursive': True/False
-            }
         :return: List of tuples (full_path, file_id) matching filter criteria.
             full_path: The complete path including collection and subdirectories
                        e.g., "/CollectionName/subdir/file.fastq.gz"
             file_id: keep URI e.g., "keep:{uuid}/subdir/file.fastq.gz"
         """
-        # Iterate over all collections matching filter criteria.
         collection_filter = [["owner_uuid", "=", project["uuid"]]]
         if filters and "folder" in filters:
             folder = filters['folder'].lstrip('/')
-            collection_filter.append(["name", "=", folder])
+            collection_name_filter = folder.split('/')[0]
+            collection_filter.append(["name", "=", collection_name_filter])
 
         matching_collections = []
         search_result = self.api.collections().list(filters=collection_filter).execute()
         if len(search_result['items']) > 0:
             matching_collections = search_result['items']
 
-        # Iterate over the collections and find files matching filter criteria
         matching_files = []
         for collection in matching_collections:
             collection_name = collection['name']
             files = self._get_files_list_in_collection(collection["uuid"])
 
             for f in files:
-                # Preserve the full internal path using stream_name()
                 internal_path = f"{f.stream_name()}/{f.name}".lstrip('./')
                 file_id = f"keep:{collection['uuid']}/{internal_path}"
                 full_path = f"/{collection_name}/{internal_path}"
 
-                # Apply filters on basename
                 filename = f.name
                 if filters:
                     if 'name' in filters and filters['name'] != filename:
@@ -402,9 +350,11 @@ class ArvadosPlatform(Platform):
                         continue
                     if 'suffix' in filters and not filename.endswith(filters['suffix']):
                         continue
+                    if 'folder' in filters and filters['folder'] != os.path.dirname(full_path):
+                        continue
                 matching_files.append((full_path, file_id))
 
-        self.logger.debug("Return list of %d files (fullpath)", len(matching_files))
+        self.logger.debug("Return list of %d files", len(matching_files))
         return matching_files
 
     def download_file(self, file, dest_folder):

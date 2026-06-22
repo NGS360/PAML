@@ -150,11 +150,13 @@ class SevenBridgesPlatform(Platform):
         """
         Copy a single file from one project to another.
 
-        :param file: The SevenBridges file object to copy
+        :param file: The SevenBridges file ID (or object) to copy
         :param destination_project: The destination project to copy the file to
         :param file_path: Optional destination folder path in the destination project
         :return: The file ID of the copied file in the destination project
         """
+        if isinstance(file, str):
+            file = self.api.files.get(id=file)
         if file_path:
             dest_folder = self._find_or_create_path(destination_project, file_path)
             if dest_folder is None:
@@ -271,39 +273,21 @@ class SevenBridgesPlatform(Platform):
 
         raise ValueError(f"File not found in specified folder: {file_path}")
 
-    def get_files_fullpath(self, project, filters=None):
-        """
-        Retrieve files in a project with their full internal paths preserved.
-
-        On SevenBridges, get_files() already preserves the full folder structure,
-        so this delegates to get_files() and extracts the file ID.
-
-        :param project: Project to search for files
-        :param filters: Dictionary containing filter criteria
-        :return: List of tuples (full_path, file_id) matching filter criteria.
-            full_path: The complete path including folders
-                       e.g., "/folder/subfolder/file.fastq.gz"
-            file_id: SevenBridges file ID string
-        """
-        files = self.get_files(project, filters=filters)
-        # get_files returns (path, file_object) - convert to (path, file_id)
-        return [(path, f.id) for path, f in files]
-
     def _get_folder_contents(self, path, folder, filters):
         '''
-        Recusivelly returns all the files in a directory and subdirectories
+        Recursively returns all the files in a directory and subdirectories
         in a SevenBridges project.
 
         :param path: path of file
         :param folder: SBG Folder reference
-        :return: List of tuples (file path, file object) matching filter criteria
+        :return: List of tuples (file path, file_id) matching filter criteria
         '''
         files = []
         for f in folder.list_files().all():
             if f.type == 'folder':
                 files += self._get_folder_contents(f"{path}/{f.name}", f, filters)
             else:
-                files.append((f"{path}/{f.name}", f))
+                files.append((f"{path}/{f.name}", f.id))
         return files
 
     def get_files(self, project, filters=None):
@@ -319,19 +303,18 @@ class SevenBridgesPlatform(Platform):
                 'folder': 'folder_name',
                 'recursive': True/False
             }
-        :return: List of tuples (file path, file object) matching filter criteria
+        :return: List of tuples (file path, file_id) matching filter criteria
         """
         files = []
         for f in self.api.files.query(project, limit=1000, cont_token='init').all():
             if f.type == 'folder':
                 files += self._get_folder_contents(f'/{f.name}', f, filters)
             else:
-                files.append((f'/{f.name}', f))
+                files.append((f'/{f.name}', f.id))
 
         if filters:
             matching_files = []
-            # Now that we have all the files, let's apply the filters
-            for filepath, file in files:
+            for filepath, file_id in files:
                 filename = os.path.basename(filepath)
                 if 'name' in filters and filters['name'] != filename:
                     continue
@@ -341,7 +324,7 @@ class SevenBridgesPlatform(Platform):
                     continue
                 if 'folder' in filters and filters['folder'] != os.path.dirname(filepath):
                     continue
-                matching_files.append((filepath, file))
+                matching_files.append((filepath, file_id))
         else:
             matching_files = files
 

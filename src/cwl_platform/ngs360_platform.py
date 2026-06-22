@@ -270,23 +270,10 @@ class NGS360Platform(Platform):
 
         :param project: Project to search for files
         :param filters: Dictionary containing filter criteria
-        :return: List of tuples (file path, file object) matching filter criteria
+        :return: List of tuples (full_path, file_id) matching filter criteria
         """
         self.logger.warning("WES API doesn't support listing files")
         return []
-
-    def get_files_fullpath(self, project, filters=None):
-        """
-        Retrieve files in a project with their full internal paths preserved.
-
-        Note: WES/NGS360 API doesn't have a direct concept of files,
-        so this delegates to get_files() which returns an empty list.
-
-        :param project: Project to search for files
-        :param filters: Dictionary containing filter criteria
-        :return: List of tuples (full_path, file_id) matching filter criteria
-        """
-        return self.get_files(project, filters=filters)
 
     def get_folder_id(self, project, folder_path):
         """
