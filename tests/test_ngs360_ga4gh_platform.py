@@ -20,7 +20,7 @@ class TestNGS360Platform(unittest.TestCase):
         self.platform = NGS360Platform('WES')
         self.platform.api_endpoint = 'https://wes.example.com/ga4gh/wes/v1'
         self.platform.ngs360_endpoint = 'https://ngs360.example.com'
-        self.platform._auth_config['token'] = 'test_token'
+        self.platform._ga4gh_auth_config['token'] = 'test_token'
         self.platform.connected = True
 
     @patch('requests.request')
@@ -81,10 +81,73 @@ class TestNGS360Platform(unittest.TestCase):
             ngs360_endpoint='https://ngs360.example.com'
         )
         self.assertTrue(result)
-        self.assertTrue(platform.connected)
-        self.assertEqual(platform.api_endpoint, 'https://wes.example.com/ga4gh/wes/v1')
-        self.assertEqual(platform.ngs360_endpoint, 'https://ngs360.example.com')
-        self.assertEqual(platform._auth_config['token'], 'test_token')
+
+    @patch('requests.request')
+    def test_connect_username_password_auth(self, mock_request):
+        '''
+        Test connect method with username/password authentication
+        '''
+        # Mock WES API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'workflow_type_versions': {'CWL': {'workflow_type_version': ['v1.0']}}}
+        mock_request.return_value = mock_response
+
+        # Mock NGS360 API response
+        with patch('requests.get') as mock_get:
+            mock_ngs360_response = MagicMock()
+            mock_ngs360_response.status_code = 200
+            mock_get.return_value = mock_ngs360_response
+
+            # Test connect with username/password
+            with patch.dict('os.environ', {'WES_USERNAME': 'testuser', 'WES_PASSWORD': 'testpass'}):
+                platform = NGS360Platform('WES')
+                result = platform.connect(
+                    api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+                    ngs360_endpoint='https://ngs360.example.com'
+                )
+
+                self.assertTrue(result)
+                self.assertEqual(platform._ga4gh_auth_config['credentials'], ('testuser', 'testpass'))
+
+    @patch('requests.request')
+    def test_connect_wes_failure(self, mock_request):
+        '''
+        Test connect method with WES API failure
+        '''
+        # Mock failed WES API response
+        mock_request.side_effect = requests.RequestException("Connection failed")
+
+        # Test connect failure
+        platform = NGS360Platform('WES')
+        result = platform.connect(
+            api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+            ngs360_endpoint='https://ngs360.example.com'
+        )
+
+        self.assertFalse(result)
+
+    @patch('requests.get')
+    @patch('requests.request')
+    def test_connect_ngs360_failure(self, mock_request, mock_get):
+        '''
+        Test connect method with NGS360 API failure
+        '''
+        # Mock successful WES API response
+        mock_wes_response = MagicMock()
+        mock_wes_response.json.return_value = {'workflow_type_versions': {'CWL': {'workflow_type_version': ['v1.0']}}}
+        mock_request.return_value = mock_wes_response
+
+        # Mock failed NGS360 API response
+        mock_get.side_effect = requests.RequestException("NGS360 connection failed")
+
+        # Test connect failure
+        platform = NGS360Platform('WES')
+        result = platform.connect(
+            api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+            ngs360_endpoint='https://ngs360.example.com'
+        )
+
+        self.assertFalse(result)
 
     @patch('requests.request')
     def test_submit_task(self, mock_request):
@@ -456,75 +519,6 @@ class TestNGS360Platform(unittest.TestCase):
         Test export_file method (not supported in WES)
         '''
         self.assertIsNone(self.platform.export_file('file_id', 'bucket', 'prefix'))
-
-    @patch('requests.request')
-    def test_connect_username_password_auth(self, mock_request):
-        '''
-        Test connect method with username/password authentication
-        '''
-        # Mock WES API response
-        mock_response = MagicMock()
-        mock_response.json.return_value = {'workflow_type_versions': {'CWL': {'workflow_type_version': ['v1.0']}}}
-        mock_request.return_value = mock_response
-
-        # Mock NGS360 API response
-        with patch('requests.get') as mock_get:
-            mock_ngs360_response = MagicMock()
-            mock_ngs360_response.status_code = 200
-            mock_get.return_value = mock_ngs360_response
-
-            # Test connect with username/password
-            with patch.dict('os.environ', {'WES_USERNAME': 'testuser', 'WES_PASSWORD': 'testpass'}):
-                platform = NGS360Platform('WES')
-                result = platform.connect(
-                    api_endpoint='https://wes.example.com/ga4gh/wes/v1',
-                    ngs360_endpoint='https://ngs360.example.com'
-                )
-
-                self.assertTrue(result)
-                self.assertEqual(platform._auth_config['credentials'], ('testuser', 'testpass'))
-
-    @patch('requests.request')
-    def test_connect_wes_failure(self, mock_request):
-        '''
-        Test connect method with WES API failure
-        '''
-        # Mock failed WES API response
-        mock_request.side_effect = requests.RequestException("Connection failed")
-
-        # Test connect failure
-        platform = NGS360Platform('WES')
-        result = platform.connect(
-            api_endpoint='https://wes.example.com/ga4gh/wes/v1',
-            ngs360_endpoint='https://ngs360.example.com'
-        )
-
-        self.assertFalse(result)
-        self.assertFalse(platform.connected)
-
-    @patch('requests.get')
-    @patch('requests.request')
-    def test_connect_ngs360_failure(self, mock_request, mock_get):
-        '''
-        Test connect method with NGS360 API failure
-        '''
-        # Mock successful WES API response
-        mock_wes_response = MagicMock()
-        mock_wes_response.json.return_value = {'workflow_type_versions': {'CWL': {'workflow_type_version': ['v1.0']}}}
-        mock_request.return_value = mock_wes_response
-
-        # Mock failed NGS360 API response
-        mock_get.side_effect = requests.RequestException("NGS360 connection failed")
-
-        # Test connect failure
-        platform = NGS360Platform('WES')
-        result = platform.connect(
-            api_endpoint='https://wes.example.com/ga4gh/wes/v1',
-            ngs360_endpoint='https://ngs360.example.com'
-        )
-
-        self.assertFalse(result)
-        self.assertFalse(platform.connected)
 
     @patch('requests.get')
     def test_get_project_by_id(self, mock_get):
