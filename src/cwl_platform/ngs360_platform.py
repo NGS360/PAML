@@ -144,7 +144,7 @@ class NGS360Platform(Platform):
         # Test connection by getting current user info
         try:
             response = requests.get(
-                f"{self.ngs360_endpoint}/auth/me",
+                f"{self.ngs360_endpoint}/api/v1/auth/me",
                 headers={"Authorization": f"Bearer {self._ngs360_auth_config['token']}"} if 'token' in self._ngs360_auth_config else None,
                 timeout=30
             )
