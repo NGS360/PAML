@@ -91,11 +91,6 @@ class TestNGS360Platform(unittest.TestCase):
         '''
         Test connect method with username/password authentication
         '''
-        # Mock WES API response
-        #mock_response = MagicMock()
-        #mock_response.json.return_value = {'workflow_type_versions': {'CWL': {'workflow_type_version': ['v1.0']}}}
-        #mock_request.return_value = mock_response
-
         with patch('requests.get') as mock_get:
             # Mock NGS360 API response
             mock_ngs360_response = MagicMock()
