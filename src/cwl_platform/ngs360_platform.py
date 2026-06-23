@@ -112,6 +112,8 @@ class NGS360Platform(Platform):
         auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
         if auth_token:
             self._ga4gh_auth_config['token'] = auth_token
+        else:
+            raise ValueError("NGS360 AUTH TOKEN is required")
 
         # Test connection by getting service info
         try:
