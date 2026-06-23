@@ -81,12 +81,16 @@ class NGS360Platform(Platform):
         """
         super().__init__(name)
         self.logger = logging.getLogger(__name__)
-        self.api_endpoint = None
-        self._auth_config = {}
+
+        self.ga4gh_api_endpoint = None
+        self._ga4gh_auth_config = {}
+
+        self.ngs360_endpoint = None
+        self._ngs360_auth_config = {}
+
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
         self.files = {}  # Map file paths to file objects
-        self.ngs360_endpoint = None
 
     def connect(self, **kwargs):
         """
@@ -96,20 +100,23 @@ class NGS360Platform(Platform):
             - api_endpoint: WES API endpoint URL
             - auth_token: Authentication token for the WES API
         """
-        self.api_endpoint = kwargs.get(
+        self.connected = False
+
+        # Get the endpoint from the kwargs or environment variable
+        self.ga4gh_api_endpoint = kwargs.get(
             "api_endpoint", os.environ.get("WES_API_ENDPOINT"))
-        if not self.api_endpoint:
+        if not self.ga4gh_api_endpoint:
             raise ValueError("WES API endpoint URL is required")
 
         # Set up auth token or username/password as auth
         auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
         if auth_token:
-            self._auth_config['token'] = auth_token
+            self._ga4gh_auth_config['token'] = auth_token
         else:
             username = os.environ.get("WES_USERNAME")
             password = os.environ.get("WES_PASSWORD")
             if username and password:
-                self._auth_config['credentials'] = (username, password)
+                self._ga4gh_auth_config['credentials'] = (username, password)
 
         # Test connection by getting service info
         try:
@@ -120,30 +127,36 @@ class NGS360Platform(Platform):
             )
         except requests.RequestException as e:
             self.logger.error("Failed to connect to WES API: %s", e)
-            self.connected = False
             return False
         except (ValueError, KeyError) as e:
             self.logger.error("Invalid response from WES API: %s", e)
-            self.connected = False
             return False
 
+        # Get the endpoint from the kwargs or environment variable
         self.ngs360_endpoint = kwargs.get(
             "ngs360_endpoint", os.environ.get("NGS360_API_ENDPOINT"))
         if not self.ngs360_endpoint:
             raise ValueError("NGS360 API endpoint URL is required")
+
+        # Set up auth token for auth
+        auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
+        if auth_token:
+            self._ngs360_auth_config['token'] = auth_token
+
+        # Test connection by getting current user info
         try:
             response = requests.get(
-                f"{self.ngs360_endpoint}/",
+                f"{self.ngs360_endpoint}/api/v1/auth/me",
+                headers={"Authorization": f"Bearer {self._ngs360_auth_config['token']}"} if 'token' in self._ngs360_auth_config else None,
                 timeout=30
             )
             response.raise_for_status()
             self.logger.info("Connected to NGS360 API")
             self.connected = True
-            return True
         except requests.RequestException as e:
             self.logger.error("Failed to connect to NGS360 API: %s", e)
-            self.connected = False
-            return False
+
+        return self.connected
 
     def _make_request(self, method, path, **kwargs):
         """
@@ -161,7 +174,7 @@ class NGS360Platform(Platform):
             path = path[1:]
 
         # Make sure the API endpoint ends with a slash for proper joining
-        endpoint = self.api_endpoint
+        endpoint = self.ga4gh_api_endpoint
         if not endpoint.endswith("/"):
             endpoint = endpoint + "/"
 
@@ -169,10 +182,10 @@ class NGS360Platform(Platform):
         headers = {}
         auth = None
 
-        if 'token' in self._auth_config:
-            headers["Authorization"] = f"Bearer {self._auth_config['token']}"
-        elif 'credentials' in self._auth_config:
-            auth = self._auth_config['credentials']
+        if 'token' in self._ga4gh_auth_config:
+            headers["Authorization"] = f"Bearer {self._ga4gh_auth_config['token']}"
+        elif 'credentials' in self._ga4gh_auth_config:
+            auth = self._ga4gh_auth_config['credentials']
 
         response = requests.request(
             method=method,
