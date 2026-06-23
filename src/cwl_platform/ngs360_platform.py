@@ -109,14 +109,9 @@ class NGS360Platform(Platform):
             raise ValueError("WES API endpoint URL is required")
 
         # Set up auth token or username/password as auth
-        auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
+        auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
         if auth_token:
             self._ga4gh_auth_config['token'] = auth_token
-        else:
-            username = os.environ.get("WES_USERNAME")
-            password = os.environ.get("WES_PASSWORD")
-            if username and password:
-                self._ga4gh_auth_config['credentials'] = (username, password)
 
         # Test connection by getting service info
         try:
@@ -180,12 +175,9 @@ class NGS360Platform(Platform):
 
         url = urljoin(endpoint, path)
         headers = {}
-        auth = None
 
         if 'token' in self._ga4gh_auth_config:
             headers["Authorization"] = f"Bearer {self._ga4gh_auth_config['token']}"
-        elif 'credentials' in self._ga4gh_auth_config:
-            auth = self._ga4gh_auth_config['credentials']
 
         response = requests.request(
             method=method,
@@ -194,7 +186,6 @@ class NGS360Platform(Platform):
             data=kwargs.get('data'),
             files=kwargs.get('files'),
             params=kwargs.get('params'),
-            auth=auth,
             timeout=120
         )
 
