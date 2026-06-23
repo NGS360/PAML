@@ -98,7 +98,7 @@ class NGS360Platform(Platform):
 
         :param kwargs: Connection parameters
             - api_endpoint: WES API endpoint URL
-            - auth_token: Authentication token for the WES API
+            - ngs360_auth_token: Authentication token for the WES API
         """
         self.connected = False
 
@@ -108,7 +108,7 @@ class NGS360Platform(Platform):
         if not self.ga4gh_api_endpoint:
             raise ValueError("WES API endpoint URL is required")
 
-        # Set up auth token or username/password as auth
+        # Set up auth token as auth
         auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
         if auth_token:
             self._ga4gh_auth_config['token'] = auth_token
@@ -144,7 +144,7 @@ class NGS360Platform(Platform):
         try:
             response = requests.get(
                 f"{self.ngs360_endpoint}/api/v1/auth/me",
-                headers={"Authorization": f"Bearer {self._ngs360_auth_config['token']}"} if 'token' in self._ngs360_auth_config else None,
+                headers={"Authorization": f"Bearer {self._ngs360_auth_config['token']}"},
                 timeout=30
             )
             response.raise_for_status()
