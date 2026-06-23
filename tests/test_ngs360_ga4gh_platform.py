@@ -91,14 +91,20 @@ class TestNGS360Platform(unittest.TestCase):
         '''
         Test connect method with username/password authentication
         '''
+        # Mock WES API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'workflow_type_versions': {'CWL': {'workflow_type_version': ['v1.0']}}}
+        mock_request.return_value = mock_response
+
+        # Mock NGS360 API response
         with patch('requests.get') as mock_get:
-            # Mock NGS360 API response
             mock_ngs360_response = MagicMock()
             mock_ngs360_response.status_code = 200
             mock_get.return_value = mock_ngs360_response
 
-            # Test connect with username/password
-            with patch.dict('os.environ', {'WES_USERNAME': 'testuser', 'WES_PASSWORD': 'testpass'}):
+            # Test connect with username/password (clear env so a stray
+            # WES_AUTH_TOKEN doesn't preempt the username/password branch)
+            with patch.dict('os.environ', {'WES_USERNAME': 'testuser', 'WES_PASSWORD': 'testpass'}, clear=True):
                 platform = NGS360Platform('WES')
                 result = platform.connect(
                     api_endpoint='https://wes.example.com/ga4gh/wes/v1',
@@ -107,6 +113,11 @@ class TestNGS360Platform(unittest.TestCase):
 
                 self.assertTrue(result)
                 self.assertEqual(platform._ga4gh_auth_config['credentials'], ('testuser', 'testpass'))
+
+                # Verify the credentials are actually used as auth on the WES request
+                _, kwargs = mock_request.call_args
+                self.assertEqual(kwargs['auth'], ('testuser', 'testpass'))
+                self.assertNotIn('Authorization', kwargs['headers'])
 
     @patch('requests.request')
     def test_connect_wes_failure(self, mock_request):
