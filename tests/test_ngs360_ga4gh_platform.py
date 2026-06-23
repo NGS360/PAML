@@ -1,13 +1,13 @@
 '''
 Test WES Platform implementation
 '''
-# pylint: disable=protected-access
 import json
 import unittest
 from unittest.mock import patch, MagicMock
 import requests
 
 from cwl_platform.ngs360_platform import NGS360Platform, WESTask
+
 
 class TestNGS360Platform(unittest.TestCase):
     '''
@@ -18,9 +18,13 @@ class TestNGS360Platform(unittest.TestCase):
         Set up test environment
         '''
         self.platform = NGS360Platform('WES')
-        self.platform.api_endpoint = 'https://wes.example.com/ga4gh/wes/v1'
+
+        self.platform.ga4gh_api_endpoint = 'https://wes.example.com/ga4gh/wes/v1'
+        self.platform._ga4gh_auth_config = {'token': 'test_token'}
+
         self.platform.ngs360_endpoint = 'https://ngs360.example.com'
-        self.platform._ga4gh_auth_config['token'] = 'test_token'
+        self.platform._ngs360_auth_config = {'token': 'test_token'}
+
         self.platform.connected = True
 
     @patch('requests.request')

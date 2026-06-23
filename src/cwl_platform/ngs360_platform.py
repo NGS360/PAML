@@ -100,6 +100,8 @@ class NGS360Platform(Platform):
             - api_endpoint: WES API endpoint URL
             - auth_token: Authentication token for the WES API
         """
+        self.connected = False
+
         # Get the endpoint from the kwargs or environment variable
         self.ga4gh_api_endpoint = kwargs.get(
             "api_endpoint", os.environ.get("WES_API_ENDPOINT"))
@@ -150,10 +152,11 @@ class NGS360Platform(Platform):
             )
             response.raise_for_status()
             self.logger.info("Connected to NGS360 API")
-            return True
+            self.connected = True
         except requests.RequestException as e:
             self.logger.error("Failed to connect to NGS360 API: %s", e)
-            return False
+
+        return self.connected
 
     def _make_request(self, method, path, **kwargs):
         """
