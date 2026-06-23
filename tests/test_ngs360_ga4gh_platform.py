@@ -20,10 +20,10 @@ class TestNGS360Platform(unittest.TestCase):
         self.platform = NGS360Platform('WES')
 
         self.platform.ga4gh_api_endpoint = 'https://wes.example.com/ga4gh/wes/v1'
-        self.platform._ga4gh_auth_config = {'token': 'test_token'}
+        self.platform._ga4gh_auth_config = {'token': 'test_token'} # pylint: disable=protected-access
 
         self.platform.ngs360_endpoint = 'https://ngs360.example.com'
-        self.platform._ngs360_auth_config = {'token': 'test_token'}
+        self.platform._ngs360_auth_config = {'token': 'test_token'} # pylint: disable=protected-access
 
         self.platform.connected = True
 
@@ -112,7 +112,7 @@ class TestNGS360Platform(unittest.TestCase):
                 )
 
                 self.assertTrue(result)
-                self.assertEqual(platform._ga4gh_auth_config['credentials'], ('testuser', 'testpass'))
+                self.assertEqual(platform._ga4gh_auth_config['credentials'], ('testuser', 'testpass')) # pylint: disable=protected-access
 
                 # Verify the credentials are actually used as auth on the WES request
                 _, kwargs = mock_request.call_args
