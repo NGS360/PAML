@@ -83,7 +83,6 @@ class NGS360Platform(Platform):
         self.logger = logging.getLogger(__name__)
 
         self.ga4gh_api_endpoint = None
-        self._ga4gh_auth_config = {}
 
         self.ngs360_endpoint = None
         self._ngs360_auth_config = {}
@@ -111,7 +110,7 @@ class NGS360Platform(Platform):
         # Set up auth token as auth
         auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
         if auth_token:
-            self._ga4gh_auth_config['token'] = auth_token
+            self._ngs360_auth_config['token'] = auth_token
         else:
             raise ValueError("NGS360 AUTH TOKEN is required")
 
@@ -134,11 +133,6 @@ class NGS360Platform(Platform):
             "ngs360_endpoint", os.environ.get("NGS360_API_ENDPOINT"))
         if not self.ngs360_endpoint:
             raise ValueError("NGS360 API endpoint URL is required")
-
-        # Set up auth token for auth
-        auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
-        if auth_token:
-            self._ngs360_auth_config['token'] = auth_token
 
         # Test connection by getting current user info
         try:
@@ -178,8 +172,8 @@ class NGS360Platform(Platform):
         url = urljoin(endpoint, path)
         headers = {}
 
-        if 'token' in self._ga4gh_auth_config:
-            headers["Authorization"] = f"Bearer {self._ga4gh_auth_config['token']}"
+        if 'token' in self._ngs360_auth_config:
+            headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
 
         response = requests.request(
             method=method,
