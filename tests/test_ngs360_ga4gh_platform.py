@@ -20,7 +20,6 @@ class TestNGS360Platform(unittest.TestCase):
         self.platform = NGS360Platform('WES')
 
         self.platform.ga4gh_api_endpoint = 'https://wes.example.com/ga4gh/wes/v1'
-        self.platform._ga4gh_auth_config = {'token': 'test_token'} # pylint: disable=protected-access
 
         self.platform.ngs360_endpoint = 'https://ngs360.example.com'
         self.platform._ngs360_auth_config = {'token': 'test_token'} # pylint: disable=protected-access
@@ -84,8 +83,7 @@ class TestNGS360Platform(unittest.TestCase):
             ngs360_endpoint='https://ngs360.example.com'
         )
         self.assertTrue(result)
-        # Verify NGS360 token for both APIs
-        self.assertEqual(platform._ga4gh_auth_config['token'], 'test_token') # pylint: disable=protected-access
+        # Verify NGS360 token is stored and used for both NGS360 and GA4GH WES requests
         self.assertEqual(platform._ngs360_auth_config['token'], 'test_token') # pylint: disable=protected-access
 
         # Verify the bearer token is sent on the WES service-info request
