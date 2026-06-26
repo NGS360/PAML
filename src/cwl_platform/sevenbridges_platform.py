@@ -857,7 +857,9 @@ class SevenBridgesPlatform(Platform):
         ''' Get a project by its name '''
         projects = self.api.projects.query(name=project_name)
         if projects:
-            return projects[0]
+            for project in projects:
+                if project.name == project_name:
+                    return project
         return None
 
     def get_project_by_id(self, project_id):
