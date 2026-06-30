@@ -193,6 +193,20 @@ class NGS360Platform(Platform):
         return {}
 
     # File methods
+    def copy_file(self, file, destination_project, file_path=None):
+        """
+        Copy a single file from one project to another.
+
+        Note: GA4GH WES/NGS360 API doesn't support direct file copy operations.
+
+        :param file: The file to copy
+        :param destination_project: The destination project to copy the file to
+        :param file_path: Optional destination folder path in the destination project
+        :return: The file path (unchanged) since WES doesn't manage files directly
+        """
+        self.logger.warning("WES API doesn't support direct file copy operations")
+        return file
+
     def copy_folder(self, source_project, source_folder, destination_project):
         """
         Copy source folder to destination project
@@ -256,7 +270,7 @@ class NGS360Platform(Platform):
 
         :param project: Project to search for files
         :param filters: Dictionary containing filter criteria
-        :return: List of tuples (file path, file object) matching filter criteria
+        :return: List of tuples (full_path, file_id) matching filter criteria
         """
         self.logger.warning("WES API doesn't support listing files")
         return []
@@ -741,6 +755,34 @@ class NGS360Platform(Platform):
         return list(self.projects.values())
 
     # User methods
+    def get_current_user(self):
+        """
+        Get the currently authenticated user's profile information.
+
+        Note: WES/NGS360 API doesn't have a concept of authenticated users in the
+        same way as SevenBridges or Arvados. This redirects to get the user from the NGS360 API.
+
+        :return: Dictionary with user info or None if unavailable
+        """
+        headers = {}
+        if 'token' in self._auth_config:
+            headers["Authorization"] = f"Bearer {self._auth_config['token']}"
+
+        response = requests.get(
+            f"{self.ngs360_endpoint}/api/v1/auth/me",
+            headers=headers,
+            timeout=30
+        )
+        if response.status_code == 200:
+            userinfo = response.json()
+            full_name = userinfo.get('full_name') or ''
+            name_parts = full_name.split(' ', 1)
+            return {'username': userinfo.get('username'),
+                    'first_name': name_parts[0],
+                    'last_name': name_parts[1] if len(name_parts) > 1 else '',
+                    'email': userinfo.get('email')}
+        return None
+
     def add_user_to_project(self, platform_user, project, permission):
         """
         Add a user to a project on the platform

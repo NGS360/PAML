@@ -64,10 +64,9 @@ class SevenBridgesPlatform(Platform):
         :param project: `sevenbridges.Project` entity
         :return: `sevenbridges.File` entity of type folder to which path indicates
         """
-        folders = path.split("/")
-        # If there is a leading slash, remove it
-        if not folders[0]:
-            folders = folders[1:]
+        folders = [f for f in path.split("/") if f]
+        if not folders:
+            return None
 
         parent = self.api.files.query(project=project, names=[folders[0]])
         if len(parent) == 0:
@@ -137,6 +136,8 @@ class SevenBridgesPlatform(Platform):
             path=folder,
             project=project
         )
+        if parent is None:
+            return list(self.api.files.query(project=project).all())
         if recursive:
             file_list = self._list_all_files(
                 files=[parent]
@@ -144,6 +145,27 @@ class SevenBridgesPlatform(Platform):
         else:
             file_list = self.api.files.get(id=parent.id).list_files().all()
         return file_list
+
+    def copy_file(self, file, destination_project, file_path=None):
+        """
+        Copy a single file from one project to another.
+
+        :param file: The SevenBridges file ID (or object) to copy
+        :param destination_project: The destination project to copy the file to
+        :param file_path: Optional destination folder path in the destination project
+        :return: The file ID of the copied file in the destination project
+        """
+        if isinstance(file, str):
+            file = self.api.files.get(id=file)
+        if file_path:
+            dest_folder = self._find_or_create_path(destination_project, file_path)
+            if dest_folder is None:
+                copied = file.copy(project=destination_project)
+            else:
+                copied = file.copy_to_folder(parent=dest_folder)
+        else:
+            copied = file.copy(project=destination_project)
+        return copied.id
 
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
@@ -253,7 +275,7 @@ class SevenBridgesPlatform(Platform):
 
     def _get_folder_contents(self, path, folder, filters):
         '''
-        Recusivelly returns all the files in a directory and subdirectories
+        Recursively returns all the files in a directory and subdirectories
         in a SevenBridges project.
 
         :param path: path of file
@@ -292,7 +314,6 @@ class SevenBridgesPlatform(Platform):
 
         if filters:
             matching_files = []
-            # Now that we have all the files, let's apply the filters
             for filepath, file in files:
                 filename = os.path.basename(filepath)
                 if 'name' in filters and filters['name'] != filename:
@@ -446,10 +467,13 @@ class SevenBridgesPlatform(Platform):
             destination_filename = filename.split('/')[-1]
 
         if dest_folder is not None:
-            if dest_folder[-1] == '/': # remove slash at the end
+            if dest_folder[-1] == '/':
                 dest_folder = dest_folder[:-1]
-            parent_folder = self._find_or_create_path(project, dest_folder)
-            parent_folder_id = parent_folder.id
+            if dest_folder:
+                parent_folder = self._find_or_create_path(project, dest_folder)
+                parent_folder_id = parent_folder.id if parent_folder else None
+            else:
+                parent_folder_id = None
         else:
             parent_folder_id = None
 
@@ -854,6 +878,24 @@ class SevenBridgesPlatform(Platform):
         return projects
 
     ### User Methods
+    def get_current_user(self):
+        """
+        Get the currently authenticated user's profile information.
+
+        :return: Dictionary with user info: {'username': str, 'first_name': str,
+                 'last_name': str, 'email': str} or None if unavailable
+        """
+        try:
+            user = self.api.users.me()
+            return {
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+            }
+        except Exception:
+            return None
+
     def add_user_to_project(self, platform_user, project, permission):
         """
         Add a user to a project on the platform

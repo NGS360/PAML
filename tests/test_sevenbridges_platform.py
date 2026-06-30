@@ -740,6 +740,14 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.assertEqual(actual_result, [test_file1_id, test_file2_id])
 
+    def test_find_or_create_path_root_returns_none(self):
+        '''Test _find_or_create_path'''
+        project = MagicMock()
+
+        ## root path should return None
+        result = self.platform._find_or_create_path(project, '/')
+        self.assertIsNone(result)
+
     @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
     def test_upload_file(self, mock_find_or_create_path):
         '''
@@ -766,6 +774,206 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Check results
         self.platform.api.files.upload.assert_called()
         self.assertEqual(actual_result, 1)
+
+    @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
+    def test_upload_file_to_root(self, mock_find_or_create_path):
+        '''Uploading with dest_folder=None should upload to project root'''
+        project = MagicMock()
+        self.platform.api.files.query.return_value = []
+
+        upload_state = MagicMock()
+        upload_state.status = 'COMPLETED'
+        upload_state.result().id = 'file-123'
+        self.platform.api.files.upload.return_value = upload_state
+
+        result = self.platform.upload_file('local_file.txt', project)
+
+        mock_find_or_create_path.assert_not_called()
+        self.platform.api.files.upload.assert_called_once_with(
+            'local_file.txt',
+            overwrite=False,
+            parent=None,
+            file_name='local_file.txt',
+            project=project,
+            wait=True
+        )
+        self.assertEqual(result, 'file-123')
+
+    @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
+    def test_upload_file_to_subfolder(self, mock_find_or_create_path):
+        '''Uploading with dest_folder should create the path and upload into it'''
+        project = MagicMock()
+        parent_folder = MagicMock()
+        parent_folder.id = 'folder-456'
+        mock_find_or_create_path.return_value = parent_folder
+        self.platform.api.files.query.return_value = []
+
+        upload_state = MagicMock()
+        upload_state.status = 'COMPLETED'
+        upload_state.result().id = 'file-789'
+        self.platform.api.files.upload.return_value = upload_state
+
+        result = self.platform.upload_file('data.csv', project, dest_folder='/inputs')
+
+        mock_find_or_create_path.assert_called_once_with(project, '/inputs')
+        self.platform.api.files.upload.assert_called_once_with(
+            'data.csv',
+            overwrite=False,
+            parent='folder-456',
+            file_name='data.csv',
+            project=None,
+            wait=True
+        )
+        self.assertEqual(result, 'file-789')
+
+    @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
+    def test_upload_file_with_destination_filename(self, mock_find_or_create_path):
+        '''destination_filename should override the uploaded file name'''
+        project = MagicMock()
+        mock_find_or_create_path.return_value = None
+        self.platform.api.files.query.return_value = []
+
+        upload_state = MagicMock()
+        upload_state.status = 'COMPLETED'
+        upload_state.result().id = 'file-abc'
+        self.platform.api.files.upload.return_value = upload_state
+
+        result = self.platform.upload_file(
+            '/tmp/local_file.txt', project,
+            dest_folder='/outputs',
+            destination_filename='renamed.txt')
+
+        self.platform.api.files.upload.assert_called_once_with(
+            '/tmp/local_file.txt',
+            overwrite=False,
+            parent=None,
+            file_name='renamed.txt',
+            project=project,
+            wait=True
+        )
+        self.assertEqual(result, 'file-abc')
+
+    @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
+    def test_upload_file_skips_existing_when_no_overwrite(self, mock_find_or_create_path):
+        '''If file already exists and overwrite=False, return existing file id'''
+        project = MagicMock()
+        mock_find_or_create_path.return_value = None
+
+        existing_file = MagicMock()
+        existing_file.id = 'existing-file-id'
+        self.platform.api.files.query.return_value = [existing_file]
+
+        result = self.platform.upload_file(
+            'file.txt', project, dest_folder='/inputs', overwrite=False)
+
+        self.platform.api.files.upload.assert_not_called()
+        self.assertEqual(result, 'existing-file-id')
+
+    @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
+    def test_upload_file_overwrites_existing(self, mock_find_or_create_path):
+        '''If overwrite=True, upload even if file already exists'''
+        project = MagicMock()
+        parent_folder = MagicMock()
+        parent_folder.id = 'folder-456'
+        mock_find_or_create_path.return_value = parent_folder
+
+        existing_file = MagicMock()
+        existing_file.id = 'old-file-id'
+        self.platform.api.files.query.return_value = [existing_file]
+
+        upload_state = MagicMock()
+        upload_state.status = 'COMPLETED'
+        upload_state.result().id = 'new-file-id'
+        self.platform.api.files.upload.return_value = upload_state
+
+        result = self.platform.upload_file(
+            'file.txt', project, dest_folder='/inputs', overwrite=True)
+
+        self.platform.api.files.upload.assert_called_once()
+        self.assertEqual(result, 'new-file-id')
+
+    @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
+    def test_upload_file_returns_none_on_failure(self, mock_find_or_create_path):
+        '''If upload fails, return None'''
+        project = MagicMock()
+        mock_find_or_create_path.return_value = None
+        self.platform.api.files.query.return_value = []
+
+        upload_state = MagicMock()
+        upload_state.status = 'FAILED'
+        self.platform.api.files.upload.return_value = upload_state
+
+        result = self.platform.upload_file('file.txt', project, dest_folder='/inputs')
+
+        self.assertIsNone(result)
+
+    @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
+    def test_upload_file_strips_trailing_slash(self, mock_find_or_create_path):
+        '''Trailing slash on dest_folder should be stripped'''
+        project = MagicMock()
+        parent_folder = MagicMock()
+        parent_folder.id = 'folder-789'
+        mock_find_or_create_path.return_value = parent_folder
+        self.platform.api.files.query.return_value = []
+
+        upload_state = MagicMock()
+        upload_state.status = 'COMPLETED'
+        upload_state.result().id = 'file-xyz'
+        self.platform.api.files.upload.return_value = upload_state
+
+        result = self.platform.upload_file('file.txt', project, dest_folder='/inputs/')
+
+        mock_find_or_create_path.assert_called_once_with(project, '/inputs')
+        self.assertEqual(result, 'file-xyz')
+
+    @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
+    def test_upload_file_dest_folder_just_slash(self, mock_find_or_create_path):
+        '''dest_folder="/" should upload to root (no folder creation)'''
+        project = MagicMock()
+        self.platform.api.files.query.return_value = []
+
+        upload_state = MagicMock()
+        upload_state.status = 'COMPLETED'
+        upload_state.result().id = 'file-root'
+        self.platform.api.files.upload.return_value = upload_state
+
+        result = self.platform.upload_file('file.txt', project, dest_folder='/')
+
+        mock_find_or_create_path.assert_not_called()
+        self.platform.api.files.upload.assert_called_once_with(
+            'file.txt',
+            overwrite=False,
+            parent=None,
+            file_name='file.txt',
+            project=project,
+            wait=True
+        )
+        self.assertEqual(result, 'file-root')
+
+    @mock.patch('cwl_platform.sevenbridges_platform.SevenBridgesPlatform._find_or_create_path')
+    def test_upload_file_extracts_basename(self, mock_find_or_create_path):
+        '''When filename has a path, only the basename should be used as file_name'''
+        project = MagicMock()
+        mock_find_or_create_path.return_value = None
+        self.platform.api.files.query.return_value = []
+
+        upload_state = MagicMock()
+        upload_state.status = 'COMPLETED'
+        upload_state.result().id = 'file-base'
+        self.platform.api.files.upload.return_value = upload_state
+
+        result = self.platform.upload_file(
+            '/home/user/data/sample.fastq', project, dest_folder='/inputs')
+
+        self.platform.api.files.upload.assert_called_once_with(
+            '/home/user/data/sample.fastq',
+            overwrite=False,
+            parent=None,
+            file_name='sample.fastq',
+            project=project,
+            wait=True
+        )
+        self.assertEqual(result, 'file-base')
 
 if __name__ == '__main__':
     unittest.main()

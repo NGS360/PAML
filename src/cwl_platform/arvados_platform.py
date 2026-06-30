@@ -191,6 +191,56 @@ class ArvadosPlatform(Platform):
         return None, None
 
     # File methods
+    def copy_file(self, file, destination_project, file_path=None):
+        """
+        Copy a single file from one project to another.
+
+        For Arvados, 'file' is a keep URI string (e.g. keep:uuid/path/to/file).
+        This copies the file into a collection in the destination project.
+
+        :param file: The keep URI of the file to copy
+        :param destination_project: The destination project to copy the file to
+        :param file_path: Optional destination folder path in the destination project.
+            On Arvados, the first component of the path is used as the collection name.
+        :return: The keep URI of the copied file in the destination project
+        """
+        # Parse the source file keep URI
+        source_collection_uuid, source_file_path = find_collection_file_path(file)
+
+        # Determine the destination collection name from file_path or default to 'shared'
+        if file_path:
+            path_parts = file_path.strip('/').split('/')
+            collection_name = path_parts[0]
+        else:
+            collection_name = "shared"
+
+        # Find or create the destination collection in the destination project
+        search_result = self.api.collections().list(filters=[
+            ["owner_uuid", "=", destination_project["uuid"]],
+            ["name", "=", collection_name]
+        ]).execute()
+        if len(search_result['items']) > 0:
+            dest_collection = search_result['items'][0]
+        else:
+            dest_collection = self.api.collections().create(body={
+                "owner_uuid": destination_project["uuid"],
+                "name": collection_name
+            }).execute()
+
+        # Copy the file
+        source_collection = arvados.collection.Collection(source_collection_uuid, api_client=self.api)
+        target_collection = arvados.collection.Collection(dest_collection['uuid'], api_client=self.api)
+
+        target_path = os.path.basename(source_file_path) if source_file_path else ""
+        target_collection.copy(
+            source_file_path or ".",
+            target_path=target_path,
+            source_collection=source_collection
+        )
+        target_collection.save()
+
+        return f"keep:{dest_collection['uuid']}/{target_path}"
+
     def copy_folder(self, source_project, source_folder, destination_project):
         '''
         Copy folder to destination project
@@ -266,39 +316,44 @@ class ArvadosPlatform(Platform):
                 'folder': 'folder_name',  # Here, a root folder is the name of the collection.
                 'recursive': True/False
             }
-        :return: List of tuples (file path, file object) matching filter criteria
+        :return: List of tuples (full_path, file_id) matching filter criteria.
+            full_path: The complete path including collection and subdirectories
+                       e.g., "/CollectionName/subdir/file.fastq.gz"
+            file_id: keep URI e.g., "keep:{uuid}/subdir/file.fastq.gz"
         """
-        # Iterate over all collections and find collections matching filter criteria.
         collection_filter = [["owner_uuid", "=", project["uuid"]]]
         if filters and "folder" in filters:
             folder = filters['folder'].lstrip('/')
-            collection_filter.append(["name", "=", folder])
+            collection_name_filter = folder.split('/')[0]
+            collection_filter.append(["name", "=", collection_name_filter])
+
         matching_collections = []
         search_result = self.api.collections().list(filters=collection_filter).execute()
         if len(search_result['items']) > 0:
             matching_collections = search_result['items']
 
-        # Iterate over the collections an find files matching filter criteria
         matching_files = []
-        for _, collection in enumerate(matching_collections):
+        for collection in matching_collections:
             collection_name = collection['name']
-            files = self._get_files_list_in_collection(
-                collection["uuid"]
-            )
-            # files is a list of StreamReaders, but get_files is suppose to return file objects.
+            files = self._get_files_list_in_collection(collection["uuid"])
+
             for f in files:
-                file_id = f"keep:{collection['uuid']}/{f.name}"
-                if filters and 'name' in filters:
-                    if filters['name'] == f.name:
-                        matching_files.append((f'/{collection_name}/{f.name}', file_id))
-                if filters and 'prefix' in filters:
-                    if f.name.startswith(filters['prefix']):
-                        matching_files.append((f'/{collection_name}/{f.name}', file_id))
-                if filters and 'suffix' in filters:
-                    if f.name.endswith(filters['suffix']):
-                        matching_files.append((f'/{collection_name}/{f.name}', file_id))
-                else:
-                    matching_files.append((f'/{collection_name}/{f.name}', file_id))
+                internal_path = f"{f.stream_name()}/{f.name}".lstrip('./')
+                file_id = f"keep:{collection['uuid']}/{internal_path}"
+                full_path = f"/{collection_name}/{internal_path}"
+
+                filename = f.name
+                if filters:
+                    if 'name' in filters and filters['name'] != filename:
+                        continue
+                    if 'prefix' in filters and not filename.startswith(filters['prefix']):
+                        continue
+                    if 'suffix' in filters and not filename.endswith(filters['suffix']):
+                        continue
+                    if 'folder' in filters and filters['folder'] != os.path.dirname(full_path):
+                        continue
+                matching_files.append((full_path, file_id))
+
         self.logger.debug("Return list of %d files", len(matching_files))
         return matching_files
 
@@ -1145,6 +1200,24 @@ class ArvadosPlatform(Platform):
         return list(all_projects)
 
     ### User Methods
+    def get_current_user(self):
+        """
+        Get the currently authenticated user's profile information.
+
+        :return: Dictionary with user info: {'username': str, 'first_name': str,
+                 'last_name': str, 'email': str} or None if unavailable
+        """
+        try:
+            user = self.api.users().current().execute()
+            return {
+                'username': user.get('username', ''),
+                'first_name': user.get('first_name', ''),
+                'last_name': user.get('last_name', ''),
+                'email': user.get('email', ''),
+            }
+        except Exception:
+            return None
+
     def add_user_to_project(self, platform_user, project, permission):
         """
         Add a user to a project on the platform
