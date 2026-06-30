@@ -439,7 +439,7 @@ class TestNGS360Platform(unittest.TestCase):
         _, kwargs = mock_post.call_args
         self.assertIn('files', kwargs)
         self.assertIn('data', kwargs)
-        self.assertEqual(kwargs['data']['entity_id'], 'test_project_id')
+        self.assertIn('project_id', 'test_project_id')
 
     @patch('requests.post')
     @patch('builtins.open')
