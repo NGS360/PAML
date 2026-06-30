@@ -304,8 +304,6 @@ class NGS360Platform(Platform):
         """
         Upload a local file to project
 
-        Note: WES API doesn't have a direct concept of files, so this returns the filename
-
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
         :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
@@ -321,11 +319,9 @@ class NGS360Platform(Platform):
             response = requests.post(
                 f"{self.ngs360_endpoint}/api/v1/files/upload",
                 data={
-                    "filename": filename,
-                    "entity_type": 'project',
-                    "entity_id": project["project_id"],
+                    "filename": destination_filename or os.path.basename(filename),
+                    "project_id": project["project_id"],
                     "relative_path": dest_folder,
-                    "destination_filename": destination_filename or os.path.basename(filename),
                     "overwrite": overwrite,
                 },
                 files={"content": f},
@@ -337,7 +333,7 @@ class NGS360Platform(Platform):
             return f"ngs360://{file_info['file_id']}"
 
         self.logger.error("Error uploading file: %s", response.status_code)
-        self.logger.error(response.json())
+        self.logger.error(response.text)
         return None
 
     # Task/Workflow methods
