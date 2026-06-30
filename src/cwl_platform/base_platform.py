@@ -11,6 +11,17 @@ class Platform(ABC):
 
     # File methods
     @abstractmethod
+    def copy_file(self, file, destination_project, file_path=None):
+        """
+        Copy a single file from one project to another.
+
+        :param file: The file ID to copy (as returned in get_files tuples)
+        :param destination_project: The destination project to copy the file to
+        :param file_path: Optional destination folder path in the destination project
+        :return: The file ID of the copied file in the destination project
+        """
+
+    @abstractmethod
     def copy_folder(self, source_project, source_folder, destination_project):
         ''' Copy source folder to destination project '''
 
@@ -41,6 +52,7 @@ class Platform(ABC):
     def get_files(self, project, filters=None):
         """
         Retrieve files in a project matching the filter criteria
+
         :param project: Project to search for files
         :param filters: Dictionary containing filter criteria
             {
@@ -50,7 +62,10 @@ class Platform(ABC):
                 'folder': 'folder_name',
                 'recursive': True/False
             }
-        :return: List of tuples (file path, file object) matching filter criteria
+        :return: List of tuples (full_path, file_ref) matching filter criteria.
+            full_path: The complete path including subdirectories
+                       e.g., "/inputs/run1/sample1/file1.fastq.gz"
+            file_ref: Platform-native file reference
         """
 
     @abstractmethod
@@ -270,6 +285,15 @@ class Platform(ABC):
         :param platform_user: platform user (from get_user)
         :param project: platform project
         :param permission: permission (permission="read|write|execute|admin")
+        """
+
+    @abstractmethod
+    def get_current_user(self):
+        """
+        Get the currently authenticated user's profile information.
+
+        :return: Dictionary with user info: {'username': str, 'first_name': str,
+                 'last_name': str, 'email': str} or None if unavailable
         """
 
     @abstractmethod

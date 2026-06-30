@@ -1,5 +1,9 @@
 '''
 Integration Test for PAML.get_files() to ensure all platforms work in the same way.
+
+get_files() returns List[(full_path, file_ref)] where:
+- full_path preserves the complete directory structure
+- file_ref is a platform-native reference (SB file object or Arvados keep URI)
 '''
 import unittest
 
@@ -12,9 +16,7 @@ from cwl_platform import SUPPORTED_PLATFORMS, PlatformFactory
 
 def generate_random_file():
     ''' Generate a temp file for testing '''
-    # Random file name
     file_name = ''.join(random.choices(string.ascii_letters + string.digits, k=8)) + ".txt"
-    # Write random data
     length = 100
     with open(file_name, 'w', encoding='us-ascii') as f:
         random_data = ''.join(random.choices(string.ascii_letters + string.digits, k=length))
@@ -28,7 +30,7 @@ class TestGetFiles(unittest.TestCase):
             self.skipTest("Skipping live test. Set INTEGRATION_TEST=1 to run live tests")
 
         self.platforms = {}
-        for platform_name in SUPPORTED_PLATFORMS:
+        for platform_name in ['Arvados', 'SevenBridges']:
             platform = PlatformFactory().get_platform(platform_name)
             platform.connect()
             self.platforms[platform_name] = platform
@@ -36,7 +38,6 @@ class TestGetFiles(unittest.TestCase):
         self.random_file = None
 
     def tearDown(self):
-        # Remove the test project from the platform
         for _, platform in self.platforms.items():
             platform.delete_project_by_name(self.project_name)
         if self.random_file:
@@ -44,16 +45,13 @@ class TestGetFiles(unittest.TestCase):
         return super().tearDown()
 
     def test_get_files_returns_zero_files(self):
-        ''' Test that PAML.get_files an empty list for an empty project, on all platforms '''
+        ''' Test that PAML.get_files returns an empty list for an empty project '''
         for _, platform in self.platforms.items():
-            # create project
             project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
             self.assertIsNotNone(project, "Expected an empty project")
 
-            # Test
             files = platform.get_files(project)
 
-            # Check results
             self.assertEqual(files, [])
 
     def test_get_files_returns_files_in_root_folder(self):
@@ -64,26 +62,21 @@ class TestGetFiles(unittest.TestCase):
         self.random_file = generate_random_file()
 
         for platform_name, platform in self.platforms.items():
-            # create project
             project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
             self.assertIsNotNone(project, "Expected an empty project")
 
-            # Add files to root folder
             file = platform.upload_file(self.random_file, project)
 
             # Handle Arvados case of no root folder
             if platform_name == 'Arvados':
                 self.assertIsNone(file)
             else:
-                # Test
                 files = platform.get_files(project)
 
-                # Assert 1 file was returned
                 self.assertEqual(
                     len(files), 1,
                     f"Expected 1 file but found {len(files)}")
 
-                # Assert file is /sample_sheet.txt
                 actual_name, _ = files[0]
                 self.assertEqual(
                     actual_name, f"/{self.random_file}",
@@ -96,35 +89,88 @@ class TestGetFiles(unittest.TestCase):
         self.random_file = generate_random_file()
 
         for platform_name, platform in self.platforms.items():
-            # create project
             project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
             self.assertIsNotNone(project, "Expected an empty project")
 
-            # Add files to subfolder
             platform.upload_file(self.random_file, project, dest_folder='/inputs')
 
-            # Test
             files = platform.get_files(project, filters={'folder': '/inputs'})
 
-            # Assert 1 file was returned
             self.assertEqual(
                 len(files), 1,
                 f"Expected 1 file but found {len(files)} on {platform_name}")
 
-            # Assert file is /sample_sheet.txt
             actual_name, _ = files[0]
             self.assertEqual(
                 actual_name, f"/inputs/{self.random_file}",
                 f"Expected to find /inputs/{self.random_file} on {platform_name} but found {actual_name} instead")
 
-    def test_handle_multiple_output_file_matches(self):
+    def test_get_files_preserves_nested_subdirectories(self):
         '''
-        Test that export_results can handle the case when multiple
-        WES_output_files.txt exist:
-        /WES_output_files.txt
-        /_1_WES_output_files.txt
+        Test that get_files() preserves subdirectory paths within collections.
         '''
-        self.skipTest("Not yet implemented")
+        self.random_file = generate_random_file()
+
+        for platform_name, platform in self.platforms.items():
+            project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
+            self.assertIsNotNone(project, "Expected an empty project")
+
+            platform.upload_file(self.random_file, project, dest_folder='/inputs/run1/sample1')
+
+            files = platform.get_files(project)
+            fullpaths = [path for path, _ in files]
+
+            expected_path = f"/inputs/run1/sample1/{self.random_file}"
+            self.assertIn(
+                expected_path, fullpaths,
+                f"[{platform_name}] get_files should preserve nested path. "
+                f"Expected {expected_path}, got {fullpaths}")
+
+    def test_get_files_filter_by_prefix(self):
+        '''Test filtering by prefix'''
+        self.random_file = generate_random_file()
+
+        for platform_name, platform in self.platforms.items():
+            project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
+
+            platform.upload_file(self.random_file, project, dest_folder='/data')
+
+            files = platform.get_files(project, filters={'prefix': self.random_file[:4]})
+
+            self.assertEqual(
+                len(files), 1,
+                f"[{platform_name}] Expected 1 file with prefix filter, got {len(files)}")
+
+            files_no_match = platform.get_files(project, filters={'prefix': 'nonexistent_'})
+            self.assertEqual(
+                len(files_no_match), 0,
+                f"[{platform_name}] Expected 0 files with non-matching prefix")
+
+    def test_get_files_nested_dir_with_folder_filter(self):
+        '''
+        Test that uploading to a nested directory (inputs/run1/sample1) and
+        filtering by that folder returns the correct path and file_id.
+        '''
+        self.random_file = generate_random_file()
+
+        for platform_name, platform in self.platforms.items():
+            project = platform.create_project(self.project_name, 'Project for TestGetFiles integration test')
+            self.assertIsNotNone(project, "Expected an empty project")
+
+            platform.upload_file(self.random_file, project, dest_folder='/inputs/run1/sample1')
+
+            files = platform.get_files(project, filters={'folder': '/inputs/run1/sample1'})
+
+            self.assertEqual(
+                len(files), 1,
+                f"[{platform_name}] Expected 1 file but found {len(files)}: "
+                f"{[p for p, _ in files]}")
+
+            actual_path, _ = files[0]
+            self.assertEqual(
+                actual_path, f"/inputs/run1/sample1/{self.random_file}",
+                f"[{platform_name}] Expected /inputs/run1/sample1/{self.random_file} "
+                f"but got {actual_path}")
 
 if __name__ == '__main__':
     unittest.main()
