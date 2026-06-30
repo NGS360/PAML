@@ -765,8 +765,8 @@ class NGS360Platform(Platform):
         :return: Dictionary with user info or None if unavailable
         """
         headers = {}
-        if 'token' in self._auth_config:
-            headers["Authorization"] = f"Bearer {self._auth_config['token']}"
+        if 'token' in self._ngs360_auth_config:
+            headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
 
         response = requests.get(
             f"{self.ngs360_endpoint}/api/v1/auth/me",
