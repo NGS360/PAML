@@ -12,7 +12,8 @@ import random
 import string
 import os
 
-from cwl_platform import SUPPORTED_PLATFORMS, PlatformFactory
+from cwl_platform import PlatformFactory
+
 
 def generate_random_file():
     ''' Generate a temp file for testing '''
@@ -22,6 +23,7 @@ def generate_random_file():
         random_data = ''.join(random.choices(string.ascii_letters + string.digits, k=length))
         f.write(random_data)
     return file_name
+
 
 class TestGetFiles(unittest.TestCase):
     ''' TestGetFiles '''
@@ -171,6 +173,7 @@ class TestGetFiles(unittest.TestCase):
                 actual_path, f"/inputs/run1/sample1/{self.random_file}",
                 f"[{platform_name}] Expected /inputs/run1/sample1/{self.random_file} "
                 f"but got {actual_path}")
+
 
 if __name__ == '__main__':
     unittest.main()

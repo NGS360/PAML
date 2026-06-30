@@ -112,7 +112,7 @@ class TestUploadFileIntegration(unittest.TestCase):
         '''Uploading with overwrite=True should succeed even if file exists'''
         local_file = self._create_local_file()
 
-        first_id = self.platform.upload_file(
+        self.platform.upload_file(
             local_file, self.project, dest_folder='/inputs')
         second_id = self.platform.upload_file(
             local_file, self.project, dest_folder='/inputs', overwrite=True)

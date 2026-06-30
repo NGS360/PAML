@@ -1075,6 +1075,7 @@ class ArvadosPlatform(Platform):
                     '--prefer-cached-downloads',
                     '--debug',
                     '--priority', str(priority),
+                    '--intermediate-output-ttl', '172800',
                     cmd_spot_instance,
                     '--project-uuid', project['uuid'],
                     '--name', name,
