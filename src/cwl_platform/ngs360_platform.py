@@ -83,7 +83,6 @@ class NGS360Platform(Platform):
         self.logger = logging.getLogger(__name__)
 
         self.ga4gh_api_endpoint = None
-        self._ga4gh_auth_config = {}
 
         self.ngs360_endpoint = None
         self._ngs360_auth_config = {}
@@ -98,7 +97,7 @@ class NGS360Platform(Platform):
 
         :param kwargs: Connection parameters
             - api_endpoint: WES API endpoint URL
-            - auth_token: Authentication token for the WES API
+            - ngs360_auth_token: Authentication token for the WES API
         """
         self.connected = False
 
@@ -108,15 +107,12 @@ class NGS360Platform(Platform):
         if not self.ga4gh_api_endpoint:
             raise ValueError("WES API endpoint URL is required")
 
-        # Set up auth token or username/password as auth
-        auth_token = kwargs.get("auth_token", os.environ.get("WES_AUTH_TOKEN"))
+        # Set up auth token as auth
+        auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
         if auth_token:
-            self._ga4gh_auth_config['token'] = auth_token
+            self._ngs360_auth_config['token'] = auth_token
         else:
-            username = os.environ.get("WES_USERNAME")
-            password = os.environ.get("WES_PASSWORD")
-            if username and password:
-                self._ga4gh_auth_config['credentials'] = (username, password)
+            raise ValueError("NGS360 AUTH TOKEN is required")
 
         # Test connection by getting service info
         try:
@@ -138,16 +134,11 @@ class NGS360Platform(Platform):
         if not self.ngs360_endpoint:
             raise ValueError("NGS360 API endpoint URL is required")
 
-        # Set up auth token for auth
-        auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
-        if auth_token:
-            self._ngs360_auth_config['token'] = auth_token
-
         # Test connection by getting current user info
         try:
             response = requests.get(
                 f"{self.ngs360_endpoint}/api/v1/auth/me",
-                headers={"Authorization": f"Bearer {self._ngs360_auth_config['token']}"} if 'token' in self._ngs360_auth_config else None,
+                headers={"Authorization": f"Bearer {self._ngs360_auth_config['token']}"},
                 timeout=30
             )
             response.raise_for_status()
@@ -180,12 +171,9 @@ class NGS360Platform(Platform):
 
         url = urljoin(endpoint, path)
         headers = {}
-        auth = None
 
-        if 'token' in self._ga4gh_auth_config:
-            headers["Authorization"] = f"Bearer {self._ga4gh_auth_config['token']}"
-        elif 'credentials' in self._ga4gh_auth_config:
-            auth = self._ga4gh_auth_config['credentials']
+        if 'token' in self._ngs360_auth_config:
+            headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
 
         response = requests.request(
             method=method,
@@ -194,7 +182,6 @@ class NGS360Platform(Platform):
             data=kwargs.get('data'),
             files=kwargs.get('files'),
             params=kwargs.get('params'),
-            auth=auth,
             timeout=120
         )
 
@@ -331,8 +318,6 @@ class NGS360Platform(Platform):
         """
         Upload a local file to project
 
-        Note: WES API doesn't have a direct concept of files, so this returns the filename
-
         :param filename: filename of local file to be uploaded.
         :param project: project that the file is uploaded to.
         :param dest_folder: The target path to the folder that file will be uploaded to. None will upload to root.
@@ -348,11 +333,9 @@ class NGS360Platform(Platform):
             response = requests.post(
                 f"{self.ngs360_endpoint}/api/v1/files/upload",
                 data={
-                    "filename": filename,
-                    "entity_type": 'project',
-                    "entity_id": project["project_id"],
+                    "filename": destination_filename or os.path.basename(filename),
+                    "project_id": project["project_id"],
                     "relative_path": dest_folder,
-                    "destination_filename": destination_filename or os.path.basename(filename),
                     "overwrite": overwrite,
                 },
                 files={"content": f},
@@ -364,7 +347,7 @@ class NGS360Platform(Platform):
             return f"ngs360://{file_info['file_id']}"
 
         self.logger.error("Error uploading file: %s", response.status_code)
-        self.logger.error(response.json())
+        self.logger.error(response.text)
         return None
 
     # Task/Workflow methods
@@ -782,8 +765,8 @@ class NGS360Platform(Platform):
         :return: Dictionary with user info or None if unavailable
         """
         headers = {}
-        if 'token' in self._auth_config:
-            headers["Authorization"] = f"Bearer {self._auth_config['token']}"
+        if 'token' in self._ngs360_auth_config:
+            headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
 
         response = requests.get(
             f"{self.ngs360_endpoint}/api/v1/auth/me",

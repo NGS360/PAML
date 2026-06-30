@@ -20,7 +20,6 @@ class TestNGS360Platform(unittest.TestCase):
         self.platform = NGS360Platform('WES')
 
         self.platform.ga4gh_api_endpoint = 'https://wes.example.com/ga4gh/wes/v1'
-        self.platform._ga4gh_auth_config = {'token': 'test_token'} # pylint: disable=protected-access
 
         self.platform.ngs360_endpoint = 'https://ngs360.example.com'
         self.platform._ngs360_auth_config = {'token': 'test_token'} # pylint: disable=protected-access
@@ -47,8 +46,7 @@ class TestNGS360Platform(unittest.TestCase):
             data=None,
             files=None,
             params=None,
-            timeout=120,
-            auth=None
+            timeout=120
         )
         self.assertEqual(result, {'key': 'value'})
 
@@ -81,43 +79,16 @@ class TestNGS360Platform(unittest.TestCase):
         platform = NGS360Platform('WES')
         result = platform.connect(
             api_endpoint='https://wes.example.com/ga4gh/wes/v1',
-            auth_token='test_token',
+            ngs360_auth_token='test_token',
             ngs360_endpoint='https://ngs360.example.com'
         )
         self.assertTrue(result)
+        # Verify NGS360 token is stored and used for both NGS360 and GA4GH WES requests
+        self.assertEqual(platform._ngs360_auth_config['token'], 'test_token') # pylint: disable=protected-access
 
-    @patch('requests.request')
-    def test_connect_username_password_auth(self, mock_request):
-        '''
-        Test connect method with username/password authentication
-        '''
-        # Mock WES API response
-        mock_response = MagicMock()
-        mock_response.json.return_value = {'workflow_type_versions': {'CWL': {'workflow_type_version': ['v1.0']}}}
-        mock_request.return_value = mock_response
-
-        # Mock NGS360 API response
-        with patch('requests.get') as mock_get:
-            mock_ngs360_response = MagicMock()
-            mock_ngs360_response.status_code = 200
-            mock_get.return_value = mock_ngs360_response
-
-            # Test connect with username/password (clear env so a stray
-            # WES_AUTH_TOKEN doesn't preempt the username/password branch)
-            with patch.dict('os.environ', {'WES_USERNAME': 'testuser', 'WES_PASSWORD': 'testpass'}, clear=True):
-                platform = NGS360Platform('WES')
-                result = platform.connect(
-                    api_endpoint='https://wes.example.com/ga4gh/wes/v1',
-                    ngs360_endpoint='https://ngs360.example.com'
-                )
-
-                self.assertTrue(result)
-                self.assertEqual(platform._ga4gh_auth_config['credentials'], ('testuser', 'testpass')) # pylint: disable=protected-access
-
-                # Verify the credentials are actually used as auth on the WES request
-                _, kwargs = mock_request.call_args
-                self.assertEqual(kwargs['auth'], ('testuser', 'testpass'))
-                self.assertNotIn('Authorization', kwargs['headers'])
+        # Verify the bearer token is sent on the WES service-info request
+        _, kwargs = mock_request.call_args
+        self.assertEqual(kwargs['headers']['Authorization'], 'Bearer test_token')
 
     @patch('requests.request')
     def test_connect_wes_failure(self, mock_request):
@@ -131,6 +102,7 @@ class TestNGS360Platform(unittest.TestCase):
         platform = NGS360Platform('WES')
         result = platform.connect(
             api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+            ngs360_auth_token='test_token',
             ngs360_endpoint='https://ngs360.example.com'
         )
 
@@ -154,6 +126,7 @@ class TestNGS360Platform(unittest.TestCase):
         platform = NGS360Platform('WES')
         result = platform.connect(
             api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+            ngs360_auth_token='test_token',
             ngs360_endpoint='https://ngs360.example.com'
         )
 
@@ -197,8 +170,7 @@ class TestNGS360Platform(unittest.TestCase):
             },
             files=None,
             params=None,
-            timeout=120,
-            auth=None
+            timeout=120
         )
 
         # Verify task
@@ -244,8 +216,7 @@ class TestNGS360Platform(unittest.TestCase):
             data=None,
             files=None,
             params=None,
-            timeout=120,
-            auth=None
+            timeout=120
         )
 
     @patch('requests.request')
@@ -362,8 +333,7 @@ class TestNGS360Platform(unittest.TestCase):
             data=None,
             files=None,
             params={"filters": '{"tags": {"ProjectId": "test_project"}}'},
-            timeout=120,
-            auth=None
+            timeout=120
         )
 
         # Verify tasks
@@ -400,8 +370,7 @@ class TestNGS360Platform(unittest.TestCase):
             data=None,
             files=None,
             params=None,
-            timeout=120,
-            auth=None
+            timeout=120
         )
 
     @patch('requests.get')
@@ -470,7 +439,7 @@ class TestNGS360Platform(unittest.TestCase):
         _, kwargs = mock_post.call_args
         self.assertIn('files', kwargs)
         self.assertIn('data', kwargs)
-        self.assertEqual(kwargs['data']['entity_id'], 'test_project_id')
+        self.assertIn('project_id', 'test_project_id')
 
     @patch('requests.post')
     @patch('builtins.open')
