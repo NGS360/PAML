@@ -975,5 +975,222 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         )
         self.assertEqual(result, 'file-base')
 
+    def test_get_project_by_name_exact_match(self):
+        ''' Test that get_project_by_name returns the project with an exact name match '''
+        mock_project = MagicMock()
+        mock_project.name = 'MyProject'
+
+        self.platform.api.projects.query.return_value = [mock_project]
+
+        result = self.platform.get_project_by_name('MyProject')
+
+        self.platform.api.projects.query.assert_called_once_with(name='MyProject')
+        self.assertEqual(result, mock_project)
+
+    def test_get_project_by_name_no_results(self):
+        ''' Test that get_project_by_name returns None when query returns empty '''
+        self.platform.api.projects.query.return_value = []
+
+        result = self.platform.get_project_by_name('NonExistent')
+
+        self.assertIsNone(result)
+
+    def test_get_project_by_name_no_exact_match(self):
+        ''' Test that get_project_by_name returns None when no project name matches exactly '''
+        mock_project = MagicMock()
+        mock_project.name = 'MyProject-Extra'
+
+        self.platform.api.projects.query.return_value = [mock_project]
+
+        result = self.platform.get_project_by_name('MyProject')
+
+        self.assertIsNone(result)
+
+    def test_get_project_by_name_multiple_matches_returns_none(self):
+        ''' Test that get_project_by_name returns None when multiple exact matches exist '''
+        mock_project1 = MagicMock()
+        mock_project1.name = 'MyProject'
+        mock_project2 = MagicMock()
+        mock_project2.name = 'MyProject'
+
+        self.platform.api.projects.query.return_value = [mock_project1, mock_project2]
+
+        result = self.platform.get_project_by_name('MyProject')
+
+        self.assertIsNone(result)
+
+    def test_get_project_by_name_filters_partial_matches(self):
+        ''' Test that get_project_by_name ignores partial matches and returns exact one '''
+        mock_partial = MagicMock()
+        mock_partial.name = 'MyProject-Dev'
+        mock_exact = MagicMock()
+        mock_exact.name = 'MyProject'
+
+        self.platform.api.projects.query.return_value = [mock_partial, mock_exact]
+
+        result = self.platform.get_project_by_name('MyProject')
+
+        self.assertEqual(result, mock_exact)
+
+    def test_get_project_by_name_query_returns_none(self):
+        ''' Test that get_project_by_name handles None from api query '''
+        self.platform.api.projects.query.return_value = None
+
+        result = self.platform.get_project_by_name('MyProject')
+
+        self.assertIsNone(result)
+
+    def test_get_file_id_raises_on_url(self):
+        ''' Test that get_file_id raises ValueError when given a URL '''
+        project = MagicMock()
+        with self.assertRaises(ValueError) as context:
+            self.platform.get_file_id(project, 'http://example.com/file.txt')
+        self.assertIn('cannot be a URL', str(context.exception))
+
+    def test_get_file_id_raises_on_https_url(self):
+        ''' Test that get_file_id raises ValueError when given an HTTPS URL '''
+        project = MagicMock()
+        with self.assertRaises(ValueError) as context:
+            self.platform.get_file_id(project, 'https://example.com/file.txt')
+        self.assertIn('cannot be a URL', str(context.exception))
+
+    def test_get_file_id_s3_path_extracts_filename(self):
+        ''' Test that get_file_id strips S3 prefix and uses only the filename '''
+        project = MagicMock()
+        mock_file = MagicMock(name='sample.fastq')
+        mock_file.name = 'sample.fastq'
+        mock_file.id = 'file-123'
+
+        query_result = MagicMock()
+        query_result.all.return_value = [mock_file]
+        self.platform.api.files.query.return_value = query_result
+
+        result = self.platform.get_file_id(project, 's3://bucket/path/to/sample.fastq')
+
+        self.platform.api.files.query.assert_called_once_with(
+            project=project,
+            names=['sample.fastq'],
+            limit=100
+        )
+        self.assertEqual(result, 'file-123')
+
+    def test_get_file_id_root_level_file(self):
+        ''' Test that get_file_id finds a file at the project root '''
+        project = MagicMock()
+        mock_file = MagicMock(name='data.csv')
+        mock_file.name = 'data.csv'
+        mock_file.id = 'file-456'
+
+        query_result = MagicMock()
+        query_result.all.return_value = [mock_file]
+        self.platform.api.files.query.return_value = query_result
+
+        result = self.platform.get_file_id(project, 'data.csv')
+
+        self.platform.api.files.query.assert_called_once_with(
+            project=project,
+            names=['data.csv'],
+            limit=100
+        )
+        self.assertEqual(result, 'file-456')
+
+    @mock.patch.object(SevenBridgesPlatform, '_list_files_in_folder')
+    def test_get_file_id_file_in_folder(self, mock_list_files):
+        ''' Test that get_file_id finds a file inside a folder '''
+        project = MagicMock()
+        mock_file = MagicMock(name='result.bam')
+        mock_file.name = 'result.bam'
+        mock_file.id = 'file-789'
+
+        mock_list_files.return_value = [mock_file]
+
+        result = self.platform.get_file_id(project, 'outputs/result.bam')
+
+        mock_list_files.assert_called_once_with(
+            project=project,
+            folder='outputs'
+        )
+        self.assertEqual(result, 'file-789')
+
+    @mock.patch.object(SevenBridgesPlatform, '_list_files_in_folder')
+    def test_get_file_id_file_in_nested_folder(self, mock_list_files):
+        ''' Test that get_file_id handles a nested folder path '''
+        project = MagicMock()
+        mock_file = MagicMock(name='variants.vcf')
+        mock_file.name = 'variants.vcf'
+        mock_file.id = 'file-nested'
+
+        mock_list_files.return_value = [mock_file]
+
+        result = self.platform.get_file_id(project, 'results/pipeline/variants.vcf')
+
+        mock_list_files.assert_called_once_with(
+            project=project,
+            folder='results/pipeline'
+        )
+        self.assertEqual(result, 'file-nested')
+
+    def test_get_file_id_file_not_found_raises(self):
+        ''' Test that get_file_id raises ValueError when file is not found '''
+        project = MagicMock()
+
+        query_result = MagicMock()
+        query_result.all.return_value = []
+        self.platform.api.files.query.return_value = query_result
+
+        with self.assertRaises(ValueError) as context:
+            self.platform.get_file_id(project, 'nonexistent.txt')
+        self.assertIn('File not found', str(context.exception))
+
+    @mock.patch.object(SevenBridgesPlatform, '_list_files_in_folder')
+    def test_get_file_id_file_not_found_in_folder_raises(self, mock_list_files):
+        ''' Test that get_file_id raises ValueError when file is not in folder '''
+        project = MagicMock()
+        mock_other_file = MagicMock(name='other.txt')
+        mock_other_file.name = 'other.txt'
+
+        mock_list_files.return_value = [mock_other_file]
+
+        with self.assertRaises(ValueError) as context:
+            self.platform.get_file_id(project, 'folder/missing.txt')
+        self.assertIn('File not found', str(context.exception))
+
+    def test_get_file_id_returns_first_match(self):
+        ''' Test that get_file_id returns the first file when multiple matches exist '''
+        project = MagicMock()
+        mock_file1 = MagicMock(name='data.csv')
+        mock_file1.name = 'data.csv'
+        mock_file1.id = 'file-first'
+        mock_file2 = MagicMock(name='data.csv')
+        mock_file2.name = 'data.csv'
+        mock_file2.id = 'file-second'
+
+        query_result = MagicMock()
+        query_result.all.return_value = [mock_file1, mock_file2]
+        self.platform.api.files.query.return_value = query_result
+
+        result = self.platform.get_file_id(project, 'data.csv')
+
+        self.assertEqual(result, 'file-first')
+
+    def test_get_file_id_filters_by_name(self):
+        ''' Test that get_file_id filters results to match the exact filename '''
+        project = MagicMock()
+        mock_file_wrong = MagicMock(name='data_old.csv')
+        mock_file_wrong.name = 'data_old.csv'
+        mock_file_wrong.id = 'file-wrong'
+        mock_file_right = MagicMock(name='data.csv')
+        mock_file_right.name = 'data.csv'
+        mock_file_right.id = 'file-right'
+
+        query_result = MagicMock()
+        query_result.all.return_value = [mock_file_wrong, mock_file_right]
+        self.platform.api.files.query.return_value = query_result
+
+        result = self.platform.get_file_id(project, 'data.csv')
+
+        self.assertEqual(result, 'file-right')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -257,7 +257,7 @@ class SevenBridgesPlatform(Platform):
             file_name = path_parts[0]
             file_list = self.api.files.query(
                 project=project,
-                names=[file_path],
+                names=[file_name],
                 limit=100
             ).all()
         else:
@@ -857,7 +857,18 @@ class SevenBridgesPlatform(Platform):
         ''' Get a project by its name '''
         projects = self.api.projects.query(name=project_name)
         if projects:
-            return projects[0]
+            matches = []
+            for project in projects:
+                if project.name == project_name:
+                    matches.append(project)
+            if len(matches)==1:
+                return matches[0]
+            elif len(matches)>1:
+                self.logger.warning("Multiple projects found with name %s. Returning None", project_name)
+                return None
+            else:
+                self.logger.warning("No project found with name %s. Returning None", project_name)
+                return None
         return None
 
     def get_project_by_id(self, project_id):
