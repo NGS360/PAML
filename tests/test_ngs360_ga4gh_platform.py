@@ -419,7 +419,7 @@ class TestNGS360Platform(unittest.TestCase):
         # Mock successful response
         mock_response = MagicMock()
         mock_response.status_code = 201
-        mock_response.json.return_value = {'file_id': 'test_file_id'}
+        mock_response.json.return_value = {'id': 'test_file_id'}
         mock_post.return_value = mock_response
 
         # Test upload_file
