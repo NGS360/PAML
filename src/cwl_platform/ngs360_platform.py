@@ -344,7 +344,7 @@ class NGS360Platform(Platform):
 
         if response.status_code == 201:
             file_info = response.json()
-            return f"ngs360://{file_info['file_id']}"
+            return f"ngs360://{file_info['id']}"
 
         self.logger.error("Error uploading file: %s", response.status_code)
         self.logger.error(response.text)
