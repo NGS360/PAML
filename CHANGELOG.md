@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.5](https://github.com/NGS360/PAML.git/releases/tag/v0.5) - 2026-07-01
+
+### Added
+
+- Add `copy_file()` and `get_current_user()` abstract methods to Platform base class (PR #116)
+- Add `intermediate-output-ttl` support for arvados-cwl-runner (PR #115)
+- Add GA4GH WES API platform support (PR #110)
+
+### Changed
+
+- Consolidate GA4GH WES and NGS360 API to use NGS360 auth token (PR #118)
+- Rename `api_endpoint` variable to `ga4gh_api_endpoint` for clarity (PR #117)
+- Check inputs when submitting tasks via `get_tasks_by_name()` and improve error logging (PR #110)
+- Update arvados-python-client requirement to >=3.2.1, <3.3.0 (PR #120)
+- Update setuptools requirement to >=82.0.1 (PR #109)
+
+### Fixed
+
+- Handle missing output files when list of files is returned in Arvados (PR #111)
+- Fix `get_files()` filter logic in Arvados to avoid duplicate results and return correct nested paths (PR #116)
+- Fix `upload_file()` for root path in SevenBridges (PR #116)
+- Fix `_list_files_in_folder()` when path resolves to root in SevenBridges (PR #116)
+- Check if username/password is not None before using for credentials (PR #114)
+
 ## [v0.4](https://github.com/NGS360/PAML.git/releases/tag/v0.4) - 2026-04-10
 
 ### Added
