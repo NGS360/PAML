@@ -697,6 +697,54 @@ class TestSevenBridgesPlaform(unittest.TestCase):
                         "Expected task2 with non-matching inputs to not be returned, but it was.")
         self.assertEqual(len(result), 1, "Expected only a single task to be returned")
 
+    def test_get_tasks_by_name_from_provided_tasks(self):
+        '''
+        Test get_tasks_by_name can use provided tasks parameter
+        '''
+        project = MagicMock()
+
+        # Create mock tasks
+        task1 = MagicMock(spec=sevenbridges.Task)
+        task1.name = 'task1'
+
+        task2 = MagicMock(spec=sevenbridges.Task)
+        task2.name = 'task2'
+
+        tasks = [task1, task2]
+
+        # Test with provided tasks
+        result = self.platform.get_tasks_by_name(
+            project=project,
+            task_name='task1',
+            tasks=tasks
+        )
+
+        # Verify only matching task returned
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, 'task1')
+
+    def test_get_tasks_by_name_with_new_task_added(self):
+        '''
+        Test get_tasks_by_name with a new task that may only have id, not name
+        '''
+        project = MagicMock()
+
+        # Create mock task with only id
+        task1 = MagicMock(spec=sevenbridges.Task)
+        task1.name = 'task1'
+
+        tasks = [task1]
+
+        # Test searching for task that doesn't exist
+        result = self.platform.get_tasks_by_name(
+            project=project,
+            task_name='task2',
+            tasks=tasks
+        )
+
+        # Verify empty list returned
+        self.assertListEqual(result, [])
+
     def test_get_task_input_non_file_obj(self):
         '''
         Test get_task_input method where the input is not a File object (e.g. string)
