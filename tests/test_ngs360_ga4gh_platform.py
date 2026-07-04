@@ -522,6 +522,103 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertListEqual(result, [])
 
     @patch('requests.request')
+    def test_get_tasks_by_name_match_subset_of_inputs(self, mock_request):
+        '''
+        Test get_tasks_by_name with inputs_to_compare as subset of task inputs
+        Task should match even if it has additional inputs beyond those compared
+        '''
+        # Define inputs to compare (subset)
+        inputs_to_compare = {
+            'input1': 'value1'
+        }
+
+        # Mock initial response with task that has MORE inputs
+        mock_list_response = MagicMock()
+        mock_list_response.json.return_value = {
+            'runs': [
+                {
+                    'run_id': 'run1',
+                    'name': 'Task 1',
+                    'state': 'COMPLETE',
+                }
+            ]
+        }
+
+        # Mock detailed response - task has input1, input2, and input3
+        mock_detail_response = MagicMock()
+        mock_detail_response.json.return_value = {
+            'run_id': 'run1',
+            'request': {
+                'workflow_params': {
+                    'input1': 'value1',      # Matches
+                    'input2': 'value2',      # Extra (should be ignored)
+                    'input3': 'value3'       # Extra (should be ignored)
+                }
+            }
+        }
+
+        mock_request.side_effect = [mock_list_response, mock_detail_response]
+
+        # Test
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+        tasks = self.platform.get_tasks_by_name(
+            project,
+            task_name='Task 1',
+            inputs_to_compare=inputs_to_compare
+        )
+
+        # Verify task matched despite having extra inputs
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(tasks[0].run_id, 'run1')
+
+    @patch('requests.request')
+    def test_get_tasks_by_name_no_match_different_value(self, mock_request):
+        '''
+        Test get_tasks_by_name rejects task when input values don't match
+        '''
+        # Define inputs to compare
+        inputs_to_compare = {
+            'input1': 'value1'
+        }
+
+        # Mock initial response
+        mock_list_response = MagicMock()
+        mock_list_response.json.return_value = {
+            'runs': [
+                {
+                    'run_id': 'run1',
+                    'name': 'Task 1',
+                    'state': 'COMPLETE',
+                }
+            ]
+        }
+
+        # Mock detailed response - task has DIFFERENT value for input1
+        mock_detail_response = MagicMock()
+        mock_detail_response.json.return_value = {
+            'run_id': 'run1',
+            'request': {
+                'workflow_params': {
+                    'input1': 'different_value',  # Does NOT match
+                    'input2': 'value2'
+                }
+            }
+        }
+
+        mock_request.side_effect = [mock_list_response, mock_detail_response]
+
+        # Test
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+        tasks = self.platform.get_tasks_by_name(
+            project,
+            task_name='Task 1',
+            inputs_to_compare=inputs_to_compare
+        )
+
+        # Verify no tasks matched
+        self.assertEqual(len(tasks), 0)
+
+    @patch('requests.request')
     def test_delete_task(self, mock_request):
         '''
         Test delete_task method
