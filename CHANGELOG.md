@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.5.1](https://github.com/NGS360/PAML.git/releases/tag/v0.5.1) - 2026-07-03
+
+### Changed
+
+- Merge pull request #123 from NGS360/bugfix/get_tasks_by_name
+
+
 ## [v0.5](https://github.com/NGS360/PAML.git/releases/tag/v0.5) - 2026-07-01
 
 ### Added
