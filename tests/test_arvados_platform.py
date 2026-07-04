@@ -10,6 +10,7 @@ import mock
 from mock import MagicMock
 
 from cwl_platform.arvados_platform import ArvadosPlatform, ArvadosTask, StreamFileReader
+from test_base_platform import BasePlatformTests
 
 class MockFile:
     """Mock file object for testing."""
@@ -24,7 +25,7 @@ class MockFile:
         """Return file name."""
         return self._name
 
-class TestArvadosPlaform(unittest.TestCase):
+class TestArvadosPlaform(BasePlatformTests, unittest.TestCase):
     '''
     Test Class for Arvados Platform
     '''
@@ -32,7 +33,106 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform = ArvadosPlatform('Arvados')
         self.platform.api = MagicMock()
         self.platform.keep_client = MagicMock()
+        self.setup_platform_mocks()
         return super().setUp()
+
+    def setup_platform_mocks(self):
+        '''Set up Arvados-specific mocks'''
+        # API and Keep client are already set up in setUp()
+        pass
+
+    def create_mock_task(self, task_id, name, state='Complete', inputs=None, outputs=None):
+        '''Create an Arvados-specific mock task'''
+        container_request = {
+            'name': name,
+            'uuid': task_id,
+            'container_uuid': f'container-{task_id}',
+            'properties': {
+                'cwl_input': inputs or {}
+            }
+        }
+
+        # Map state to Arvados states
+        state_mapping = {
+            'Complete': 'Final',
+            'Running': 'Committed',
+            'Failed': 'Final',
+            'Queued': 'Committed',
+            'Cancelled': 'Final'
+        }
+        container_request['state'] = state_mapping.get(state, 'Committed')
+
+        container = {
+            'uuid': f'container-{task_id}',
+            'state': state if state != 'Queued' else 'Queued',
+            'exit_code': 0 if state == 'Complete' else (1 if state == 'Failed' else None)
+        }
+
+        return ArvadosTask(container_request=container_request, container=container)
+
+    def create_mock_file(self, file_id, filename):
+        '''Create an Arvados-specific mock file'''
+        return MockFile("stream", filename)
+
+    def create_mock_project(self, project_id, name):
+        '''Create an Arvados-specific mock project'''
+        return {'uuid': project_id, 'name': name}
+
+    def mock_get_all_tasks(self, tasks):
+        '''Set up mocks to return the given list of tasks'''
+        container_requests = [t.container_request for t in tasks]
+        mock_keyset_list_all = MagicMock(return_value=container_requests)
+
+        containers = [t.container for t in tasks]
+        self.platform.api.containers().get().execute.side_effect = containers
+
+        with mock.patch('arvados.util.keyset_list_all', mock_keyset_list_all):
+            # This will be used by get_tasks_by_name
+            self._mock_keyset_list_all = mock_keyset_list_all
+
+    def mock_delete_task(self, task):
+        '''Set up mocks for task deletion'''
+        # Mock is already set up in setUp() via self.platform.api
+        pass
+
+    def verify_task_deleted(self, task):
+        '''Verify that task deletion was called'''
+        task_id = task.container_request['uuid']
+        self.platform.api.container_requests().delete.assert_called_once_with(uuid=task_id)
+
+    def create_platform_file_input(self, file_id):
+        '''Create an Arvados-specific file input'''
+        return {
+            'class': 'File',
+            'location': f'keep:{file_id}'
+        }
+
+    def mock_get_task_output(self, task, output_name, output_value):
+        '''Set up mocks for get_task_output'''
+        # For Arvados, we need to mock the collection and cwl_output
+        import arvados.collection
+
+        if output_value is None:
+            cwl_output = {output_name: None}
+        elif isinstance(output_value, list):
+            cwl_output = {output_name: [{'basename': f.name()} for f in output_value]}
+        else:
+            cwl_output = {output_name: {'basename': output_value.name()}}
+
+        with mock.patch('arvados.collection.Collection') as mock_collection:
+            mock_collection.return_value \
+                .open.return_value \
+                .__enter__.return_value \
+                .read.return_value = json.dumps(cwl_output)
+            self._mock_collection = mock_collection
+
+    def get_task_name(self, task):
+        '''Get name from Arvados task'''
+        return task.container_request['name']
+
+    def get_task_id(self, task):
+        '''Get ID from Arvados task'''
+        return task.container_request['uuid']
 
     def test_add_user_to_project(self):
         ''' Test that we can add a user to a project '''
