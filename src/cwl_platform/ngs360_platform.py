@@ -510,6 +510,22 @@ class NGS360Platform(Platform):
 
         return output.split('/')[-1]
 
+    def _inputs_match(self, task_inputs, inputs_to_compare):
+        """
+        Check if inputs_to_compare match the corresponding values in task_inputs.
+        Supports subset matching - task_inputs can have additional keys.
+
+        :param task_inputs: Dict of all task inputs (workflow_params)
+        :param inputs_to_compare: Dict of inputs to match (can be subset)
+        :return: True if all inputs in inputs_to_compare match task_inputs
+        """
+        for input_name, input_value in inputs_to_compare.items():
+            if input_name not in task_inputs:
+                return False
+            if task_inputs[input_name] != input_value:
+                return False
+        return True
+
     def get_tasks_by_name(
         self, project, task_name=None, workflow=None, inputs_to_compare=None, tasks=None
     ):
@@ -551,7 +567,8 @@ class NGS360Platform(Platform):
                 matching_tasks_inputs=[]
                 for task in matching_tasks:
                     run_details = self._make_request("GET", f"runs/{task.run_id}")
-                    if inputs_to_compare == run_details.get("request",{}).get("workflow_params",{}):
+                    workflow_params = run_details.get("request", {}).get("workflow_params", {})
+                    if self._inputs_match(workflow_params, inputs_to_compare):
                         matching_tasks_inputs.append(task)
                 return matching_tasks_inputs
 

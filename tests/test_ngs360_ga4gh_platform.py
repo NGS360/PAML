@@ -287,7 +287,55 @@ class TestNGS360Platform(unittest.TestCase):
     @patch('requests.request')
     def test_get_tasks_by_name(self, mock_request):
         '''
-        Test get_tasks_by_name method
+        Test get_tasks_by_name method with task name filtering
+        '''
+        # Mock response - API filters by name, so only matching task is returned
+        mock_response = MagicMock()
+        mock_response.content = json.dumps({
+            'runs': [
+                {
+                    'run_id': 'run1',
+                    'name': 'Task 1',
+                    'state': 'COMPLETE'
+                }
+            ]
+        }).encode('utf-8')
+        mock_response.json.return_value = {
+            'runs': [
+                {
+                    'run_id': 'run1',
+                    'name': 'Task 1',
+                    'state': 'COMPLETE'
+                }
+            ]
+        }
+        mock_request.return_value = mock_response
+
+        # Test get_tasks_by_name with specific task name
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+        tasks = self.platform.get_tasks_by_name(project, task_name='Task 1')
+
+        # Verify request includes task name in filters
+        mock_request.assert_called_with(
+            method='GET',
+            url='https://wes.example.com/ga4gh/wes/v1/runs',
+            headers={'Authorization': 'Bearer test_token'},
+            data=None,
+            files=None,
+            params={"filters": '{"tags": {"ProjectId": "test_project", "TaskName": "Task 1"}}'},
+            timeout=120
+        )
+
+        # Verify only matching task returned
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(tasks[0].run_id, 'run1')
+        self.assertEqual(tasks[0].name, 'Task 1')
+        self.assertEqual(tasks[0].state, 'Complete')
+
+    @patch('requests.request')
+    def test_get_tasks_by_name_match_all(self, mock_request):
+        '''
+        Test get_tasks_by_name method with no task name (should return all tasks)
         '''
         # Mock response
         mock_response = MagicMock()
@@ -321,22 +369,11 @@ class TestNGS360Platform(unittest.TestCase):
         }
         mock_request.return_value = mock_response
 
-        # Test get_tasks_by_name
+        # Test get_tasks_by_name without task name
         project = {'project_id': 'test_project', 'name': 'Test Project'}
         tasks = self.platform.get_tasks_by_name(project)
 
-        # Verify request
-        mock_request.assert_called_with(
-            method='GET',
-            url='https://wes.example.com/ga4gh/wes/v1/runs',
-            headers={'Authorization': 'Bearer test_token'},
-            data=None,
-            files=None,
-            params={"filters": '{"tags": {"ProjectId": "test_project"}}'},
-            timeout=120
-        )
-
-        # Verify tasks
+        # Verify all tasks returned
         self.assertEqual(len(tasks), 2)
         self.assertEqual(tasks[0].run_id, 'run1')
         self.assertEqual(tasks[0].name, 'Task 1')
@@ -344,6 +381,242 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertEqual(tasks[1].run_id, 'run2')
         self.assertEqual(tasks[1].name, 'Task 2')
         self.assertEqual(tasks[1].state, 'Running')
+
+    @patch('requests.request')
+    def test_get_tasks_by_name_match_name_and_inputs(self, mock_request):
+        '''
+        Test get_tasks_by_name method with task name and matching inputs
+        '''
+        # Define inputs to compare (must match exactly as JSON)
+        inputs_to_compare = {
+            'input1': {'class': 'File', 'path': 'file1'},
+            'input2': [
+                {'class': 'File', 'path': 'file2'},
+                {'class': 'File', 'path': 'file3'}
+            ]
+        }
+
+        # Mock initial response with two tasks with same name
+        mock_list_response = MagicMock()
+        mock_list_response.json.return_value = {
+            'runs': [
+                {
+                    'run_id': 'run1',
+                    'name': 'Task 1',
+                    'state': 'COMPLETE',
+                },
+                {
+                    'run_id': 'run2',
+                    'name': 'Task 1',
+                    'state': 'RUNNING',
+                }
+            ]
+        }
+
+        # Mock detailed responses for each task
+        mock_detail_response1 = MagicMock()
+        mock_detail_response1.json.return_value = {
+            'run_id': 'run1',
+            'request': {
+                'workflow_params': inputs_to_compare  # Exact match
+            }
+        }
+
+        mock_detail_response2 = MagicMock()
+        mock_detail_response2.json.return_value = {
+            'run_id': 'run2',
+            'request': {
+                'workflow_params': {
+                    'input1': {'class': 'File', 'path': 'file1'},
+                    'input2': [
+                        {'class': 'File', 'path': 'file2'},
+                        {'class': 'File', 'path': 'different_file'}  # Different
+                    ]
+                }
+            }
+        }
+
+        # Set up mock to return different responses for different calls
+        mock_request.side_effect = [
+            mock_list_response,
+            mock_detail_response1,
+            mock_detail_response2
+        ]
+
+        # Test get_tasks_by_name with name and inputs
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+        tasks = self.platform.get_tasks_by_name(
+            project,
+            task_name='Task 1',
+            inputs_to_compare=inputs_to_compare
+        )
+
+        # Verify only matching task returned
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(tasks[0].run_id, 'run1')
+
+    @patch('requests.request')
+    def test_get_tasks_by_name_from_provided_tasks(self, mock_request):
+        '''
+        Test get_tasks_by_name can use provided tasks parameter
+        NOTE: NGS360 platform currently ignores tasks parameter and always queries API
+        '''
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+
+        # Mock API response
+        mock_response = MagicMock()
+        mock_response.content = json.dumps({
+            'runs': [
+                {
+                    'run_id': 'run1',
+                    'name': 'Task 1',
+                    'state': 'COMPLETE'
+                }
+            ]
+        }).encode('utf-8')
+        mock_response.json.return_value = {
+            'runs': [
+                {
+                    'run_id': 'run1',
+                    'name': 'Task 1',
+                    'state': 'COMPLETE'
+                }
+            ]
+        }
+        mock_request.return_value = mock_response
+
+        # Create mock tasks (currently ignored by NGS360 implementation)
+        task1 = WESTask('run1', 'Task 1')
+        task2 = WESTask('run2', 'Task 2')
+        tasks = [task1, task2]
+
+        # Test with provided tasks
+        result = self.platform.get_tasks_by_name(
+            project=project,
+            task_name='Task 1',
+            tasks=tasks
+        )
+
+        # Verify only matching task returned (from API, not from provided tasks)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, 'Task 1')
+
+    def test_get_tasks_by_name_with_new_task_added(self):
+        '''
+        Test get_tasks_by_name with a new task that may only have id, not name
+        '''
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+
+        # Create mock task
+        task1 = WESTask('run1', 'Task 1')
+        tasks = [task1]
+
+        # Test searching for task that doesn't exist
+        result = self.platform.get_tasks_by_name(
+            project=project,
+            task_name='Task 2',
+            tasks=tasks
+        )
+
+        # Verify empty list returned
+        self.assertListEqual(result, [])
+
+    @patch('requests.request')
+    def test_get_tasks_by_name_match_subset_of_inputs(self, mock_request):
+        '''
+        Test get_tasks_by_name with inputs_to_compare as subset of task inputs
+        Task should match even if it has additional inputs beyond those compared
+        '''
+        # Define inputs to compare (subset)
+        inputs_to_compare = {
+            'input1': 'value1'
+        }
+
+        # Mock initial response with task that has MORE inputs
+        mock_list_response = MagicMock()
+        mock_list_response.json.return_value = {
+            'runs': [
+                {
+                    'run_id': 'run1',
+                    'name': 'Task 1',
+                    'state': 'COMPLETE',
+                }
+            ]
+        }
+
+        # Mock detailed response - task has input1, input2, and input3
+        mock_detail_response = MagicMock()
+        mock_detail_response.json.return_value = {
+            'run_id': 'run1',
+            'request': {
+                'workflow_params': {
+                    'input1': 'value1',      # Matches
+                    'input2': 'value2',      # Extra (should be ignored)
+                    'input3': 'value3'       # Extra (should be ignored)
+                }
+            }
+        }
+
+        mock_request.side_effect = [mock_list_response, mock_detail_response]
+
+        # Test
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+        tasks = self.platform.get_tasks_by_name(
+            project,
+            task_name='Task 1',
+            inputs_to_compare=inputs_to_compare
+        )
+
+        # Verify task matched despite having extra inputs
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(tasks[0].run_id, 'run1')
+
+    @patch('requests.request')
+    def test_get_tasks_by_name_no_match_different_value(self, mock_request):
+        '''
+        Test get_tasks_by_name rejects task when input values don't match
+        '''
+        # Define inputs to compare
+        inputs_to_compare = {
+            'input1': 'value1'
+        }
+
+        # Mock initial response
+        mock_list_response = MagicMock()
+        mock_list_response.json.return_value = {
+            'runs': [
+                {
+                    'run_id': 'run1',
+                    'name': 'Task 1',
+                    'state': 'COMPLETE',
+                }
+            ]
+        }
+
+        # Mock detailed response - task has DIFFERENT value for input1
+        mock_detail_response = MagicMock()
+        mock_detail_response.json.return_value = {
+            'run_id': 'run1',
+            'request': {
+                'workflow_params': {
+                    'input1': 'different_value',  # Does NOT match
+                    'input2': 'value2'
+                }
+            }
+        }
+
+        mock_request.side_effect = [mock_list_response, mock_detail_response]
+
+        # Test
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+        tasks = self.platform.get_tasks_by_name(
+            project,
+            task_name='Task 1',
+            inputs_to_compare=inputs_to_compare
+        )
+
+        # Verify no tasks matched
+        self.assertEqual(len(tasks), 0)
 
     @patch('requests.request')
     def test_delete_task(self, mock_request):
