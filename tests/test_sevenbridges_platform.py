@@ -214,6 +214,10 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.assertFalse(result)
 
     def test___compare_platform_object_directory(self):
+        '''
+        Test when a CWL input for a Directory (class, path) is given
+        and _compare_platform_directory can handle it.
+        '''
         # Set up test parameters
         platform_object = MagicMock(spec=sevenbridges.File, id='asdf')
         input_to_compare = {
