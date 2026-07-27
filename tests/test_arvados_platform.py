@@ -55,7 +55,8 @@ class TestArvadosPlaform(unittest.TestCase):
             'ARVADOS_API_HOST': 'host',
             'ARVADOS_API_TOKEN': 'token'
         }
-        self.platform.connect()
+        result = self.platform.connect()
+        self.assertTrue(result)
         self.assertTrue(self.platform.connected)
 
     def test_get_task_input_non_file_obj(self):
@@ -255,8 +256,13 @@ class TestArvadosPlaform(unittest.TestCase):
 
     def test_detect_platform(self):
         ''' Test detect_platform method '''
-        os.environ['ARVADOS_API_HOST'] = 'some host'
-        self.assertTrue(ArvadosPlatform.detect())
+        # Test with ARVADOS_API_HOST set
+        with mock.patch.dict('os.environ', {'ARVADOS_API_HOST': 'some host'}):
+            self.assertTrue(ArvadosPlatform.detect())
+
+        # Test without ARVADOS_API_HOST
+        with mock.patch.dict('os.environ', {}, clear=True):
+            self.assertFalse(ArvadosPlatform.detect())
 
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._lookup_collection_from_foldername")
     @mock.patch("cwl_platform.arvados_platform.ArvadosPlatform._get_files_list_in_collection")

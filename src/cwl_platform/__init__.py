@@ -7,15 +7,14 @@ import os
 from .arvados_platform import ArvadosPlatform
 from .sevenbridges_platform import SevenBridgesPlatform
 from .ngs360_platform import NGS360Platform
-#from .omics_platform import OmicsPlatform
 
 # Move this for a config file
 SUPPORTED_PLATFORMS = {
     'Arvados': ArvadosPlatform,
-#    'Omics': OmicsPlatform,
     'SevenBridges': SevenBridgesPlatform,
     'NGS360': NGS360Platform
 }
+
 
 class PlatformFactory():
     ''' PlatformFactory '''
@@ -33,7 +32,8 @@ class PlatformFactory():
             if creator.detect():
                 return platform
 
-        # If we can't detect the platform, print out environment variables and raise an error
+        # If we can't detect the platform,
+        # print out environment variables and raise an error
         logging.info("Environment Variables:")
         for name, value in os.environ.items():
             logging.info("%s: %s", name, value)
