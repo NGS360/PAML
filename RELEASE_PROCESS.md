@@ -14,7 +14,7 @@ Before starting a release, ensure:
 ## Quick Release
 
 1. **Bump version** in `pyproject.toml`
-   
+
    Update the version number (e.g., `0.5.1` → `0.5.2`):
    ```toml
    [project]
