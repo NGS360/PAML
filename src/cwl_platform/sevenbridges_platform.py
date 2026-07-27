@@ -12,13 +12,14 @@ from sevenbridges.http.error_handlers import (
 
 from .base_platform import Platform
 
+
 class SevenBridgesPlatform(Platform):
     ''' SevenBridges Platform class '''
     def __init__(self, name):
         '''
-        Initialize SevenBridges Platform 
-        
-        We need either a session id or an api_config object to connect to SevenBridges
+        Initialize SevenBridges Platform
+
+        We need either a session id or an api_config object
         '''
         super().__init__(name)
         self.api = None
@@ -30,7 +31,8 @@ class SevenBridgesPlatform(Platform):
             self.api_endpoint = None
             self.token = None
         else:
-            if os.path.exists(os.path.expanduser("~") + '/.sevenbridges/credentials') is True:
+            credentials_file = os.path.expanduser("~") + '/.sevenbridges/credentials'
+            if os.path.exists(credentials_file) is True:
                 self.api_config = sevenbridges.Config(profile='default')
             else:
                 raise ValueError('No SevenBridges credentials found')
@@ -41,11 +43,14 @@ class SevenBridgesPlatform(Platform):
             self.api_endpoint = kwargs.get('api_endpoint', self.api_endpoint)
             self.token = kwargs.get('token', self.token)
 
-            self.api = sevenbridges.Api(url=self.api_endpoint, token=self.token,
-                                        error_handlers=[rate_limit_sleeper,
-                                                        maintenance_sleeper,
-                                                        general_error_sleeper],
-                                        advance_access=True)
+            self.api = sevenbridges.Api(
+                url=self.api_endpoint,
+                token=self.token,
+                error_handlers=[rate_limit_sleeper,
+                                maintenance_sleeper,
+                                general_error_sleeper],
+                advance_access=True
+            )
             self.api._session_id = self._session_id  # pylint: disable=protected-access
         else:
             self.api = sevenbridges.Api(config=self.api_config,
@@ -54,6 +59,7 @@ class SevenBridgesPlatform(Platform):
                                                         general_error_sleeper],
                                         advance_access=True)
         self.connected = True
+        return True
 
     # File methods
     def _find_or_create_path(self, project, path):

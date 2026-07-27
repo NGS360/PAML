@@ -1258,6 +1258,7 @@ class ArvadosPlatform(Platform):
         self.api = arvados.api_from_config(version='v1', apiconfig=self.api_config)
         self.keep_client = arvados.KeepClient(self.api)
         self.connected = True
+        return True
 
     @classmethod
     def detect(cls):

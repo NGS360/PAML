@@ -108,7 +108,10 @@ class NGS360Platform(Platform):
             raise ValueError("WES API endpoint URL is required")
 
         # Set up auth token as auth
-        auth_token = kwargs.get("ngs360_auth_token", os.environ.get("NGS360_AUTH_TOKEN"))
+        auth_token = kwargs.get(
+            "ngs360_auth_token",
+            os.environ.get("NGS360_AUTH_TOKEN")
+        )
         if auth_token:
             self._ngs360_auth_config['token'] = auth_token
         else:

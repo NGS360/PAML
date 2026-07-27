@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 import logging
 
+
 class Platform(ABC):
     ''' abstract Platform class '''
     def __init__(self, name):
@@ -307,12 +308,14 @@ class Platform(ABC):
 
     # Other methods
     @abstractmethod
-    def connect(self, **kwargs):
+    def connect(self, **kwargs) -> bool:
         ''' Connect to the platform '''
+        return False
 
     @classmethod
-    def detect(cls):
+    def detect(cls) -> bool:
         ''' Detect platform we are running on '''
+        return False
 
     def set_logger(self, logger):
         ''' Set the logger '''
