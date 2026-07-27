@@ -484,7 +484,13 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
     def test_detect_platform(self):
         ''' Test detect_platform method '''
-        self.assertTrue(SevenBridgesPlatform.detect())
+        # Test with SESSION_ID set
+        with mock.patch.dict('os.environ', {'SESSION_ID': 'dummy'}):
+            self.assertTrue(SevenBridgesPlatform.detect())
+
+        # Test without SESSION_ID
+        with mock.patch.dict('os.environ', {}, clear=True):
+            self.assertFalse(SevenBridgesPlatform.detect())
 
     def test_get_project(self):
         ''' Test that get_project returns None when we do not have a TASK_ID '''
