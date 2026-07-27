@@ -867,13 +867,19 @@ class SevenBridgesPlatform(Platform):
             for project in projects:
                 if project.name == project_name:
                     matches.append(project)
-            if len(matches)==1:
+            if len(matches) == 1:
                 return matches[0]
-            elif len(matches)>1:
-                self.logger.warning("Multiple projects found with name %s. Returning None", project_name)
+            if len(matches) > 1:
+                self.logger.warning(
+                    "Multiple projects found with name %s. Returning None",
+                    project_name
+                )
                 return None
             else:
-                self.logger.warning("No project found with name %s. Returning None", project_name)
+                self.logger.warning(
+                    "No project found with name %s. Returning None",
+                    project_name
+                )
                 return None
         return None
 
