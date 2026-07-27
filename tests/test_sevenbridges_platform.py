@@ -213,6 +213,49 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.assertFalse(result)
 
+    def test___compare_platform_object_directory_same(self):
+        '''
+        Test when a CWL input for a Directory (class, path) is given
+        and _compare_platform_directory can handle it.
+        '''
+        # Set up test parameters
+        platform_object = MagicMock(spec=sevenbridges.File, id='sbg-directory-id')
+        platform_object.is_folder.return_value = True
+
+        input_to_compare = {
+            'class': 'Directory',
+            'path': 'sbg-directory-id'
+        }
+
+        # Test
+        result = self.platform._compare_platform_object(
+            platform_object, input_to_compare
+        )
+
+        # Check results
+        self.assertTrue(result)
+
+    def test___compare_platform_object_directory_different(self):
+        '''
+        Test when a CWL input for a Directory (class, path) is given
+        and _compare_platform_directory can handle it.
+        '''
+        # Set up test parameters
+        platform_object = MagicMock(spec=sevenbridges.File, id='sbg-file-id')
+        platform_object.is_folder.return_value = True
+
+        input_to_compare = {
+            'class': 'Directory',
+            'path': 'sbg-directory-id'
+        }
+
+        # Test
+        result = self.platform._compare_platform_object(
+            platform_object, input_to_compare
+        )
+
+        # Check results
+        self.assertFalse(result)
 
     def test__compare_platform_directory(self):
         '''

@@ -629,7 +629,7 @@ class SevenBridgesPlatform(Platform):
                 return task.outputs[output_name].name
         raise ValueError(f"Output {output_name} does not exist for task {task.name}.")
 
-    def _compare_platform_object(self, platform_object:Any, input_to_compare:Any) -> bool:
+    def _compare_platform_object(self, platform_object: Any, input_to_compare: Any) -> bool:
         '''
         Compare a platform object to a CWL representation of the object
         For example, a SevenBridges File object to a CWL File object
@@ -645,20 +645,27 @@ class SevenBridgesPlatform(Platform):
                 ):
                     self.logger.debug("Platform object is a Directory, but input to compare is not")
                     return False
-                folder_contents = list(platform_object.list_files().all())
-                if not len(folder_contents) == len(input_to_compare['listing']):
-                    self.logger.debug("Platform object and input to compare are not the same length")
-                    return False
-                for platform_element, input_element in zip(
-                    folder_contents,
-                    input_to_compare['listing']):
-                    # Directory inputs are sorted alphabetically, so while this check is order-
-                    # dependent, this is unlikely to differ in reality if elements are the same
-                    if not self._compare_platform_object(platform_element, input_element):
-                        self.logger.debug(
-                            "Platform object and input to compare were not the same: %s != %s",
-                            platform_element, input_element
-                        )
+
+                # If the input_to_compare is a directory (on the platform?), it will have a listing key
+                if 'listing' in input_to_compare:
+                    folder_contents = list(platform_object.list_files().all())
+                    if len(folder_contents) != len(input_to_compare['listing']):
+                        self.logger.debug("Platform object and input to compare are not the same length")
+                        return False
+                    for platform_element, input_element in zip(
+                        folder_contents,
+                        input_to_compare['listing']
+                    ):
+                        # Directory inputs are sorted alphabetically, so while this check is order-
+                        # dependent, this is unlikely to differ in reality if elements are the same
+                        if not self._compare_platform_object(platform_element, input_element):
+                            self.logger.debug(
+                                "Platform object and input to compare were not the same: %s != %s",
+                                platform_element, input_element
+                            )
+                            return False
+                else:
+                    if platform_object.id != input_to_compare['path']:
                         return False
                 return True
             if not isinstance(input_to_compare, dict) or input_to_compare.get("class") != "File":
