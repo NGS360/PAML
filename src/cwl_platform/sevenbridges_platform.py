@@ -875,12 +875,10 @@ class SevenBridgesPlatform(Platform):
                     project_name
                 )
                 return None
-            else:
-                self.logger.warning(
-                    "No project found with name %s. Returning None",
-                    project_name
-                )
-                return None
+        self.logger.warning(
+            "No project found with name %s. Returning None",
+            project_name
+        )
         return None
 
     def get_project_by_id(self, project_id):
