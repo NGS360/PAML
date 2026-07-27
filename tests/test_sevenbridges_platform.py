@@ -213,6 +213,20 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.assertFalse(result)
 
+    def test___compare_platform_object_directory(self):
+        # Set up test parameters
+        platform_object = MagicMock(spec=sevenbridges.File, id='asdf')
+        input_to_compare = {
+            'class': 'Directory',
+            'path': 'asdf'
+        }
+        # Set up supporting mocks
+
+        # Test
+        result = self.platform._compare_platform_object(platform_object, input_to_compare)
+
+        # Check results
+        self.assertTrue(result)
 
     def test__compare_platform_directory(self):
         '''
