@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.5.2](https://github.com/NGS360/PAML.git/releases/tag/v0.5.2) - 2026-07-27
+
+### Changed
+
+- Updating min python version to 3.10 and bumping package revision
+- Merge pull request #126 from NGS360/bugfix/resolve_detect_connect_return_values
+- Merge pull request #124 from NGS360/claude-improve-release-process
+
+
 ## [v0.5.1](https://github.com/NGS360/PAML.git/releases/tag/v0.5.1) - 2026-07-03
 
 ### Changed
