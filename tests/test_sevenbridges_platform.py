@@ -40,7 +40,8 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         ''' Test connect method '''
         mock_api_client.return_value = MagicMock()
 
-        self.platform.connect()
+        result = self.platform.connect()
+        self.assertTrue(result)
         self.assertTrue(self.platform.connected)
 
     def test__compare_platform_object_string(self):

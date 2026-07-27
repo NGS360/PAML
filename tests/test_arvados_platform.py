@@ -55,7 +55,8 @@ class TestArvadosPlaform(unittest.TestCase):
             'ARVADOS_API_HOST': 'host',
             'ARVADOS_API_TOKEN': 'token'
         }
-        self.platform.connect()
+        result = self.platform.connect()
+        self.assertTrue(result)
         self.assertTrue(self.platform.connected)
 
     def test_get_task_input_non_file_obj(self):
