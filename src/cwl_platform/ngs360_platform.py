@@ -611,14 +611,10 @@ class NGS360Platform(Platform):
 
         workflow_engine_parameters = {}
 
-        if execution_settings and "cacheId" in execution_settings:
-            workflow_engine_parameters["cacheId"] = execution_settings["cacheId"]
-        if execution_settings and "workflowVersionName" in execution_settings:
-            workflow_engine_parameters["workflowVersionName"] = execution_settings["workflowVersionName"]
-        if execution_settings and "storageType" in execution_settings:
-            workflow_engine_parameters["storageType"] = execution_settings["storageType"]
-        if execution_settings and "storageCapacity" in execution_settings:
-            workflow_engine_parameters["storageCapacity"] = execution_settings["storageCapacity"]
+        engine_par = ["networkingMode", "configurationName", "cacheId", "workflowVersionName", "storageType", "storageCapacity"]
+        for setting in engine_par:
+            if execution_settings and setting in execution_settings:
+                workflow_engine_parameters[setting] = execution_settings[setting]
 
         # Prepare the request data
         workflow_url = workflow
