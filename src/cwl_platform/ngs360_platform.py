@@ -611,7 +611,14 @@ class NGS360Platform(Platform):
 
         workflow_engine_parameters = {}
 
-        engine_par = ["networkingMode", "configurationName", "cacheId", "workflowVersionName", "storageType", "storageCapacity"]
+        engine_par = [
+            "networkingMode",
+            "configurationName",
+            "cacheId",
+            "workflowVersionName",
+            "storageType",
+            "storageCapacity",
+        ]
         for setting in engine_par:
             if execution_settings and setting in execution_settings:
                 workflow_engine_parameters[setting] = execution_settings[setting]
