@@ -2,11 +2,36 @@
 Test WES Platform implementation
 '''
 import json
+import os
 import unittest
+from contextlib import contextmanager
 from unittest.mock import patch, MagicMock
 import requests
 
 from cwl_platform.ngs360_platform import NGS360Platform, WESTask
+
+# connect() and submit_task() read these as fallbacks, so one left set in the
+# shell running the tests would change what those tests exercise.
+LAUNCHER_ENV_VARS = (
+    'NGS360_AUTH_TOKEN',
+    'WES_SERVICE_KEY',
+    'WES_ON_BEHALF_OF',
+    'WES_RUN_ID',
+)
+
+
+@contextmanager
+def hidden_launcher_env():
+    '''
+    Hide the launcher's environment variables for the duration of a test
+
+    Removes only the variables in LAUNCHER_ENV_VARS and restores the
+    environment on exit; everything else is left alone.
+    '''
+    with patch.dict('os.environ'):
+        for var in LAUNCHER_ENV_VARS:
+            os.environ.pop(var, None)
+        yield
 
 
 class TestNGS360Platform(unittest.TestCase):
@@ -89,6 +114,95 @@ class TestNGS360Platform(unittest.TestCase):
         # Verify the bearer token is sent on the WES service-info request
         _, kwargs = mock_request.call_args
         self.assertEqual(kwargs['headers']['Authorization'], 'Bearer test_token')
+
+    @patch('requests.get')
+    @patch('requests.request')
+    def test_connect_with_service_key(self, mock_request, mock_get):
+        '''
+        Test connect method with a service key instead of a bearer token
+        '''
+        # Mock WES API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'workflow_type_versions': {
+                'CWL': {'workflow_type_version': ['v1.0']}
+            }
+        }
+        mock_request.return_value = mock_response
+
+        platform = NGS360Platform('WES')
+        with hidden_launcher_env():
+            result = platform.connect(
+                api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+                ngs360_endpoint='https://ngs360.example.com',
+                wes_service_key='test_service_key',
+                wes_on_behalf_of='someuser'
+            )
+        self.assertTrue(result)
+
+        # The service key is not a user token, so /auth/me is not probed
+        mock_get.assert_not_called()
+
+        # Verify the service key headers are sent instead of a bearer token
+        _, kwargs = mock_request.call_args
+        self.assertEqual(kwargs['headers']['X-Internal-Service-Key'], 'test_service_key')
+        self.assertEqual(kwargs['headers']['X-On-Behalf-Of'], 'someuser')
+        self.assertNotIn('Authorization', kwargs['headers'])
+
+    @patch('requests.get')
+    @patch('requests.request')
+    def test_connect_prefers_token_over_service_key(self, mock_request, mock_get):
+        '''
+        Test connect method uses the bearer token when both credentials are given
+        '''
+        # Mock WES API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'workflow_type_versions': {
+                'CWL': {'workflow_type_version': ['v1.0']}
+            }
+        }
+        mock_request.return_value = mock_response
+
+        # Mock NGS360 API response
+        mock_ngs360_response = MagicMock()
+        mock_ngs360_response.status_code = 200
+        mock_get.return_value = mock_ngs360_response
+
+        platform = NGS360Platform('WES')
+        result = platform.connect(
+            api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+            ngs360_endpoint='https://ngs360.example.com',
+            ngs360_auth_token='test_token',
+            wes_service_key='test_service_key'
+        )
+        self.assertTrue(result)
+
+        _, kwargs = mock_request.call_args
+        self.assertEqual(kwargs['headers']['Authorization'], 'Bearer test_token')
+        self.assertNotIn('X-Internal-Service-Key', kwargs['headers'])
+
+    @patch('requests.request')
+    def test_connect_requires_a_credential(self, mock_request):
+        '''
+        Test connect method raises when neither credential is available
+        '''
+        # Mock WES API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'workflow_type_versions': {
+                'CWL': {'workflow_type_version': ['v1.0']}
+            }
+        }
+        mock_request.return_value = mock_response
+
+        platform = NGS360Platform('WES')
+        with hidden_launcher_env():
+            with self.assertRaises(ValueError):
+                platform.connect(
+                    api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+                    ngs360_endpoint='https://ngs360.example.com'
+                )
 
     @patch('requests.request')
     def test_connect_wes_failure(self, mock_request):

@@ -86,6 +86,8 @@ class NGS360Platform(Platform):
 
         self.ngs360_endpoint = None
         self._ngs360_auth_config = {}
+        self._wes_service_key = None
+        self._wes_on_behalf_of = None
 
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
@@ -98,6 +100,9 @@ class NGS360Platform(Platform):
         :param kwargs: Connection parameters
             - api_endpoint: WES API endpoint URL
             - ngs360_auth_token: Authentication token for the WES API
+            - wes_service_key: Shared service key, used only when no
+              ngs360_auth_token is available
+            - wes_on_behalf_of: User the service key is acting for
         """
         self.connected = False
 
@@ -112,10 +117,28 @@ class NGS360Platform(Platform):
             "ngs360_auth_token",
             os.environ.get("NGS360_AUTH_TOKEN")
         )
+        # The service key is a fallback for headless runs: a launcher running as an
+        # AWS Batch job has no user session to source a token from, so whoever
+        # submits the job has to inject a credential, and the service key is the
+        # one WES already provisions for callers acting without a user session.
+        # A bearer token wins when both are set: it names one real user and is
+        # scoped to them, whereas a holder of the service key is trusted to
+        # assert whatever identity it likes, so injecting the key into a
+        # container widens WES's trust boundary to that container.
+        service_key = kwargs.get(
+            "wes_service_key",
+            os.environ.get("WES_SERVICE_KEY")
+        )
         if auth_token:
             self._ngs360_auth_config['token'] = auth_token
+        elif service_key:
+            self._wes_service_key = service_key
+            self._wes_on_behalf_of = kwargs.get(
+                "wes_on_behalf_of",
+                os.environ.get("WES_ON_BEHALF_OF")
+            )
         else:
-            raise ValueError("NGS360 AUTH TOKEN is required")
+            raise ValueError("NGS360 AUTH TOKEN or WES SERVICE KEY is required")
 
         # Test connection by getting service info
         try:
@@ -136,6 +159,17 @@ class NGS360Platform(Platform):
             "ngs360_endpoint", os.environ.get("NGS360_API_ENDPOINT"))
         if not self.ngs360_endpoint:
             raise ValueError("NGS360 API endpoint URL is required")
+
+        # /api/v1/auth/me validates a user's bearer token, so there is nothing to
+        # probe when authenticating with the service key. The service-info call
+        # above already proved we can reach and authenticate against WES.
+        if self._wes_service_key:
+            self.logger.info(
+                "Authenticated to WES with a service key on behalf of '%s'",
+                self._wes_on_behalf_of or "(unspecified)"
+            )
+            self.connected = True
+            return self.connected
 
         # Test connection by getting current user info
         try:
@@ -177,6 +211,10 @@ class NGS360Platform(Platform):
 
         if 'token' in self._ngs360_auth_config:
             headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
+        elif self._wes_service_key:
+            headers["X-Internal-Service-Key"] = self._wes_service_key
+            if self._wes_on_behalf_of:
+                headers["X-On-Behalf-Of"] = self._wes_on_behalf_of
 
         response = requests.request(
             method=method,
