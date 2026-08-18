@@ -437,9 +437,31 @@ class NGS360Platform(Platform):
         """
         Get the current task
 
-        Note: WES API doesn't have a concept of current task, so this returns None
+        A launcher that is itself a WES run -- e.g. one running as an AWS Batch
+        job -- is told its own run id through WES_RUN_ID, the same way the
+        SevenBridges platform uses TASK_ID. Its own run record is where the
+        launcher reads back the inputs it was started with.
+
+        :return: WESTask object for this launcher's own run
+        :raises ValueError: If WES_RUN_ID is not set
         """
-        return None
+        run_id = os.environ.get("WES_RUN_ID")
+        if not run_id:
+            raise ValueError("ERROR: Environment variable WES_RUN_ID not set.")
+        self.logger.info("WES_RUN_ID: %s", run_id)
+
+        response = self._make_request("GET", f"runs/{run_id}")
+        request = response.get("request") or {}
+
+        return WESTask(
+            run_id=run_id,
+            name=response.get("name") or "",
+            state=self.STATE_MAP.get(response.get("state", "UNKNOWN"), "Unknown"),
+            # workflow_params are what the launcher was submitted with, which is
+            # what get_task_input reads back.
+            inputs=request.get("workflow_params") or {},
+            outputs=response.get("outputs") or {},
+        )
 
     def get_task_cost(self, task):
         """
