@@ -261,13 +261,14 @@ class TestNGS360Platform(unittest.TestCase):
         mock_request.return_value = mock_response
 
         # Test
-        task = self.platform.submit_task(
-            name='Test Task',
-            project={'project_id': "P-1234567", 'name': 'Test Project'},
-            workflow=workflow_url,
-            parameters=workflow_parameters,
-            execution_settings={"use_spot_instance": False}
-        )
+        with hidden_launcher_env():
+            task = self.platform.submit_task(
+                name='Test Task',
+                project={'project_id': "P-1234567", 'name': 'Test Project'},
+                workflow=workflow_url,
+                parameters=workflow_parameters,
+                execution_settings={"use_spot_instance": False}
+            )
 
         # Verify GA4GH API request withing submit_task was made correctly
         mock_request.assert_called_with(
@@ -293,6 +294,35 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertEqual(task.name, 'Test Task')
         self.assertEqual(task.state, 'Queued')
         self.assertEqual(task.inputs, workflow_parameters)
+
+    @patch.dict('os.environ', {'WES_RUN_ID': 'launcher_run_id'})
+    @patch('requests.request')
+    def test_submit_task_links_to_the_launcher_run(self, mock_request):
+        '''
+        Test submit_task method tags submitted tasks with the launcher's run id
+        '''
+        # Mock the GA4GH response for submit_task
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'run_id': 'test_run_id'}
+        mock_request.return_value = mock_response
+
+        self.platform.submit_task(
+            name='Test Task',
+            project={'project_id': "P-1234567", 'name': 'Test Project'},
+            workflow='workflow_id',
+            parameters={'input': 'value'},
+            execution_settings={"use_spot_instance": False}
+        )
+
+        _, kwargs = mock_request.call_args
+        self.assertEqual(
+            json.loads(kwargs['data']['tags']),
+            {
+                'ProjectId': 'P-1234567',
+                'TaskName': 'Test Task',
+                'ParentRunId': 'launcher_run_id',
+            }
+        )
 
     @patch('requests.request')
     def test_get_task_state(self, mock_request):

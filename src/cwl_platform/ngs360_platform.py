@@ -699,16 +699,25 @@ class NGS360Platform(Platform):
         else:
             files = None
 
+        tags = {
+            "ProjectId": project["project_id"],
+            "TaskName": name,
+        }
+        # When this launcher is itself a WES run, link what it submits back to it.
+        # WES promotes ParentRunId into an indexed column, which is what lets it
+        # roll up launcher progress without the launcher reporting its own status,
+        # and what lets a restarted launcher find work it already submitted.
+        launcher_run_id = os.environ.get("WES_RUN_ID")
+        if launcher_run_id:
+            tags["ParentRunId"] = launcher_run_id
+
         # Prepare the request data
         data = {
             "workflow_params": json.dumps(parameters),
             "workflow_type": workflow_type,
             "workflow_type_version": workflow_type_version,
             "workflow_url": workflow_url,
-            "tags": json.dumps({
-                "ProjectId": project["project_id"],
-                "TaskName": name,
-            }),
+            "tags": json.dumps(tags),
             "workflow_engine_parameters": json.dumps(
                 workflow_engine_parameters
             ),
