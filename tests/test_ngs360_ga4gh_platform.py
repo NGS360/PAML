@@ -5,10 +5,32 @@ import json
 import os
 import tempfile
 import unittest
+from contextlib import contextmanager
 from unittest.mock import patch, MagicMock
 import requests
 
 from cwl_platform.ngs360_platform import NGS360Platform, WESTask
+
+# connect() and submit_task() read these as fallbacks, so one left set in the
+# shell running the tests would change what those tests exercise.
+LAUNCHER_ENV_VARS = (
+    'NGS360_AUTH_TOKEN',
+    'WES_RUN_ID',
+)
+
+
+@contextmanager
+def hidden_launcher_env():
+    '''
+    Hide the launcher's environment variables for the duration of a test
+
+    Removes only the variables in LAUNCHER_ENV_VARS and restores the
+    environment on exit; everything else is left alone.
+    '''
+    with patch.dict('os.environ'):
+        for var in LAUNCHER_ENV_VARS:
+            os.environ.pop(var, None)
+        yield
 
 
 class TestNGS360Platform(unittest.TestCase):
@@ -1031,18 +1053,59 @@ class TestNGS360Platform(unittest.TestCase):
         # Test get_task_cost
         self.assertIsNone(self.platform.get_task_cost(task))
 
-    def test_current_task_and_users(self):
+    def test_project_users(self):
         '''
-        Test get_current_task and get_project_users methods
+        Test get_project_users method
         '''
         project = {'project_id': 'test_project'}
 
-        # Test get_current_task
-        self.assertIsNone(self.platform.get_current_task())
-
-        # Test get_project_users
         result = self.platform.get_project_users(project)
         self.assertEqual(result, [])
+
+    @patch.dict('os.environ', {'WES_RUN_ID': 'launcher_run_id'})
+    @patch('requests.request')
+    def test_get_current_task(self, mock_request):
+        '''
+        Test get_current_task method returns the launcher's own run
+        '''
+        # Mock the WES response for the launcher's own run
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'run_id': 'launcher_run_id',
+            'name': 'rnaseq-launcher',
+            'state': 'RUNNING',
+            'request': {
+                'workflow_params': {'factors_file': 'ngs360://file-1'}
+            }
+        }
+        mock_request.return_value = mock_response
+
+        task = self.platform.get_current_task()
+
+        # Verify the launcher's own run was fetched
+        _, kwargs = mock_request.call_args
+        self.assertEqual(
+            kwargs['url'],
+            'https://wes.example.com/ga4gh/wes/v1/runs/launcher_run_id'
+        )
+
+        self.assertEqual(task.run_id, 'launcher_run_id')
+        self.assertEqual(task.name, 'rnaseq-launcher')
+        self.assertEqual(task.state, 'Running')
+
+        # The launcher reads its own inputs back through get_task_input
+        self.assertEqual(
+            self.platform.get_task_input(task, 'factors_file'),
+            'ngs360://file-1'
+        )
+
+    def test_get_current_task_requires_run_id(self):
+        '''
+        Test get_current_task method raises when WES_RUN_ID is not set
+        '''
+        with hidden_launcher_env():
+            with self.assertRaises(ValueError):
+                self.platform.get_current_task()
 
     def test_detect_method(self):
         '''
