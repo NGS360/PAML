@@ -3,6 +3,20 @@ NGS360 / GA4GH WES Platform class
 
 This module implements the Platform abstract base class using the GA4GH
 Workflow Execution Service (WES) API.
+
+Environment contract, set by whoever starts the launcher container:
+
+    WES_API_ENDPOINT    WES API base URL, including the /ga4gh/wes/v1 prefix
+    NGS360_API_ENDPOINT NGS360 API base URL (projects, file upload)
+    NGS360_AUTH_TOKEN   Bearer token for a user; preferred when available
+    WES_SERVICE_KEY     Shared service key, used only when no bearer token is
+                        set -- for headless runs with no user session to source
+                        a token from. See connect() for the trust implications.
+    WES_ON_BEHALF_OF    User the service key is acting for; audit trail only
+    WES_RUN_ID          This launcher's own WES run id, when the launcher is
+                        itself running as a WES run (e.g. as an AWS Batch job).
+                        Makes get_current_task() work and links every task this
+                        launcher submits back to it.
 """
 
 import os
