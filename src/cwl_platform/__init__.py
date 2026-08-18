@@ -15,6 +15,26 @@ SUPPORTED_PLATFORMS = {
     'NGS360': NGS360Platform
 }
 
+# Substrings that mark an environment variable as carrying a credential. The
+# environment dump below goes to whatever collects the container's logs, which
+# is a wider audience than whoever provisioned the credential.
+_SECRET_NAME_MARKERS = ('TOKEN', 'KEY', 'SECRET', 'PASSWORD')
+
+
+def _redact(name, value):
+    '''
+    Return an environment variable's value, masked if the name marks it secret
+
+    :param name: Environment variable name
+    :param value: Environment variable value
+    :return: The value, or a mask of it
+    '''
+    if any(marker in name.upper() for marker in _SECRET_NAME_MARKERS):
+        # Length is kept because "set but empty" and "set to a truncated value"
+        # are both real misconfigurations worth telling apart in a log.
+        return f"<redacted, {len(value)} chars>"
+    return value
+
 
 class PlatformFactory():
     ''' PlatformFactory '''
@@ -36,7 +56,7 @@ class PlatformFactory():
         # print out environment variables and raise an error
         logging.info("Environment Variables:")
         for name, value in os.environ.items():
-            logging.info("%s: %s", name, value)
+            logging.info("%s: %s", name, _redact(name, value))
 
         raise ValueError("Unable to detect platform")
 
