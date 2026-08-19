@@ -181,6 +181,62 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertEqual(task.inputs, workflow_parameters)
 
     @patch('requests.request')
+    def test_submit_task_forwards_engine_parameters(self, mock_request):
+        '''
+        Test that recognized execution_settings are forwarded as
+        workflow_engine_parameters, while unrecognized keys are dropped.
+        '''
+        workflow_url = 'workflow_id'
+        workflow_parameters = {'input': 'value'}
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'run_id': 'test_run_id'}
+        mock_request.return_value = mock_response
+
+        execution_settings = {
+            'networkingMode': 'private',
+            'configurationName': 'my-config',
+            'cacheId': 'cache-1',
+            'workflowVersionName': 'v1.2.3',
+            'storageType': 'DYNAMIC',
+            'storageCapacity': 1200,
+            'use_spot_instance': False,  # not in whitelist, should be dropped
+        }
+
+        self.platform.submit_task(
+            name='Test Task',
+            project={'project_id': "P-1234567", 'name': 'Test Project'},
+            workflow=workflow_url,
+            parameters=workflow_parameters,
+            execution_settings=execution_settings
+        )
+
+        expected_engine_parameters = {
+            'networkingMode': 'private',
+            'configurationName': 'my-config',
+            'cacheId': 'cache-1',
+            'workflowVersionName': 'v1.2.3',
+            'storageType': 'DYNAMIC',
+            'storageCapacity': 1200,
+        }
+        mock_request.assert_called_with(
+            method='POST',
+            url='https://wes.example.com/ga4gh/wes/v1/runs',
+            headers={'Authorization': 'Bearer test_token'},
+            data={
+                'workflow_params': json.dumps(workflow_parameters),
+                'workflow_type': 'CWL',
+                'workflow_type_version': 'v1.0',
+                'workflow_url': workflow_url,
+                'tags': '{"ProjectId": "P-1234567", "TaskName": "Test Task"}',
+                'workflow_engine_parameters': json.dumps(expected_engine_parameters)
+            },
+            files=None,
+            params=None,
+            timeout=120
+        )
+
+    @patch('requests.request')
     def test_get_task_state(self, mock_request):
         '''
         Test get_task_state method
