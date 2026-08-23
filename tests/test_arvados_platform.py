@@ -10,6 +10,7 @@ import mock
 from mock import MagicMock
 
 from cwl_platform.arvados_platform import ArvadosPlatform, ArvadosTask, StreamFileReader
+from test_base_platform import BasePlatformTests
 
 class MockFile:
     """Mock file object for testing."""
@@ -24,7 +25,7 @@ class MockFile:
         """Return file name."""
         return self._name
 
-class TestArvadosPlaform(unittest.TestCase):
+class TestArvadosPlaform(BasePlatformTests, unittest.TestCase):
     '''
     Test Class for Arvados Platform
     '''
@@ -32,7 +33,65 @@ class TestArvadosPlaform(unittest.TestCase):
         self.platform = ArvadosPlatform('Arvados')
         self.platform.api = MagicMock()
         self.platform.keep_client = MagicMock()
+        self.setup_platform_mocks()
         return super().setUp()
+
+    def setup_platform_mocks(self):
+        '''Set up Arvados-specific mocks'''
+        # API and Keep client are already set up in setUp()
+        pass
+
+    def create_mock_task(self, task_id, name, state='Complete', inputs=None, outputs=None):
+        '''Create an Arvados-specific mock task'''
+        container_request = {
+            'name': name,
+            'uuid': task_id,
+            'container_uuid': f'container-{task_id}',
+            'properties': {
+                'cwl_input': inputs or {}
+            }
+        }
+
+        # Map state to Arvados states
+        state_mapping = {
+            'Complete': 'Final',
+            'Running': 'Committed',
+            'Failed': 'Final',
+            'Queued': 'Committed',
+            'Cancelled': 'Final'
+        }
+        container_request['state'] = state_mapping.get(state, 'Committed')
+
+        container = {
+            'uuid': f'container-{task_id}',
+            'state': state if state != 'Queued' else 'Queued',
+            'exit_code': 0 if state == 'Complete' else (1 if state == 'Failed' else None)
+        }
+
+        return ArvadosTask(container_request=container_request, container=container)
+
+    def create_mock_file(self, file_id, filename):
+        '''Create an Arvados-specific mock file'''
+        return MockFile("stream", filename)
+
+    def create_mock_project(self, project_id, name):
+        '''Create an Arvados-specific mock project'''
+        return {'uuid': project_id, 'name': name}
+
+    def create_platform_file_input(self, file_id):
+        '''Create an Arvados-specific file input'''
+        return {
+            'class': 'File',
+            'location': f'keep:{file_id}'
+        }
+
+    def get_task_name(self, task):
+        '''Get name from Arvados task'''
+        return task.container_request['name']
+
+    def get_task_id(self, task):
+        '''Get ID from Arvados task'''
+        return task.container_request['uuid']
 
     def test_add_user_to_project(self):
         ''' Test that we can add a user to a project '''

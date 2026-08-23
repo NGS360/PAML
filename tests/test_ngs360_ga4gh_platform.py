@@ -7,9 +7,10 @@ from unittest.mock import patch, MagicMock
 import requests
 
 from cwl_platform.ngs360_platform import NGS360Platform, WESTask
+from test_base_platform import BasePlatformTests
 
 
-class TestNGS360Platform(unittest.TestCase):
+class TestNGS360Platform(BasePlatformTests, unittest.TestCase):
     '''
     Test WES Platform implementation
     '''
@@ -25,6 +26,59 @@ class TestNGS360Platform(unittest.TestCase):
         self.platform._ngs360_auth_config = {'token': 'test_token'} # pylint: disable=protected-access
 
         self.platform.connected = True
+        self.setup_platform_mocks()
+
+    def setup_platform_mocks(self):
+        '''Set up NGS360-specific mocks'''
+        # Platform state is already set up in setUp()
+        pass
+
+    def create_mock_task(self, task_id, name, state='Complete', inputs=None, outputs=None):
+        '''Create an NGS360-specific mock task'''
+        # Map generic state to GA4GH WES state
+        state_mapping = {
+            'Complete': 'COMPLETE',
+            'Running': 'RUNNING',
+            'Failed': 'EXECUTOR_ERROR',
+            'Queued': 'QUEUED',
+            'Cancelled': 'CANCELED'
+        }
+        wes_state = state_mapping.get(state, 'QUEUED')
+
+        return WESTask(
+            run_id=task_id,
+            name=name,
+            state=wes_state,
+            inputs=inputs or {},
+            outputs=outputs or {}
+        )
+
+    def create_mock_file(self, file_id, filename):
+        '''Create an NGS360-specific mock file'''
+        # NGS360 uses file paths/URIs, not file objects
+        return f'ngs360://{file_id}'
+
+    def create_mock_project(self, project_id, name):
+        '''Create an NGS360-specific mock project'''
+        return {
+            'project_id': project_id,
+            'name': name
+        }
+
+    def create_platform_file_input(self, file_id):
+        '''Create an NGS360-specific file input'''
+        return {
+            'class': 'File',
+            'path': file_id
+        }
+
+    def get_task_name(self, task):
+        '''Get name from NGS360 task'''
+        return task.name
+
+    def get_task_id(self, task):
+        '''Get ID from NGS360 task'''
+        return task.run_id
 
     @patch('requests.request')
     def test_make_request(self, mock_request):
