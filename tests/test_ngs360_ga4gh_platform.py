@@ -2,11 +2,36 @@
 Test WES Platform implementation
 '''
 import json
+import os
 import unittest
+from contextlib import contextmanager
 from unittest.mock import patch, MagicMock
 import requests
 
 from cwl_platform.ngs360_platform import NGS360Platform, WESTask
+
+# connect() and submit_task() read these as fallbacks, so one left set in the
+# shell running the tests would change what those tests exercise.
+LAUNCHER_ENV_VARS = (
+    'NGS360_AUTH_TOKEN',
+    'WES_SERVICE_KEY',
+    'WES_ON_BEHALF_OF',
+    'WES_RUN_ID',
+)
+
+
+@contextmanager
+def hidden_launcher_env():
+    '''
+    Hide the launcher's environment variables for the duration of a test
+
+    Removes only the variables in LAUNCHER_ENV_VARS and restores the
+    environment on exit; everything else is left alone.
+    '''
+    with patch.dict('os.environ'):
+        for var in LAUNCHER_ENV_VARS:
+            os.environ.pop(var, None)
+        yield
 
 
 class TestNGS360Platform(unittest.TestCase):
@@ -90,6 +115,95 @@ class TestNGS360Platform(unittest.TestCase):
         _, kwargs = mock_request.call_args
         self.assertEqual(kwargs['headers']['Authorization'], 'Bearer test_token')
 
+    @patch('requests.get')
+    @patch('requests.request')
+    def test_connect_with_service_key(self, mock_request, mock_get):
+        '''
+        Test connect method with a service key instead of a bearer token
+        '''
+        # Mock WES API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'workflow_type_versions': {
+                'CWL': {'workflow_type_version': ['v1.0']}
+            }
+        }
+        mock_request.return_value = mock_response
+
+        platform = NGS360Platform('WES')
+        with hidden_launcher_env():
+            result = platform.connect(
+                api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+                ngs360_endpoint='https://ngs360.example.com',
+                wes_service_key='test_service_key',
+                wes_on_behalf_of='someuser'
+            )
+        self.assertTrue(result)
+
+        # The service key is not a user token, so /auth/me is not probed
+        mock_get.assert_not_called()
+
+        # Verify the service key headers are sent instead of a bearer token
+        _, kwargs = mock_request.call_args
+        self.assertEqual(kwargs['headers']['X-Internal-Service-Key'], 'test_service_key')
+        self.assertEqual(kwargs['headers']['X-On-Behalf-Of'], 'someuser')
+        self.assertNotIn('Authorization', kwargs['headers'])
+
+    @patch('requests.get')
+    @patch('requests.request')
+    def test_connect_prefers_token_over_service_key(self, mock_request, mock_get):
+        '''
+        Test connect method uses the bearer token when both credentials are given
+        '''
+        # Mock WES API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'workflow_type_versions': {
+                'CWL': {'workflow_type_version': ['v1.0']}
+            }
+        }
+        mock_request.return_value = mock_response
+
+        # Mock NGS360 API response
+        mock_ngs360_response = MagicMock()
+        mock_ngs360_response.status_code = 200
+        mock_get.return_value = mock_ngs360_response
+
+        platform = NGS360Platform('WES')
+        result = platform.connect(
+            api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+            ngs360_endpoint='https://ngs360.example.com',
+            ngs360_auth_token='test_token',
+            wes_service_key='test_service_key'
+        )
+        self.assertTrue(result)
+
+        _, kwargs = mock_request.call_args
+        self.assertEqual(kwargs['headers']['Authorization'], 'Bearer test_token')
+        self.assertNotIn('X-Internal-Service-Key', kwargs['headers'])
+
+    @patch('requests.request')
+    def test_connect_requires_a_credential(self, mock_request):
+        '''
+        Test connect method raises when neither credential is available
+        '''
+        # Mock WES API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'workflow_type_versions': {
+                'CWL': {'workflow_type_version': ['v1.0']}
+            }
+        }
+        mock_request.return_value = mock_response
+
+        platform = NGS360Platform('WES')
+        with hidden_launcher_env():
+            with self.assertRaises(ValueError):
+                platform.connect(
+                    api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+                    ngs360_endpoint='https://ngs360.example.com'
+                )
+
     @patch('requests.request')
     def test_connect_wes_failure(self, mock_request):
         '''
@@ -147,13 +261,14 @@ class TestNGS360Platform(unittest.TestCase):
         mock_request.return_value = mock_response
 
         # Test
-        task = self.platform.submit_task(
-            name='Test Task',
-            project={'project_id': "P-1234567", 'name': 'Test Project'},
-            workflow=workflow_url,
-            parameters=workflow_parameters,
-            execution_settings={"use_spot_instance": False}
-        )
+        with hidden_launcher_env():
+            task = self.platform.submit_task(
+                name='Test Task',
+                project={'project_id': "P-1234567", 'name': 'Test Project'},
+                workflow=workflow_url,
+                parameters=workflow_parameters,
+                execution_settings={"use_spot_instance": False}
+            )
 
         # Verify GA4GH API request withing submit_task was made correctly
         mock_request.assert_called_with(
@@ -179,6 +294,35 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertEqual(task.name, 'Test Task')
         self.assertEqual(task.state, 'Queued')
         self.assertEqual(task.inputs, workflow_parameters)
+
+    @patch.dict('os.environ', {'WES_RUN_ID': 'launcher_run_id'})
+    @patch('requests.request')
+    def test_submit_task_links_to_the_launcher_run(self, mock_request):
+        '''
+        Test submit_task method tags submitted tasks with the launcher's run id
+        '''
+        # Mock the GA4GH response for submit_task
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'run_id': 'test_run_id'}
+        mock_request.return_value = mock_response
+
+        self.platform.submit_task(
+            name='Test Task',
+            project={'project_id': "P-1234567", 'name': 'Test Project'},
+            workflow='workflow_id',
+            parameters={'input': 'value'},
+            execution_settings={"use_spot_instance": False}
+        )
+
+        _, kwargs = mock_request.call_args
+        self.assertEqual(
+            json.loads(kwargs['data']['tags']),
+            {
+                'ProjectId': 'P-1234567',
+                'TaskName': 'Test Task',
+                'ParentRunId': 'launcher_run_id',
+            }
+        )
 
     @patch('requests.request')
     def test_submit_task_forwards_engine_parameters(self, mock_request):
@@ -981,18 +1125,59 @@ class TestNGS360Platform(unittest.TestCase):
         # Test get_task_cost
         self.assertIsNone(self.platform.get_task_cost(task))
 
-    def test_current_task_and_users(self):
+    def test_project_users(self):
         '''
-        Test get_current_task and get_project_users methods
+        Test get_project_users method
         '''
         project = {'project_id': 'test_project'}
 
-        # Test get_current_task
-        self.assertIsNone(self.platform.get_current_task())
-
-        # Test get_project_users
         result = self.platform.get_project_users(project)
         self.assertEqual(result, [])
+
+    @patch.dict('os.environ', {'WES_RUN_ID': 'launcher_run_id'})
+    @patch('requests.request')
+    def test_get_current_task(self, mock_request):
+        '''
+        Test get_current_task method returns the launcher's own run
+        '''
+        # Mock the WES response for the launcher's own run
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'run_id': 'launcher_run_id',
+            'name': 'rnaseq-launcher',
+            'state': 'RUNNING',
+            'request': {
+                'workflow_params': {'factors_file': 'ngs360://file-1'}
+            }
+        }
+        mock_request.return_value = mock_response
+
+        task = self.platform.get_current_task()
+
+        # Verify the launcher's own run was fetched
+        _, kwargs = mock_request.call_args
+        self.assertEqual(
+            kwargs['url'],
+            'https://wes.example.com/ga4gh/wes/v1/runs/launcher_run_id'
+        )
+
+        self.assertEqual(task.run_id, 'launcher_run_id')
+        self.assertEqual(task.name, 'rnaseq-launcher')
+        self.assertEqual(task.state, 'Running')
+
+        # The launcher reads its own inputs back through get_task_input
+        self.assertEqual(
+            self.platform.get_task_input(task, 'factors_file'),
+            'ngs360://file-1'
+        )
+
+    def test_get_current_task_requires_run_id(self):
+        '''
+        Test get_current_task method raises when WES_RUN_ID is not set
+        '''
+        with hidden_launcher_env():
+            with self.assertRaises(ValueError):
+                self.platform.get_current_task()
 
     def test_detect_method(self):
         '''
