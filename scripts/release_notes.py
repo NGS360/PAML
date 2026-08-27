@@ -42,7 +42,12 @@ def get_change_log_notes() -> str:
                 elif line.startswith("### Removed"):
                     line = REMOVED_HEADER + "\n"
                 current_section_notes.append(line)
-    assert current_section_notes
+    if not current_section_notes:
+        raise SystemExit(
+            f"ERROR: No release notes found for {TAG} in CHANGELOG.md.\n"
+            f"Expected a non-empty '## [{TAG}](...)' section listing the changes "
+            f"for this release."
+        )
     return "## What's new\n\n" + "".join(current_section_notes).strip() + "\n"
 
 

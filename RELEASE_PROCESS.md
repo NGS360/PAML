@@ -30,11 +30,13 @@ Before starting a release, ensure:
    The script will:
    - Validate your environment (branch, uncommitted changes, etc.)
    - Optionally run tests
+   - Check that CI is green for the commit being released
    - Generate CHANGELOG entries from git commits
    - Pause for you to review/edit CHANGELOG.md
+   - Verify release notes can be generated (before any tag is created)
    - Commit version and CHANGELOG changes
    - Create and push a git tag (e.g., `v0.5.2`)
-   - Trigger GitHub Actions to build and publish
+   - Trigger GitHub Actions to build the package and open a draft release
 
 3. **Finalize on GitHub:**
    - Navigate to https://github.com/NGS360/PAML/releases
@@ -46,20 +48,36 @@ Before starting a release, ensure:
 
 ### Failed Release Recovery
 
-If the GitHub Actions workflow fails after the tag is pushed:
+If the GitHub Actions workflow fails after the tag is pushed, re-run the build
+against the existing tag rather than deleting it. Which path you take depends on
+where the fault was.
 
-1. **Delete the failed tag:**
+**If the workflow or its tooling was at fault** — a missing permission, a broken
+step, a dependency that would not install — the tagged code is fine. A manual run
+reads the workflow definition from `main` but builds the code from the tag, so
+fixing `main` is enough:
+
+1. Fix the workflow and merge it to `main`
+2. Delete the draft release if one was created, since `gh release create` will
+   not overwrite an existing release:
    ```bash
-   TAG="v0.5.2"  # Replace with your version
-   git tag -d $TAG              # Delete locally
-   git push --delete origin $TAG  # Delete from GitHub
+   gh release delete v0.5.2 --yes
+   ```
+3. Re-run the build for that tag, from the Actions tab or the CLI:
+   ```bash
+   gh workflow run release.yml -f tag=v0.5.2
    ```
 
-2. **Delete the draft release on GitHub** (if one was created):
-   - Go to https://github.com/NGS360/PAML/releases
-   - Find the draft release and delete it
+**If the tagged content was at fault** — a wrong version number, a malformed
+CHANGELOG, a bug that should not ship — then the tag points at something you do
+not want to release. Do not move the tag; release a new patch version instead,
+starting from the top of this document.
 
-3. **Fix the issue**, then repeat the release steps above
+Avoid deleting a tag once it has been pushed. Anyone who already installed that
+version resolved it to a specific commit, and recreating the tag hands them
+different code under the same name. `release.sh` now validates the CHANGELOG
+before it creates the tag, so the most common cause of this failure is caught
+while recovery is still free.
 
 ### Editing CHANGELOG Before Release
 
@@ -71,11 +89,18 @@ The release script pauses after generating CHANGELOG entries. At this point:
 
 ### Rollback a Published Release
 
-If you need to retract a published release:
+This package is not uploaded to a package index. Consumers install straight from
+a git tag (see the README), so a release stays reachable for as long as its tag
+exists and there is nothing to yank.
 
-1. **Mark as pre-release** on GitHub (or delete the release entirely)
-2. **Note**: PyPI doesn't allow re-uploading the same version number
-3. **Create a new patch version** with the fix (e.g., `0.5.3`)
+To retract a published release:
+
+1. **Mark the release as a pre-release** on GitHub so it no longer shows as the
+   latest, and describe the problem in its release notes
+2. **Leave the tag in place.** Anyone who pinned that version already resolved
+   it, and deleting or moving a published tag breaks their installs
+3. **Release a new patch version** with the fix (e.g., `0.5.3`) and direct
+   people to it
 
 ## Release Script Validations
 
@@ -85,9 +110,15 @@ The `release.sh` script performs these checks:
 - ✓ Verifies you're on the `main` branch
 - ✓ Checks for uncommitted changes
 - ✓ Confirms tag doesn't already exist (local and remote)
-- ✓ Offers to run tests before releasing
+- ✓ Offers to run tests before releasing (via `PYTHONPATH=src pytest`, matching CI)
 - ✓ Ensures local branch is up-to-date with remote
+- ✓ Checks GitHub Actions CI status for the commit being released (requires `gh`)
 - ✓ Creates `CHANGELOG.md` if missing
+- ✓ Validates that release notes can be generated **before** creating the tag
+
+The release-notes validation matters because the same generation step runs in
+GitHub Actions *after* the tag is pushed. Catching a malformed CHANGELOG locally
+avoids having to delete an already-published tag.
 
 ## Version Numbering
 
@@ -103,6 +134,11 @@ When you push a tag, the `.github/workflows/release.yml` workflow:
 
 1. Checks out the code
 2. Builds the Python package (`python3 -m build`)
-3. Generates release notes from `CHANGELOG.md`
-4. Creates a **draft release** on GitHub with built artifacts
-5. Waits for you to manually publish the release
+3. Validates the built artifacts (`twine check`)
+4. Generates release notes from `CHANGELOG.md`
+5. Creates a **draft release** on GitHub with the built artifacts attached
+6. Waits for you to manually publish the release
+
+The workflow can also be started by hand from the Actions tab. Give it an
+existing tag to rebuild that tag's draft release, or leave the tag empty to
+confirm the package still builds without creating a release.

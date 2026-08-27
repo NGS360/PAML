@@ -3,7 +3,6 @@ Test Module for Arvados Platform
 '''
 # pylint: disable=protected-access
 import json
-import os
 
 import unittest
 import mock

@@ -2,6 +2,7 @@
 Integration Test for SevenBridgesPlatform._find_or_create_path()
 to verify behavior against the live API.
 '''
+# pylint: disable=protected-access
 import unittest
 
 from datetime import datetime

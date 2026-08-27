@@ -1215,7 +1215,11 @@ class ArvadosPlatform(Platform):
                 'last_name': user.get('last_name', ''),
                 'email': user.get('email', ''),
             }
-        except Exception:
+        # Deliberately broad: the documented contract is to return None whenever
+        # the user cannot be retrieved, and googleapiclient surfaces auth,
+        # network and TLS failures as unrelated exception types.
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            self.logger.debug("Could not retrieve current user: %s", err)
             return None
 
     def add_user_to_project(self, platform_user, project, permission):
