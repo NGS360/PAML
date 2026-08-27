@@ -36,7 +36,7 @@ Before starting a release, ensure:
    - Verify release notes can be generated (before any tag is created)
    - Commit version and CHANGELOG changes
    - Create and push a git tag (e.g., `v0.5.2`)
-   - Trigger GitHub Actions to build and publish
+   - Trigger GitHub Actions to build the package and open a draft release
 
 3. **Finalize on GitHub:**
    - Navigate to https://github.com/NGS360/PAML/releases
@@ -73,11 +73,18 @@ The release script pauses after generating CHANGELOG entries. At this point:
 
 ### Rollback a Published Release
 
-If you need to retract a published release:
+This package is not uploaded to a package index. Consumers install straight from
+a git tag (see the README), so a release stays reachable for as long as its tag
+exists and there is nothing to yank.
 
-1. **Mark as pre-release** on GitHub (or delete the release entirely)
-2. **Note**: PyPI doesn't allow re-uploading the same version number
-3. **Create a new patch version** with the fix (e.g., `0.5.3`)
+To retract a published release:
+
+1. **Mark the release as a pre-release** on GitHub so it no longer shows as the
+   latest, and describe the problem in its release notes
+2. **Leave the tag in place.** Anyone who pinned that version already resolved
+   it, and deleting or moving a published tag breaks their installs
+3. **Release a new patch version** with the fix (e.g., `0.5.3`) and direct
+   people to it
 
 ## Release Script Validations
 
@@ -111,6 +118,11 @@ When you push a tag, the `.github/workflows/release.yml` workflow:
 
 1. Checks out the code
 2. Builds the Python package (`python3 -m build`)
-3. Generates release notes from `CHANGELOG.md`
-4. Creates a **draft release** on GitHub with built artifacts
-5. Waits for you to manually publish the release
+3. Validates the built artifacts (`twine check`)
+4. Generates release notes from `CHANGELOG.md`
+5. Creates a **draft release** on GitHub with the built artifacts attached
+6. Waits for you to manually publish the release
+
+The workflow can also be started by hand from the Actions tab. Give it an
+existing tag to rebuild that tag's draft release, or leave the tag empty to
+confirm the package still builds without creating a release.
