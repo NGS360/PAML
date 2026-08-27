@@ -30,8 +30,10 @@ Before starting a release, ensure:
    The script will:
    - Validate your environment (branch, uncommitted changes, etc.)
    - Optionally run tests
+   - Check that CI is green for the commit being released
    - Generate CHANGELOG entries from git commits
    - Pause for you to review/edit CHANGELOG.md
+   - Verify release notes can be generated (before any tag is created)
    - Commit version and CHANGELOG changes
    - Create and push a git tag (e.g., `v0.5.2`)
    - Trigger GitHub Actions to build and publish
@@ -85,9 +87,15 @@ The `release.sh` script performs these checks:
 - ✓ Verifies you're on the `main` branch
 - ✓ Checks for uncommitted changes
 - ✓ Confirms tag doesn't already exist (local and remote)
-- ✓ Offers to run tests before releasing
+- ✓ Offers to run tests before releasing (via `PYTHONPATH=src pytest`, matching CI)
 - ✓ Ensures local branch is up-to-date with remote
+- ✓ Checks GitHub Actions CI status for the commit being released (requires `gh`)
 - ✓ Creates `CHANGELOG.md` if missing
+- ✓ Validates that release notes can be generated **before** creating the tag
+
+The release-notes validation matters because the same generation step runs in
+GitHub Actions *after* the tag is pushed. Catching a malformed CHANGELOG locally
+avoids having to delete an already-published tag.
 
 ## Version Numbering
 

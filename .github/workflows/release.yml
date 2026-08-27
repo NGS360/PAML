@@ -11,22 +11,30 @@ jobs:
     name: Build & Publish Release 📦
     runs-on: ubuntu-latest
 
+    # Least privilege: only 'gh release create' needs write access.
+    permissions:
+      contents: write
+
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.x"
+        python-version: "3.12"
 
     - name: Install pypa/build
       run: >-
         python3 -m
         pip install
         build
+        twine
         --user
 
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
+
+    - name: Validate the built artifacts
+      run: python3 -m twine check dist/*
 
     - name: Prepare environment with release version information
       run: |

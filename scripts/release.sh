@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # Configuration
-REPO=https://github.com/NGS360/PAML.git
+REPO=https://github.com/NGS360/PAML
 MAIN_BRANCH="main"
 
 # Colors for output
@@ -58,17 +58,21 @@ if git ls-remote --tags origin | grep -q "refs/tags/v$TAG"; then
 fi
 
 # 5. Check if tests exist and offer to run them
-if [[ -f "pytest.ini" ]] || [[ -f "tests/test_*.py" ]] || [[ -f "test_*.py" ]]; then
+if compgen -G "tests/test_*.py" > /dev/null || compgen -G "test_*.py" > /dev/null || [[ -f "pytest.ini" ]]; then
     read -p "Run tests before release? [Y/n] " prompt
     if [[ $prompt == "n" || $prompt == "N" || $prompt == "no" || $prompt == "No" ]]; then
         warning "Skipping tests"
     else
         echo "Running tests..."
-        if ! pytest; then
+        # Match the invocation used by 'make test' and CI so the working tree is
+        # tested rather than whatever version happens to be installed.
+        if ! PYTHONPATH=src pytest; then
             error "Tests failed. Fix tests before releasing."
         fi
         success "Tests passed ✓"
     fi
+else
+    warning "No tests found to run"
 fi
 
 # 6. Fetch latest from remote
@@ -87,7 +91,39 @@ if [[ -n "$REMOTE" ]] && [[ "$LOCAL" != "$REMOTE" ]]; then
     fi
 fi
 
-# 8. Check CHANGELOG.md exists
+# 8. Verify CI is green for the commit being released
+SHA=$(git rev-parse HEAD)
+SHORT_SHA=$(git rev-parse --short HEAD)
+if ! command -v gh > /dev/null 2>&1 || ! gh auth status > /dev/null 2>&1; then
+    warning "GitHub CLI unavailable or not authenticated - cannot check CI status"
+    read -p "Continue without verifying CI? [y/N] " prompt
+    [[ ! $prompt =~ ^[Yy]$ ]] && error "Release cancelled. Install/authenticate 'gh', or verify CI manually."
+else
+    echo "Checking CI status for $SHORT_SHA..."
+    RUN_COUNT=$(gh run list --commit "$SHA" --limit 50 --json status --jq 'length' 2>/dev/null || echo "0")
+    FAILED=$(gh run list --commit "$SHA" --limit 50 --json conclusion,workflowName \
+        --jq '[.[] | select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out") | .workflowName] | unique | join(", ")' 2>/dev/null || echo "")
+    PENDING=$(gh run list --commit "$SHA" --limit 50 --json status,workflowName \
+        --jq '[.[] | select(.status != "completed") | .workflowName] | unique | join(", ")' 2>/dev/null || echo "")
+
+    if [[ "$RUN_COUNT" == "0" ]]; then
+        warning "No CI runs found for $SHORT_SHA. Has this commit been pushed?"
+        read -p "Continue without a CI result? [y/N] " prompt
+        [[ ! $prompt =~ ^[Yy]$ ]] && error "Release cancelled. Push the commit and wait for CI."
+    elif [[ -n "$FAILED" ]]; then
+        warning "CI is FAILING for $SHORT_SHA: $FAILED"
+        read -p "Release anyway? [y/N] " prompt
+        [[ ! $prompt =~ ^[Yy]$ ]] && error "Release cancelled. Fix CI before releasing."
+    elif [[ -n "$PENDING" ]]; then
+        warning "CI is still running for $SHORT_SHA: $PENDING"
+        read -p "Release before CI completes? [y/N] " prompt
+        [[ ! $prompt =~ ^[Yy]$ ]] && error "Release cancelled. Wait for CI to finish."
+    else
+        success "CI is green ✓"
+    fi
+fi
+
+# 9. Check CHANGELOG.md exists
 if [[ ! -f "CHANGELOG.md" ]]; then
     warning "CHANGELOG.md not found"
     read -p "Create a basic CHANGELOG.md? [Y/n] " prompt
@@ -124,8 +160,18 @@ if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" |
     echo "Press Enter to continue after reviewing CHANGELOG.md, or Ctrl+C to cancel..."
     read
 
+    # Validate that release notes can be generated BEFORE creating the tag.
+    # The GitHub Actions workflow runs this same script on the pushed tag; if it
+    # fails there, recovery requires deleting an already-published tag.
+    echo "Validating release notes for v$TAG..."
+    if ! TAG="v$TAG" python3 scripts/release_notes.py > /dev/null; then
+        error "Could not generate release notes for v$TAG. Fix CHANGELOG.md and re-run (no tag was created)."
+    fi
+    success "Release notes validated ✓"
+
+    echo ""
     echo "Committing changes..."
-    git add -A
+    git add pyproject.toml CHANGELOG.md
     if git commit -m "Bump version to $TAG for release"; then
         success "Changes committed ✓"
     else
@@ -141,7 +187,7 @@ if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" |
     success "Tag created ✓"
 
     echo "Pushing tag to remote..."
-    git push --tags
+    git push origin "v$TAG"
     success "Tag pushed ✓"
 
     echo ""
