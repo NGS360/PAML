@@ -656,10 +656,12 @@ class NGS360Platform(Platform):
                 workflow_engine_parameters
             ),
         }
-        # AWS Omics can't handle inputs greater than 50,000 bytes.
-        with open(f"{project['project_id']}-{name}.parameters.json", mode="w",
-                  encoding="utf-8") as f:
-            json.dump(parameters, f, indent=4)
+        # AWS Omics rejects inputs larger than 50,000 bytes (see issue #81), so
+        # record the payload size to make that diagnosable from the logs. No
+        # threshold is enforced here because this client talks to any WES
+        # backend, not only Omics-backed ones.
+        self.logger.debug("workflow_params is %d bytes",
+                          len(data["workflow_params"]))
         try:
             response = self._make_request("POST", "runs", data=data, files=files)
             run_id = response.get("run_id")
