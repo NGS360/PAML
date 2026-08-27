@@ -5,6 +5,15 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: >-
+          Existing tag to build a draft release for, e.g. v0.5.3. Use this to
+          re-run a release build that failed. Leave empty to validate that the
+          package builds without creating a release.
+        required: false
+        type: string
 
 jobs:
   release:
@@ -17,6 +26,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        # A manual run builds the tag given as input; a tag push builds itself.
+        ref: ${{ inputs.tag || github.ref }}
+        # release_notes.py walks the tag list and commit history, neither of
+        # which exist in the default shallow clone. Without this the "Commits"
+        # section of the release notes only ever contains the version bump.
+        fetch-depth: 0
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -39,24 +55,38 @@ jobs:
     - name: Validate the built artifacts
       run: python3 -m twine check dist/*
 
+    # Resolves to the dispatch input, else the pushed tag, else empty. An empty
+    # TAG means this run only validates the build, so no release is created.
     - name: Prepare environment with release version information
+      env:
+        INPUT_TAG: ${{ inputs.tag }}
       run: |
-        echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
-        echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        if [ -n "$INPUT_TAG" ]; then
+          TAG="$INPUT_TAG"
+        elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          TAG="${GITHUB_REF#refs/tags/}"
+        else
+          TAG=""
+          echo "No tag supplied - validating the build only, no release will be created."
+        fi
+        echo "TAG=$TAG" >> $GITHUB_ENV
+        echo "RELEASE_VERSION=${TAG#v}" >> $GITHUB_ENV
 
     - name: Generate release notes
+      if: env.TAG != ''
       run: |
         python scripts/release_notes.py > ${{ github.workspace }}-RELEASE_NOTES.md
 
     - name: Create Release
+      if: env.TAG != ''
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: >-
         gh release create
-        --title "${{ github.ref_name }}"
+        --title "$TAG"
         --notes-file ${{ github.workspace }}-RELEASE_NOTES.md
         --draft
         --latest
         --repo ${{ github.repository }}
-        ${{ github.ref }}
+        "$TAG"
         dist/**
