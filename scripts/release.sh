@@ -24,9 +24,30 @@ success() {
     echo -e "${GREEN}$1${NC}"
 }
 
-# Extract version from pyproject.toml
-TAG=$(grep version pyproject.toml | cut -d '=' -f2 | sed 's/"//g' | tr -d '[:space:]')
-[[ -z "$TAG" ]] && error "Could not extract version from pyproject.toml"
+# The package version is derived from the git tag by hatch-vcs, so there is
+# nothing in pyproject.toml to read: the version is an input to this script and
+# the tag it creates becomes the source of truth.
+usage() {
+    echo "Usage: $0 [VERSION]"
+    echo "  VERSION  release version, e.g. 0.5.4 (a leading 'v' is accepted)"
+    echo "           omit it and you will be prompted"
+    exit 1
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && usage
+
+TAG="${1:-}"
+if [[ -z "$TAG" ]]; then
+    read -p "Version to release (e.g. 0.5.4): " TAG
+fi
+TAG="${TAG#v}"
+[[ -z "$TAG" ]] && error "No version given."
+
+# Enforce MAJOR.MINOR.PATCH, with the pre-release suffixes DEV-006 allows.
+# Historical tags like v0.5 and v0.3-rc1 predate this check; see issue #141.
+if [[ ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+    error "Version '$TAG' is not MAJOR.MINOR.PATCH (optionally -alpha.N, -beta.N or -rc.N)."
+fi
 
 echo "=== Release Validation for v$TAG ==="
 echo ""
@@ -49,12 +70,12 @@ fi
 
 # 3. Check if tag already exists
 if git rev-parse "v$TAG" >/dev/null 2>&1; then
-    error "Tag v$TAG already exists. Update version in pyproject.toml first."
+    error "Tag v$TAG already exists. Choose a different version."
 fi
 
 # 4. Check if remote tag exists
 if git ls-remote --tags origin | grep -q "refs/tags/v$TAG"; then
-    error "Tag v$TAG already exists on remote. Update version in pyproject.toml first."
+    error "Tag v$TAG already exists on remote. Choose a different version."
 fi
 
 # 5. Check if tests exist and offer to run them
@@ -171,11 +192,11 @@ if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" |
 
     echo ""
     echo "Committing changes..."
-    git add pyproject.toml CHANGELOG.md
-    if git commit -m "Bump version to $TAG for release"; then
+    git add CHANGELOG.md
+    if git commit -m "Update CHANGELOG for v$TAG"; then
         success "Changes committed ✓"
     else
-        warning "No changes to commit (this is OK if version was already committed)"
+        warning "No changes to commit (this is OK if the CHANGELOG was already updated)"
     fi
 
     echo "Pushing to remote..."

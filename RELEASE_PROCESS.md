@@ -21,32 +21,32 @@ Before starting a release, ensure:
 
 ## Quick Release
 
-1. **Bump version** in `pyproject.toml`
+There is no version to edit. `hatch-vcs` derives the package version from the
+git tag, so the tag you create *is* the version — pass it to the release script
+and nothing else needs updating.
 
-   Update the version number (e.g., `0.5.3` → `0.5.4`):
-   ```toml
-   [project]
-   name = "cwl_platform"
-   version = "0.5.4"  # Update this line
-   ```
-
-2. **Run the release script:**
+1. **Run the release script** with the version you are releasing:
    ```bash
-   ./scripts/release.sh
+   ./scripts/release.sh 0.5.4
    ```
-   
+
+   Omit the argument and it will prompt. The version must be
+   `MAJOR.MINOR.PATCH`, optionally with `-alpha.N`, `-beta.N` or `-rc.N`; the
+   script rejects anything else before touching git.
+
    The script will:
+   - Validate the version format
    - Validate your environment (branch, uncommitted changes, etc.)
    - Optionally run tests
    - Check that CI is green for the commit you are releasing from
    - Generate CHANGELOG entries from git commits
    - Pause for you to review/edit CHANGELOG.md
    - Verify release notes can be generated (before any tag is created)
-   - Commit version and CHANGELOG changes
+   - Commit the CHANGELOG
    - Create and push a git tag (e.g., `v0.5.4`)
    - Trigger GitHub Actions to build the package and open a draft release
 
-3. **Finalize on GitHub:**
+2. **Finalize on GitHub:**
    - Navigate to https://github.com/NGS360/PAML/releases
    - Review the draft release created by GitHub Actions
    - Verify release notes and artifacts
@@ -114,7 +114,7 @@ To retract a published release:
 
 The `release.sh` script performs these checks:
 
-- ✓ Extracts version from `pyproject.toml`
+- ✓ Validates the version argument is MAJOR.MINOR.PATCH
 - ✓ Verifies you're on the `main` branch
 - ✓ Checks for uncommitted changes
 - ✓ Confirms tag doesn't already exist (local and remote)
@@ -129,10 +129,10 @@ GitHub Actions *after* the tag is pushed. Catching a malformed CHANGELOG locally
 avoids having to delete an already-published tag.
 
 Note what the CI check does and does not cover. It reads the result for the
-commit you are releasing *from*. The version-bump commit that the tag actually
+commit you are releasing *from*. The CHANGELOG commit that the tag actually
 lands on is created afterwards, so its own CI run is still in flight when the tag
-is pushed — it changes only `pyproject.toml` and `CHANGELOG.md`, but the gate is
-not a guarantee about the tagged commit itself.
+is pushed — it changes only `CHANGELOG.md`, but the gate is not a guarantee
+about the tagged commit itself.
 
 ## Version Numbering
 
@@ -142,13 +142,26 @@ Follow [Semantic Versioning](https://semver.org/):
 - **Minor** (0.5.2 → 0.6.0): New features, backwards-compatible
 - **Major** (0.6.0 → 1.0.0): Breaking changes
 
+Tags **must** be `vMAJOR.MINOR.PATCH`, with `-alpha.N`, `-beta.N` or `-rc.N` for
+pre-releases. `release.sh` enforces this. Some historical tags predate the rule
+(`v0.5` has only two components, `v0.3-rc1` uses the wrong suffix form); they are
+left alone deliberately, because moving a published tag breaks anyone who pinned
+it.
+
+Because `hatch-vcs` derives the version from the tag, a build between tags gets a
+`.devN` version such as `0.5.4.dev21+gac1d2a3`, and a build from a tree with
+uncommitted changes gets a further `.dYYYYMMDD` suffix. Only a clean checkout of
+a tag produces a bare release version, and the release workflow verifies that
+before publishing.
+
 ## What Happens on GitHub Actions
 
 When you push a tag, the `.github/workflows/release.yml` workflow:
 
 1. Checks out the code
-2. Builds the Python package (`python3 -m build`)
-3. Validates the built artifacts (`twine check`)
+2. Builds the Python package (`uv build`), taking the version from the tag
+3. Confirms the built version matches the tag, then validates the artifacts
+   (`twine check`)
 4. Generates release notes from `CHANGELOG.md`
 5. Creates a **draft release** on GitHub with the built artifacts attached
 6. Waits for you to manually publish the release

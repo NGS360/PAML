@@ -620,7 +620,6 @@ wheels = [
 
 [[package]]
 name = "cwl-platform"
-version = "0.5.3"
 source = { editable = "." }
 dependencies = [
     { name = "arvados-python-client" },

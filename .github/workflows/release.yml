@@ -29,24 +29,16 @@ jobs:
       with:
         # A manual run builds the tag given as input; a tag push builds itself.
         ref: ${{ inputs.tag || github.ref }}
-        # release_notes.py walks the tag list and commit history, neither of
-        # which exist in the default shallow clone. Without this the "Commits"
-        # section of the release notes only ever contains the version bump.
+        # Required for two separate reasons. release_notes.py walks the tag list
+        # and commit history, and hatch-vcs derives the package version from the
+        # nearest tag - in a shallow clone with no tags it silently produces
+        # 0.1.dev1 instead of failing, which would publish a wrong version.
         fetch-depth: 0
     - name: Install uv
       uses: astral-sh/setup-uv@v10.0.1
       with:
         enable-cache: true
         cache-dependency-glob: "uv.lock"
-
-    - name: Build a binary wheel and a source tarball
-      run: uv build --python 3.12
-
-    # --only-group installs the dev group without the project or its runtime
-    # dependencies, which would otherwise drag in pycurl and require libcurl
-    # headers on this runner. Versions still come from uv.lock.
-    - name: Validate the built artifacts
-      run: uv run --only-group dev twine check dist/*
 
     # Resolves to the dispatch input, else the pushed tag, else empty. An empty
     # TAG means this run only validates the build, so no release is created.
@@ -64,6 +56,28 @@ jobs:
         fi
         echo "TAG=$TAG" >> $GITHUB_ENV
         echo "RELEASE_VERSION=${TAG#v}" >> $GITHUB_ENV
+
+    - name: Build a binary wheel and a source tarball
+      run: uv build --python 3.12
+
+    # The version is derived from git rather than declared, so confirm it came
+    # out as the tag being released. Catches a shallow checkout, a missing tag,
+    # or a dirty tree before any of it reaches a published release.
+    - name: Check the built version matches the tag
+      if: env.TAG != ''
+      run: |
+        if [ ! -f "dist/cwl_platform-${RELEASE_VERSION}-py3-none-any.whl" ]; then
+          echo "::error::built artifacts do not match tag ${TAG}; expected version ${RELEASE_VERSION}"
+          ls -1 dist
+          exit 1
+        fi
+        echo "Built version matches ${TAG}"
+
+    # --only-group installs the dev group without the project or its runtime
+    # dependencies, which would otherwise drag in pycurl and require libcurl
+    # headers on this runner. Versions still come from uv.lock.
+    - name: Validate the built artifacts
+      run: uv run --only-group dev twine check dist/*
 
     - name: Generate release notes
       if: env.TAG != ''
