@@ -8,3 +8,10 @@ updates:
   schedule:
     interval: "weekly"
 
+# Workflow action versions rot silently otherwise: checkout and setup-python had
+# both fallen four major versions behind before anyone noticed.
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+
