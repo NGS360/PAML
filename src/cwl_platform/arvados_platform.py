@@ -1051,7 +1051,11 @@ class ArvadosPlatform(Platform):
         :param project: Project to submit the task to
         :param workflow: Workflow to submit
         :param parameters: Parameters for the workflow
-        :param executing_settings: {use_spot_instance: True/False}
+        :param execution_settings: Optional dict of execution hints. Reads
+            use_spot_instance (default True), which selects
+            --enable-preemptible or --disable-preemptible, and priority
+            (default 500, clamped to 500 if outside 0-1000). Other keys are
+            ignored.
         :return: Task object or None
         '''
         with tempfile.NamedTemporaryFile() as parameter_file:

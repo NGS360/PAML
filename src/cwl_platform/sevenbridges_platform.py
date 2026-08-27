@@ -777,7 +777,10 @@ class SevenBridgesPlatform(Platform):
         :param project: Project to submit the task to
         :param workflow: Workflow to submit
         :param parameters: Parameters for the workflow
-        :param executing_settings: {use_spot_instance: True/False}
+        :param execution_settings: Optional dict of execution hints. Reads
+            use_spot_instance (default True), which sets the task's
+            interruptible flag. Other keys are ignored; use_elastic_disk and
+            use_memoization are always enabled.
         :return: Task object or None
         '''
         def set_file_metadata(file, metadata):
