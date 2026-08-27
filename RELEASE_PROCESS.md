@@ -8,6 +8,8 @@ diverged from it.
 
 Before starting a release, ensure:
 
+- [uv](https://docs.astral.sh/uv/) installed. It manages the environment for
+  every `make` target and for the test run inside `release.sh`
 - All tests pass: `make test`
 - Working directory is clean: `git status`
 - On the main branch with latest changes: `git pull origin main`
@@ -116,7 +118,7 @@ The `release.sh` script performs these checks:
 - ✓ Verifies you're on the `main` branch
 - ✓ Checks for uncommitted changes
 - ✓ Confirms tag doesn't already exist (local and remote)
-- ✓ Offers to run tests before releasing (via `PYTHONPATH=src pytest`, matching CI)
+- ✓ Offers to run tests before releasing (via `uv run pytest`, matching CI)
 - ✓ Ensures local branch is up-to-date with remote
 - ✓ Checks GitHub Actions CI status for `HEAD` before tagging (requires `gh`)
 - ✓ Creates `CHANGELOG.md` if missing

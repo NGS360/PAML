@@ -13,10 +13,45 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dynamic = ["dependencies"]
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+# Published as the package's install_requires, so these use lower bounds (the
+# version we test against) plus an upper bound at the next incompatible release.
+# Never exact '==' pins, which would force version conflicts on anything that
+# depends on cwl_platform.
+dependencies = [
+    "chardet>=5.2.0,<6.0",
+    "smart_open>=7.1.0,<8.0",
+    # arvados-python-client tracks the Arvados API version and can break between
+    # minor releases, so it is bounded more tightly than the others.
+    "arvados-python-client>=3.2.1,<3.3.0",
+    "sevenbridges-python>=2.11.2,<3.0",
+]
+
+# Development dependencies (PEP 735). Not published as package metadata, so they
+# are bounded tightly to keep local and CI runs reproducible. Exact versions come
+# from uv.lock; these bounds express intent.
+[dependency-groups]
+dev = [
+    # Used by the release workflow to validate built artifacts before publishing.
+    "twine>=7.0.0,<8.0",
+    # Lower bound is a security floor, not just a tested version: pytest through
+    # 9.0.2 has predictable /tmp/pytest-of-{user} handling (CVE-2025-71176),
+    # fixed in 9.0.3.
+    "pytest>=9.0.3,<10.0",
+    "pytest-cov>=7.1.0,<8.0",
+    # Invoked directly by the test workflow ('coverage run' / 'coverage report'),
+    # so it is declared rather than relied on transitively via pytest-cov.
+    "coverage>=7.13.5,<8.0",
+    "mock>=5.2.0,<6.0",
+    # Imported directly by scripts/release_notes.py and prepare_changelog.py.
+    # Previously arrived transitively via 'build', which is no longer needed now
+    # that 'uv build' does the packaging.
+    "packaging>=26.0,<27.0",
+    # Bounded to a single minor release: pylint introduces new checks in minor
+    # versions (R0917 arrived in 3.3, for example), which turns 'make lint' red
+    # without any code change. Bump this deliberately, not incidentally.
+    "pylint>=3.3.7,<3.4",
+]
 
 [project.urls]
 Homepage = "https://github.com/NGS360/PAML"
