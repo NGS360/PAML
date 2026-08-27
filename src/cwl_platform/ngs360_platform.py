@@ -602,7 +602,11 @@ class NGS360Platform(Platform):
         :param project: Project to submit the task to
         :param workflow: Workflow to submit (ID, URL or file path to the workflow)
         :param parameters: Parameters for the workflow
-        :param execution_settings: Not used in NGS360 WES API (yet)
+        :param execution_settings: Optional dict of WES workflow engine
+            parameters. Only networkingMode, configurationName, cacheId,
+            workflowVersionName, storageType and storageCapacity are forwarded;
+            every other key is ignored, including the use_spot_instance that
+            the Platform base class documents.
         :return: WESTask object or None
         """
         if not workflow:
