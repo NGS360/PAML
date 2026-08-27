@@ -18,4 +18,4 @@ mock>=5.2.0,<6.0
 # Bounded to a single minor release: pylint introduces new checks in minor
 # versions (R0917 arrived in 3.3, for example), which turns 'make lint' red
 # without any code change. Bump this deliberately, not incidentally.
-pylint>=3.3.7,<3.4
+pylint>=4.0.7,<4.1
