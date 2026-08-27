@@ -2,9 +2,14 @@
 # package metadata, so they are bounded tightly to keep local and CI runs
 # reproducible. Lower bounds are the versions currently tested against.
 build>=1.2.2,<2.0
+# Used by the release workflow to validate built artifacts before publishing.
+twine>=7.0.0,<8.0
 
 pytest>=8.3.5,<9.0
 pytest-cov>=7.1.0,<8.0
+# Invoked directly by the test workflow ('coverage run' / 'coverage report'),
+# so it is declared rather than relied on transitively via pytest-cov.
+coverage>=7.13.5,<8.0
 mock>=5.2.0,<6.0
 
 # Bounded to a single minor release: pylint introduces new checks in minor

@@ -22,12 +22,15 @@ jobs:
       with:
         python-version: "3.12"
 
-    - name: Install pypa/build
+    # Only build and twine are needed here, but requirements-dev.txt supplies
+    # their version bounds so the pins live in exactly one place.
+    - name: Install build tooling
       run: >-
         python3 -m
         pip install
         build
         twine
+        --constraint requirements-dev.txt
         --user
 
     - name: Build a binary wheel and a source tarball
