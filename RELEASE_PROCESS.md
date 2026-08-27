@@ -1,25 +1,31 @@
 # Release Process
 
-This follows the guidance of [Python Package Template](https://github.com/allenai/python-package-template)
+The scripts in `scripts/` were originally based on [Python Package
+Template](https://github.com/allenai/python-package-template) and have since
+diverged from it.
 
 ## Prerequisites
 
 Before starting a release, ensure:
 
-- All tests pass: `pytest`
+- All tests pass: `make test`
 - Working directory is clean: `git status`
 - On the main branch with latest changes: `git pull origin main`
+- The changes you are releasing are already pushed **and CI has finished on
+  them**. `release.sh` reads the result, and stops if there is nothing to read
+- GitHub CLI installed and authenticated: `gh auth status`. This is what the CI
+  check uses; without it the script can only ask you to confirm blind
 - CHANGELOG.md exists (will be auto-created if missing)
 
 ## Quick Release
 
 1. **Bump version** in `pyproject.toml`
 
-   Update the version number (e.g., `0.5.1` → `0.5.2`):
+   Update the version number (e.g., `0.5.3` → `0.5.4`):
    ```toml
    [project]
    name = "cwl_platform"
-   version = "0.5.2"  # Update this line
+   version = "0.5.4"  # Update this line
    ```
 
 2. **Run the release script:**
@@ -30,12 +36,12 @@ Before starting a release, ensure:
    The script will:
    - Validate your environment (branch, uncommitted changes, etc.)
    - Optionally run tests
-   - Check that CI is green for the commit being released
+   - Check that CI is green for the commit you are releasing from
    - Generate CHANGELOG entries from git commits
    - Pause for you to review/edit CHANGELOG.md
    - Verify release notes can be generated (before any tag is created)
    - Commit version and CHANGELOG changes
-   - Create and push a git tag (e.g., `v0.5.2`)
+   - Create and push a git tag (e.g., `v0.5.4`)
    - Trigger GitHub Actions to build the package and open a draft release
 
 3. **Finalize on GitHub:**
@@ -61,11 +67,11 @@ fixing `main` is enough:
 2. Delete the draft release if one was created, since `gh release create` will
    not overwrite an existing release:
    ```bash
-   gh release delete v0.5.2 --yes
+   gh release delete v0.5.4 --yes
    ```
 3. Re-run the build for that tag, from the Actions tab or the CLI:
    ```bash
-   gh workflow run release.yml -f tag=v0.5.2
+   gh workflow run release.yml -f tag=v0.5.4
    ```
 
 **If the tagged content was at fault** — a wrong version number, a malformed
@@ -99,7 +105,7 @@ To retract a published release:
    latest, and describe the problem in its release notes
 2. **Leave the tag in place.** Anyone who pinned that version already resolved
    it, and deleting or moving a published tag breaks their installs
-3. **Release a new patch version** with the fix (e.g., `0.5.3`) and direct
+3. **Release a new patch version** with the fix (e.g., `0.5.5`) and direct
    people to it
 
 ## Release Script Validations
@@ -112,13 +118,19 @@ The `release.sh` script performs these checks:
 - ✓ Confirms tag doesn't already exist (local and remote)
 - ✓ Offers to run tests before releasing (via `PYTHONPATH=src pytest`, matching CI)
 - ✓ Ensures local branch is up-to-date with remote
-- ✓ Checks GitHub Actions CI status for the commit being released (requires `gh`)
+- ✓ Checks GitHub Actions CI status for `HEAD` before tagging (requires `gh`)
 - ✓ Creates `CHANGELOG.md` if missing
 - ✓ Validates that release notes can be generated **before** creating the tag
 
 The release-notes validation matters because the same generation step runs in
 GitHub Actions *after* the tag is pushed. Catching a malformed CHANGELOG locally
 avoids having to delete an already-published tag.
+
+Note what the CI check does and does not cover. It reads the result for the
+commit you are releasing *from*. The version-bump commit that the tag actually
+lands on is created afterwards, so its own CI run is still in flight when the tag
+is pushed — it changes only `pyproject.toml` and `CHANGELOG.md`, but the gate is
+not a guarantee about the tagged commit itself.
 
 ## Version Numbering
 
