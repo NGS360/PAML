@@ -8,7 +8,7 @@ twine>=7.0.0,<8.0
 # Lower bound is a security floor, not just a tested version: pytest through
 # 9.0.2 has predictable /tmp/pytest-of-{user} handling (CVE-2025-71176), fixed
 # in 9.0.3.
-pytest>=9.0.3,<10.0
+pytest>=9.1.1,<10.0
 pytest-cov>=7.1.0,<8.0
 # Invoked directly by the test workflow ('coverage run' / 'coverage report'),
 # so it is declared rather than relied on transitively via pytest-cov.
