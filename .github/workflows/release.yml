@@ -25,7 +25,7 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
       with:
         # A manual run builds the tag given as input; a tag push builds itself.
         ref: ${{ inputs.tag || github.ref }}
@@ -34,7 +34,7 @@ jobs:
         # section of the release notes only ever contains the version bump.
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v7
       with:
         python-version: "3.12"
 
