@@ -7,13 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## [v0.5.3](https://github.com/NGS360/PAML.git/releases/tag/v0.5.3) - 2026-07-27
+## [v0.5.3](https://github.com/NGS360/PAML/releases/tag/v0.5.3) - 2026-07-27
 
 ### Changed
 
 - Merge pull request #128 from NGS360/bugfix/sbg_compare_platform_object_directory
 
-## [v0.5.2](https://github.com/NGS360/PAML.git/releases/tag/v0.5.2) - 2026-07-27
+## [v0.5.2](https://github.com/NGS360/PAML/releases/tag/v0.5.2) - 2026-07-27
 
 ### Changed
 
@@ -22,14 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Merge pull request #124 from NGS360/claude-improve-release-process
 
 
-## [v0.5.1](https://github.com/NGS360/PAML.git/releases/tag/v0.5.1) - 2026-07-03
+## [v0.5.1](https://github.com/NGS360/PAML/releases/tag/v0.5.1) - 2026-07-03
 
 ### Changed
 
 - Merge pull request #123 from NGS360/bugfix/get_tasks_by_name
 
 
-## [v0.5](https://github.com/NGS360/PAML.git/releases/tag/v0.5) - 2026-07-01
+## [v0.5](https://github.com/NGS360/PAML/releases/tag/v0.5) - 2026-07-01
 
 ### Added
 
@@ -53,20 +53,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `_list_files_in_folder()` when path resolves to root in SevenBridges (PR #116)
 - Check if username/password is not None before using for credentials (PR #114)
 
-## [v0.4](https://github.com/NGS360/PAML.git/releases/tag/v0.4) - 2026-04-10
+## [v0.4](https://github.com/NGS360/PAML/releases/tag/v0.4) - 2026-04-10
 
 ### Added
 
 - get_tasks_by_name now supports filtering tasks by workflow
 
-## [v0.3.4](https://github.com/NGS360/PAML.git/releases/tag/v0.3.4) - 2025-11-19
+## [v0.3.4](https://github.com/NGS360/PAML/releases/tag/v0.3.4) - 2025-11-19
 
 ### Fixed
 
 - Add check for container_uuid when called get_tasks_by_name.
 - Fix copy_folder to handle directories better in Arvados and only copy the specified folder instead of the whole collection.
 
-## [v0.3.3](https://github.com/NGS360/PAML.git/releases/tag/v0.3.3) - 2025-10-28
+## [v0.3.3](https://github.com/NGS360/PAML/releases/tag/v0.3.3) - 2025-10-28
 
 ### Fixed
 
@@ -74,13 +74,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix incorrect type hint for Arvados in get_task_by_name (PR #96)
 - Fix get_task_state for Arvados not properly checking container request status (PR #97)
 
-## [v0.3.2](https://github.com/NGS360/PAML.git/releases/tag/v0.3.2) - 2025-07-12
+## [v0.3.2](https://github.com/NGS360/PAML/releases/tag/v0.3.2) - 2025-07-12
 
 ### Fixed
 
 - ArvadosPlatform::get_tasks_by_name was not properly handling list of tasks provided
 
-## [v0.3.1](https://github.com/NGS360/PAML.git/releases/tag/v0.3.1) - 2025-06-09
+## [v0.3.1](https://github.com/NGS360/PAML/releases/tag/v0.3.1) - 2025-06-09
 
 ### Added
 
@@ -90,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update Arvados Python Client requirement to use >=3.0.0 and <3.2.0
 
-## [v0.3](https://github.com/NGS360/PAML.git/releases/tag/v0.3) - 2025-06-02
+## [v0.3](https://github.com/NGS360/PAML/releases/tag/v0.3) - 2025-06-02
 
 ### Added
 
@@ -105,7 +105,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update get_task_input to handle list of files
 - Resolve failing SBG integration test
 
-## [v0.2.5](https://github.com/NGS360/PAML.git/releases/tag/v0.2.5) - 2025-03-11
+## [v0.2.5](https://github.com/NGS360/PAML/releases/tag/v0.2.5) - 2025-03-11
 
 ### Added
 
@@ -125,31 +125,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed get_user method to ignore case sensitivity
 
-## [v0.2.4](https://github.com/NGS360/PAML.git/releases/tag/v0.2.4) - 2025-02-14
+## [v0.2.4](https://github.com/NGS360/PAML/releases/tag/v0.2.4) - 2025-02-14
 
 - Fix get_task_output for optional fields when queried in Arvados
 
-## [v0.2.3](https://github.com/NGS360/PAML.git/releases/tag/v0.2.3) - 2025-02-12
+## [v0.2.3](https://github.com/NGS360/PAML/releases/tag/v0.2.3) - 2025-02-12
 
 - Fix removal of collection.all_files() from Arvados Python SDK.
 
-## [v0.2.2](https://github.com/NGS360/PAML.git/releases/tag/v0.2.2) - 2025-01-27
+## [v0.2.2](https://github.com/NGS360/PAML/releases/tag/v0.2.2) - 2025-01-27
 
 - Downgraded support for arvados-python to 2.7.4
 
-## [v0.3-rc3](https://github.com/NGS360/PAML.git/releases/tag/v0.3-rc3) - 2024-12-16
+## [v0.3-rc3](https://github.com/NGS360/PAML/releases/tag/v0.3-rc3) - 2024-12-16
 
 ### Changed
 
 - Update support Python version >= 3.9
 
-## [v0.3-rc2](https://github.com/NGS360/PAML.git/releases/tag/v0.3-rc2) - 2024-12-16
+## [v0.3-rc2](https://github.com/NGS360/PAML/releases/tag/v0.3-rc2) - 2024-12-16
 
 ### Changed
 
 - Update support Python version >= 3.11
 
-## [v0.3-rc1](https://github.com/NGS360/PAML.git/releases/tag/v0.3-rc1) - 2024-12-16
+## [v0.3-rc1](https://github.com/NGS360/PAML/releases/tag/v0.3-rc1) - 2024-12-16
 
 ### Added
 
