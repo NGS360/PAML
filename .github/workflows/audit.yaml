@@ -1,4 +1,4 @@
-# Scans the declared dependencies for known vulnerabilities and fails if any are
+# Scans the locked dependencies for known vulnerabilities and fails if any are
 # found. Dependabot (see .github/dependabot.yml) proposes upgrades but does not
 # block a merge, so this is what actually gates.
 
@@ -19,6 +19,9 @@ on:
 permissions:
   contents: read
 
+env:
+  UV_FROZEN: "1"
+
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -26,13 +29,16 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v7
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10
       with:
-        python-version: "3.12"
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
 
-    - name: Install pip-audit
-      run: python3 -m pip install pip-audit --user
-
-    - name: Audit declared dependencies
-      run: python3 -m pip_audit -r requirements.txt -r requirements-dev.txt
+    # Auditing the export rather than the manifest means the exact pinned
+    # versions are checked, not whatever the declared ranges happen to allow.
+    - name: Audit locked dependencies
+      run: |
+        uv export --frozen --all-groups --no-emit-project --no-hashes \
+          -o "${{ runner.temp }}/requirements-audit.txt"
+        uvx pip-audit -r "${{ runner.temp }}/requirements-audit.txt"

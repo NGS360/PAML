@@ -33,27 +33,20 @@ jobs:
         # which exist in the default shallow clone. Without this the "Commits"
         # section of the release notes only ever contains the version bump.
         fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v7
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10
       with:
-        python-version: "3.12"
-
-    # Only build and twine are needed here, but requirements-dev.txt supplies
-    # their version bounds so the pins live in exactly one place.
-    - name: Install build tooling
-      run: >-
-        python3 -m
-        pip install
-        build
-        twine
-        --constraint requirements-dev.txt
-        --user
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
 
     - name: Build a binary wheel and a source tarball
-      run: python3 -m build
+      run: uv build --python 3.12
 
+    # --only-group installs the dev group without the project or its runtime
+    # dependencies, which would otherwise drag in pycurl and require libcurl
+    # headers on this runner. Versions still come from uv.lock.
     - name: Validate the built artifacts
-      run: python3 -m twine check dist/*
+      run: uv run --only-group dev twine check dist/*
 
     # Resolves to the dispatch input, else the pushed tag, else empty. An empty
     # TAG means this run only validates the build, so no release is created.
@@ -75,7 +68,7 @@ jobs:
     - name: Generate release notes
       if: env.TAG != ''
       run: |
-        python scripts/release_notes.py > ${{ github.workspace }}-RELEASE_NOTES.md
+        uv run --only-group dev python scripts/release_notes.py > ${{ github.workspace }}-RELEASE_NOTES.md
 
     - name: Create Release
       if: env.TAG != ''

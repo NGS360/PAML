@@ -64,9 +64,9 @@ if compgen -G "tests/test_*.py" > /dev/null || compgen -G "test_*.py" > /dev/nul
         warning "Skipping tests"
     else
         echo "Running tests..."
-        # Match the invocation used by 'make test' and CI so the working tree is
-        # tested rather than whatever version happens to be installed.
-        if ! PYTHONPATH=src pytest; then
+        # Run through uv so the versions match uv.lock and CI, rather than
+        # whatever happens to be on PATH.
+        if ! uv run pytest; then
             error "Tests failed. Fix tests before releasing."
         fi
         success "Tests passed ✓"
