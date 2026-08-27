@@ -48,20 +48,36 @@ Before starting a release, ensure:
 
 ### Failed Release Recovery
 
-If the GitHub Actions workflow fails after the tag is pushed:
+If the GitHub Actions workflow fails after the tag is pushed, re-run the build
+against the existing tag rather than deleting it. Which path you take depends on
+where the fault was.
 
-1. **Delete the failed tag:**
+**If the workflow or its tooling was at fault** — a missing permission, a broken
+step, a dependency that would not install — the tagged code is fine. A manual run
+reads the workflow definition from `main` but builds the code from the tag, so
+fixing `main` is enough:
+
+1. Fix the workflow and merge it to `main`
+2. Delete the draft release if one was created, since `gh release create` will
+   not overwrite an existing release:
    ```bash
-   TAG="v0.5.2"  # Replace with your version
-   git tag -d $TAG              # Delete locally
-   git push --delete origin $TAG  # Delete from GitHub
+   gh release delete v0.5.2 --yes
+   ```
+3. Re-run the build for that tag, from the Actions tab or the CLI:
+   ```bash
+   gh workflow run release.yml -f tag=v0.5.2
    ```
 
-2. **Delete the draft release on GitHub** (if one was created):
-   - Go to https://github.com/NGS360/PAML/releases
-   - Find the draft release and delete it
+**If the tagged content was at fault** — a wrong version number, a malformed
+CHANGELOG, a bug that should not ship — then the tag points at something you do
+not want to release. Do not move the tag; release a new patch version instead,
+starting from the top of this document.
 
-3. **Fix the issue**, then repeat the release steps above
+Avoid deleting a tag once it has been pushed. Anyone who already installed that
+version resolved it to a specific commit, and recreating the tag hands them
+different code under the same name. `release.sh` now validates the CHANGELOG
+before it creates the tag, so the most common cause of this failure is caught
+while recovery is still free.
 
 ### Editing CHANGELOG Before Release
 
