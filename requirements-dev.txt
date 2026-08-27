@@ -1,7 +1,7 @@
 # Development dependencies. Unlike requirements.txt, these are not published as
 # package metadata, so they are bounded tightly to keep local and CI runs
 # reproducible. Lower bounds are the versions currently tested against.
-build>=1.2.2,<2.0
+build>=1.5.0,<2.0
 # Used by the release workflow to validate built artifacts before publishing.
 twine>=7.0.0,<8.0
 
