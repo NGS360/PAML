@@ -1,6 +1,9 @@
 [project]
 name = "cwl_platform"
-version = "0.5.3"
+# Derived from the git tag by hatch-vcs, so the tag is the single source of
+# truth and there is no version to hand-edit. Between tags this resolves to a
+# .devN version; on a tag it resolves to the tag itself.
+dynamic = ["version"]
 authors = [
   { name="Ryan Golhar", email="ngsbioinformatics@gmail.com" }
 ]
@@ -58,8 +61,27 @@ Homepage = "https://github.com/NGS360/PAML"
 Issues = "https://github.com/NGS360/PAML/issues"
 
 [build-system]
-requires = ["setuptools >= 82.0.1"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cwl_platform"]
+
+# Hatchling would otherwise sdist everything git does not ignore, which pulls in
+# .claude/, .github/ and the generated htmlcov/ report. Keep this to the sources
+# and packaging files, matching what the previous setuptools build shipped.
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/cwl_platform/",
+    "tests/",
+    "pyproject.toml",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+]
 
 # Pylint configuration lives here rather than in the 'make lint' command line so
 # that local runs and CI cannot drift apart.
