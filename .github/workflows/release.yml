@@ -34,7 +34,7 @@ jobs:
         # section of the release notes only ever contains the version bump.
         fetch-depth: 0
     - name: Install uv
-      uses: astral-sh/setup-uv@v10
+      uses: astral-sh/setup-uv@v10.0.1
       with:
         enable-cache: true
         cache-dependency-glob: "uv.lock"
