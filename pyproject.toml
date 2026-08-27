@@ -26,3 +26,35 @@ Issues = "https://github.com/NGS360/PAML/issues"
 requires = ["setuptools >= 82.0.1"]
 build-backend = "setuptools.build_meta"
 
+# Pylint configuration lives here rather than in the 'make lint' command line so
+# that local runs and CI cannot drift apart.
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.similarities]
+ignore-imports = true
+
+[tool.pylint."messages control"]
+disable = [
+    # Accepted structural debt. The platform adapters are deliberately large
+    # classes with wide signatures because they mirror the upstream SDK surfaces
+    # (Arvados, SevenBridges, GA4GH WES). Splitting them to satisfy these limits
+    # would fragment the API without making it clearer. Revisit if a module is
+    # refactored for other reasons.
+    "too-many-arguments",
+    "too-many-positional-arguments",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-return-statements",
+    "too-many-nested-blocks",
+    "too-many-public-methods",
+    "too-many-instance-attributes",
+    "too-few-public-methods",
+    "too-many-lines",
+    # Every platform implements the same Platform method surface, so
+    # near-identical blocks across adapters are expected by design.
+    "duplicate-code",
+    # Open work is tracked in GitHub issues, not enforced by the linter.
+    "fixme",
+]
+
