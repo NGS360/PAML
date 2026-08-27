@@ -567,8 +567,9 @@ class SevenBridgesPlatform(Platform):
         task_cost = 0.0
         try:
             task_cost = task.price.amount
-        except Exception:
-            pass
+        except (AttributeError, SbgError) as err:
+            # price is absent on tasks that have not been billed yet.
+            self.logger.debug("Could not determine cost for task: %s", err)
         return task_cost
 
     def get_task_input(self, task: sevenbridges.Task, input_name):
@@ -921,7 +922,11 @@ class SevenBridgesPlatform(Platform):
                 'last_name': user.last_name,
                 'email': user.email,
             }
-        except Exception:
+        # Deliberately broad: the documented contract is to return None whenever
+        # the user cannot be retrieved, and the SDK surfaces auth, network and
+        # TLS failures as unrelated exception types from deep in its HTTP stack.
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            self.logger.debug("Could not retrieve current user: %s", err)
             return None
 
     def add_user_to_project(self, platform_user, project, permission):

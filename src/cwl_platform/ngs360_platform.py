@@ -657,7 +657,8 @@ class NGS360Platform(Platform):
             ),
         }
         # AWS Omics can't handle inputs greater than 50,000 bytes.
-        with open(f"{project['project_id']}-{name}.parameters.json", mode="w") as f:
+        with open(f"{project['project_id']}-{name}.parameters.json", mode="w",
+                  encoding="utf-8") as f:
             json.dump(parameters, f, indent=4)
         try:
             response = self._make_request("POST", "runs", data=data, files=files)
@@ -673,8 +674,10 @@ class NGS360Platform(Platform):
             return task
         except requests.RequestException as e:
             try:
+                # e.response is None when the request never got a reply, and
+                # .json() raises when the body is not a JSON object.
                 error_details = e.response.json().get('msg')
-            except:
+            except (AttributeError, ValueError):
                 error_details = str(e)
             self.logger.error("Failed to submit task: %s", error_details)
             return None
