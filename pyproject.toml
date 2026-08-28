@@ -50,9 +50,11 @@ dev = [
     # Previously arrived transitively via 'build', which is no longer needed now
     # that 'uv build' does the packaging.
     "packaging>=26.0,<27.0",
-    # Bounded to a single minor release: pylint introduces new checks in minor
-    # versions (R0917 arrived in 3.3, for example), which turns 'make lint' red
-    # without any code change. Bump this deliberately, not incidentally.
+    # The exact version comes from uv.lock; this bound is only a coarse guard.
+    # pylint introduces new checks in minor releases (R0917 arrived in 3.3),
+    # which can turn 'make lint' red with no code change, so an upgrade should
+    # arrive as a reviewed Dependabot pull request rather than an incidental
+    # re-resolve.
     "pylint>=3.3.7,<4.1",
 ]
 
