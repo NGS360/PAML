@@ -5,6 +5,7 @@ Prepares markdown release notes for GitHub releases.
 """
 
 import os
+import subprocess
 from typing import List, Optional
 
 import packaging.version
@@ -51,17 +52,41 @@ def get_change_log_notes() -> str:
     return "## What's new\n\n" + "".join(current_section_notes).strip() + "\n"
 
 
+def git(*args: str) -> str:
+    '''
+    Run a git command and return its stdout.
+
+    Unlike os.popen this captures stderr rather than letting it leak to the
+    terminal, and raises on failure instead of quietly returning an empty
+    string, so a broken command cannot pass for an empty result.
+    '''
+    result = subprocess.run(
+        ["git", *args], capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"git {' '.join(args)} failed ({result.returncode}): "
+            f"{result.stderr.strip()}"
+        )
+    return result.stdout
+
+
+def rev_exists(ref: str) -> bool:
+    ''' Whether a git revision resolves in this repository. '''
+    return subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", ref],
+        capture_output=True, check=False
+    ).returncode == 0
+
+
 def get_commit_history() -> str:
     '''
     get git commit history
     '''
     new_version = packaging.version.parse(TAG)
 
-    # Pull all tags.
-    os.popen("git fetch --tags")
-
     # Get all tags sorted by version, latest first.
-    all_tags = os.popen("git tag -l --sort=-version:refname 'v*'").read().split("\n")
+    all_tags = git("tag", "-l", "--sort=-version:refname", "v*").split("\n")
 
     # Out of `all_tags`, find the latest previous version so that we can collect all
     # commits between that version and the new version we're about to publish.
@@ -76,10 +101,15 @@ def get_commit_history() -> str:
         if version < new_version:
             last_tag = tag
             break
+    # release.sh validates these notes before creating the tag, so TAG may not
+    # resolve yet. HEAD is the commit that tag will point at, which makes the
+    # preview accurate instead of making git complain about an unknown revision.
+    end = TAG if rev_exists(TAG) else "HEAD"
+
     if last_tag is not None:
-        commits = os.popen(f"git log {last_tag}..{TAG} --oneline --first-parent").read()
+        commits = git("log", f"{last_tag}..{end}", "--oneline", "--first-parent")
     else:
-        commits = os.popen("git log --oneline --first-parent").read()
+        commits = git("log", "--oneline", "--first-parent")
     return "## Commits\n\n" + commits
 
 
