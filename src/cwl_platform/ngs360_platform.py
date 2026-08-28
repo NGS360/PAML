@@ -602,7 +602,11 @@ class NGS360Platform(Platform):
         :param project: Project to submit the task to
         :param workflow: Workflow to submit (ID, URL or file path to the workflow)
         :param parameters: Parameters for the workflow
-        :param execution_settings: Not used in NGS360 WES API (yet)
+        :param execution_settings: Optional dict of WES workflow engine
+            parameters. Only networkingMode, configurationName, cacheId,
+            workflowVersionName, storageType and storageCapacity are forwarded;
+            every other key is ignored, including the use_spot_instance that
+            the Platform base class documents.
         :return: WESTask object or None
         """
         if not workflow:
@@ -656,10 +660,12 @@ class NGS360Platform(Platform):
                 workflow_engine_parameters
             ),
         }
-        # AWS Omics can't handle inputs greater than 50,000 bytes.
-        with open(f"{project['project_id']}-{name}.parameters.json", mode="w",
-                  encoding="utf-8") as f:
-            json.dump(parameters, f, indent=4)
+        # AWS Omics rejects inputs larger than 50,000 bytes (see issue #81), so
+        # record the payload size to make that diagnosable from the logs. No
+        # threshold is enforced here because this client talks to any WES
+        # backend, not only Omics-backed ones.
+        self.logger.debug("workflow_params is %d bytes",
+                          len(data["workflow_params"]))
         try:
             response = self._make_request("POST", "runs", data=data, files=files)
             run_id = response.get("run_id")

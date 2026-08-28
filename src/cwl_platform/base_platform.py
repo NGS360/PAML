@@ -232,7 +232,15 @@ class Platform(ABC):
         :param project: Project to submit the task to
         :param workflow: Workflow to submit
         :param parameters: Parameters for the workflow
-        :param executing_settings: {use_spot_instance: True/False}
+        :param execution_settings: Optional dict of platform-specific execution
+            hints. Keys a platform does not recognise are ignored, so a
+            cross-platform launcher can pass the union of what it needs. No key
+            is honoured by every platform - see each implementation for the ones
+            it reads:
+              * Arvados: use_spot_instance (default True), priority (default 500)
+              * SevenBridges: use_spot_instance (default True)
+              * NGS360: WES workflow engine parameters; use_spot_instance is
+                ignored
         :return: Task object or None
         '''
 
