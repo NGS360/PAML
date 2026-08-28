@@ -13,10 +13,11 @@ PAML(Platform API Middle-Layer) is an installable Python package to enable anyon
 
 ## Features
 
-Multiple Supports Platforms
+Multiple supported platforms
 
 - Arvados
 - SevenBridges
+- NGS360 (via the GA4GH WES API)
 
 ## Usage
 
