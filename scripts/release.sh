@@ -3,6 +3,11 @@
 # Configuration
 REPO=https://github.com/NGS360/PAML
 MAIN_BRANCH="main"
+# Every gh call is pinned to this with --repo. Without it gh infers the
+# repository from the git remotes, and in a clone that also has an 'upstream'
+# remote it resolves to the fork's parent instead - so CI lookups come back
+# empty and pull requests would be opened against the wrong repository.
+REPO_SLUG="${REPO#https://github.com/}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -121,10 +126,10 @@ if ! command -v gh > /dev/null 2>&1 || ! gh auth status > /dev/null 2>&1; then
     [[ ! $prompt =~ ^[Yy]$ ]] && error "Release cancelled. Install/authenticate 'gh', or verify CI manually."
 else
     echo "Checking CI status for $SHORT_SHA..."
-    RUN_COUNT=$(gh run list --commit "$SHA" --limit 50 --json status --jq 'length' 2>/dev/null || echo "0")
-    FAILED=$(gh run list --commit "$SHA" --limit 50 --json conclusion,workflowName \
+    RUN_COUNT=$(gh run list --repo "$REPO_SLUG" --commit "$SHA" --limit 50 --json status --jq 'length' 2>/dev/null || echo "0")
+    FAILED=$(gh run list --repo "$REPO_SLUG" --commit "$SHA" --limit 50 --json conclusion,workflowName \
         --jq '[.[] | select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out") | .workflowName] | unique | join(", ")' 2>/dev/null || echo "")
-    PENDING=$(gh run list --commit "$SHA" --limit 50 --json status,workflowName \
+    PENDING=$(gh run list --repo "$REPO_SLUG" --commit "$SHA" --limit 50 --json status,workflowName \
         --jq '[.[] | select(.status != "completed") | .workflowName] | unique | join(", ")' 2>/dev/null || echo "")
 
     if [[ "$RUN_COUNT" == "0" ]]; then
@@ -234,7 +239,7 @@ if [[ "$PHASE" == "changelog" ]]; then
     # Checked explicitly rather than left to 'set -e': the branch is already
     # pushed at this point, so a failure here needs a message that says so.
     echo "Opening pull request..."
-    if ! gh pr create --base "$MAIN_BRANCH" --head "$RELEASE_BRANCH" \
+    if ! gh pr create --repo "$REPO_SLUG" --base "$MAIN_BRANCH" --head "$RELEASE_BRANCH" \
         --title "Release v$TAG" \
         --body "CHANGELOG entry for v$TAG. Merging this creates the commit that will be tagged; re-run 'scripts/release.sh $TAG' afterwards to tag it."; then
         error "Could not open the pull request. $RELEASE_BRANCH is pushed, so open it manually and then re-run this script."
