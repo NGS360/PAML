@@ -2,6 +2,8 @@
 Test WES Platform implementation
 '''
 import json
+import os
+import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 import requests
@@ -179,6 +181,31 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertEqual(task.name, 'Test Task')
         self.assertEqual(task.state, 'Queued')
         self.assertEqual(task.inputs, workflow_parameters)
+
+    @patch('requests.request')
+    def test_submit_task_writes_no_files(self, mock_request):
+        '''
+        submit_task must not leave files behind in the working directory. It
+        used to dump the parameters to '<project>-<name>.parameters.json' for
+        debugging, which polluted the caller's cwd and this repository's root.
+        '''
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'run_id': 'test_run_id'}
+        mock_request.return_value = mock_response
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                self.platform.submit_task(
+                    name='Test Task',
+                    project={'project_id': "P-1234567", 'name': 'Test Project'},
+                    workflow='workflow_id',
+                    parameters={'input': 'value'}
+                )
+                self.assertEqual(sorted(os.listdir(tmpdir)), [])
+            finally:
+                os.chdir(cwd)
 
     @patch('requests.request')
     def test_submit_task_forwards_engine_parameters(self, mock_request):
