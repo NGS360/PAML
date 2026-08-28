@@ -9,24 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.6.0](https://github.com/NGS360/PAML/releases/tag/v0.6.0) - 2026-08-28
 
+### Added
+
+- `cwl_platform.__version__`, reporting the version of the installed package (PR #153)
+- `submit_task()` on NGS360 forwards `networkingMode` and `configurationName` as
+  WES workflow engine parameters, alongside the four it already forwarded (PR #129)
+
 ### Changed
 
-- Merge pull request #160 from NGS360/fix/release-script-repo
-- Merge pull request #151 from NGS360/dependabot/uv/smart-open-8.0.1
-- Merge pull request #159 from NGS360/fix/smart-open-api
-- Merge pull request #152 from NGS360/dependabot/uv/chardet-7.6.0
-- Merge pull request #150 from NGS360/dependabot/uv/pylint-4.0.7
-- Merge pull request #158 from NGS360/cicd/dependabot/collapse_prs
-- Merge pull request #157 from NGS360/docs/readme-features
-- Merge pull request #156 from NGS360/docs/readme-versioning
-- Merge pull request #155 from NGS360/chore/release-via-pull-request
-- Merge pull request #154 from NGS360/fix/no-parameters-file-side-effect
-- Merge pull request #153 from NGS360/chore/git-tag-versioning
-- Merge pull request #149 from NGS360/chore/migrate-to-uv
-- Merge pull request #143 from NGS360/chore/ci-hardening-public-repo
-- Merge pull request #142 from NGS360/docs/release-process-accuracy
-- Merge pull request #133 from NGS360/chore/harden-release-process
-- Merge pull request #129 from NGS360/feature/internal_sentieon
+- Support `smart_open` 8.x and `chardet` 7.x (PRs #151, #152)
+- Runtime dependencies now declare explicit floors and ceilings, where `chardet`
+  and `smart_open` previously had neither: `chardet>=5.2.0,<8.0`,
+  `smart_open>=7.1.0,<9.0`, `sevenbridges-python>=2.11.2,<3.0` (PRs #133, #151,
+  #152). An environment holding an older `chardet` or `smart_open` will no longer
+  satisfy the requirements.
+- `chardet` 7 ships compiled platform wheels rather than a pure-Python wheel, so
+  a platform without a prebuilt wheel now needs a compiler to install (PR #152)
+- The package version is derived from the git tag rather than declared in
+  `pyproject.toml`, and the build backend moved from setuptools to hatchling
+  (PR #153)
+- Dependencies are managed with `uv` and a committed `uv.lock`;
+  `requirements.txt` and `requirements-dev.txt` have been removed (PR #149)
+- Development and release tooling: quality gates that block on failure, a
+  dependency vulnerability audit, and a pull-request-based release flow
+  (PRs #133, #142, #143, #155, #160)
+
+### Fixed
+
+- `submit_task()` on NGS360 no longer writes a `<project>-<name>.parameters.json`
+  file into the caller's working directory (PR #154)
+- Arvados file copies call `smart_open.open()`; the `smart_open.smart_open()`
+  alias they previously used was removed in smart_open 8 and would have raised
+  `AttributeError` (PR #159)
+- `submit_task()` on NGS360 writes its request payload as UTF-8 rather than the
+  platform's locale encoding, and no longer swallows `KeyboardInterrupt` through
+  a bare `except` (PR #133)
+- `get_task_cost()` on SevenBridges logs why a cost could not be read instead of
+  silently returning 0.0 (PR #133)
+- `execution_settings` is documented accurately on every platform. It was
+  described as unused on NGS360 and as a lone `use_spot_instance` flag on the
+  base class, while Arvados also reads `priority` (PR #154)
 
 
 ## [v0.5.3](https://github.com/NGS360/PAML/releases/tag/v0.5.3) - 2026-07-27
