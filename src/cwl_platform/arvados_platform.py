@@ -392,7 +392,7 @@ class ArvadosPlatform(Platform):
         # If the file is in the keep collection
         if key in c:
             with c.open(key, "rb") as reader:
-                with smart_open.smart_open(
+                with smart_open.open(
                     f"s3://{bucket_name}/{prefix}/{key}", "wb"
                 ) as writer:
                     content = reader.read(128 * 1024)
