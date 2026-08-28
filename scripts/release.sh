@@ -162,60 +162,120 @@ EOF
     fi
 fi
 
+# Which half of the release is this? The CHANGELOG reaches main through a pull
+# request, because main does not accept direct pushes, so a release takes two
+# runs of this script: the first opens that PR, the second tags the merge commit
+# once it has landed.
+if git show "origin/$MAIN_BRANCH:CHANGELOG.md" 2>/dev/null | grep -q "^## \[v$TAG\]"; then
+    PHASE="tag"
+else
+    PHASE="changelog"
+fi
+
 echo ""
 echo "=== Release Summary ==="
 echo "Version: v$TAG"
 echo "Branch: $CURRENT_BRANCH"
 echo "Repository: $REPO"
+if [[ "$PHASE" == "changelog" ]]; then
+    echo "Step: 1 of 2 - open the CHANGELOG pull request"
+else
+    echo "Step: 2 of 2 - tag the merged release commit"
+fi
 echo ""
 
-read -p "Creating new release for v$TAG. Do you want to continue? [Y/n] " prompt
+if [[ "$PHASE" == "changelog" ]]; then
+    read -p "Prepare the CHANGELOG for v$TAG and open a pull request? [Y/n] " prompt
+    if [[ $prompt == "n" || $prompt == "N" || $prompt == "no" || $prompt == "No" ]]; then
+        echo "Cancelled"
+        exit 1
+    fi
 
-if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" || $prompt == "" ]]; then
+    RELEASE_BRANCH="release/v$TAG"
+    if git rev-parse --verify "$RELEASE_BRANCH" >/dev/null 2>&1; then
+        error "Branch $RELEASE_BRANCH already exists locally. Delete it or finish that release."
+    fi
+    if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
+        error "Branch $RELEASE_BRANCH already exists on the remote. Finish or delete that release."
+    fi
+
     echo ""
+    echo "Creating $RELEASE_BRANCH..."
+    git checkout -q -b "$RELEASE_BRANCH"
+
     echo "Preparing CHANGELOG..."
-    python3 scripts/prepare_changelog.py $REPO $TAG
+    python3 scripts/prepare_changelog.py "$REPO" "$TAG"
 
     echo ""
     warning "CHANGELOG has been updated. Please review and edit if needed."
     echo "Press Enter to continue after reviewing CHANGELOG.md, or Ctrl+C to cancel..."
     read
 
-    # Validate that release notes can be generated BEFORE creating the tag.
-    # The GitHub Actions workflow runs this same script on the pushed tag; if it
-    # fails there, recovery requires deleting an already-published tag.
+    # Validate that release notes can be generated before anything is pushed. The
+    # same generation step runs in GitHub Actions once the tag exists, where
+    # recovery would mean deleting an already-published tag.
     echo "Validating release notes for v$TAG..."
     if ! TAG="v$TAG" python3 scripts/release_notes.py > /dev/null; then
-        error "Could not generate release notes for v$TAG. Fix CHANGELOG.md and re-run (no tag was created)."
+        error "Could not generate release notes for v$TAG. Fix CHANGELOG.md and re-run."
     fi
     success "Release notes validated ✓"
 
-    echo ""
-    echo "Committing changes..."
+    echo "Committing CHANGELOG..."
     git add CHANGELOG.md
-    if git commit -m "Update CHANGELOG for v$TAG"; then
-        success "Changes committed ✓"
-    else
-        warning "No changes to commit (this is OK if the CHANGELOG was already updated)"
+    if ! git commit -q -m "Update CHANGELOG for v$TAG"; then
+        error "Nothing to commit. Does CHANGELOG.md already contain a v$TAG section?"
+    fi
+    success "Changes committed ✓"
+
+    echo "Pushing $RELEASE_BRANCH..."
+    git push -q -u origin "$RELEASE_BRANCH"
+    success "Branch pushed ✓"
+
+    # Checked explicitly rather than left to 'set -e': the branch is already
+    # pushed at this point, so a failure here needs a message that says so.
+    echo "Opening pull request..."
+    if ! gh pr create --base "$MAIN_BRANCH" --head "$RELEASE_BRANCH" \
+        --title "Release v$TAG" \
+        --body "CHANGELOG entry for v$TAG. Merging this creates the commit that will be tagged; re-run 'scripts/release.sh $TAG' afterwards to tag it."; then
+        error "Could not open the pull request. $RELEASE_BRANCH is pushed, so open it manually and then re-run this script."
     fi
 
-    echo "Pushing to remote..."
-    git push
-    success "Changes pushed ✓"
-
-    echo "Creating git tag v$TAG..."
-    git tag "v$TAG" -m "v$TAG"
-    success "Tag created ✓"
-
-    echo "Pushing tag to remote..."
-    git push origin "v$TAG"
-    success "Tag pushed ✓"
-
     echo ""
-    success "=== Release v$TAG initiated successfully! ==="
-    echo "GitHub Actions will now build and create a draft release."
-    echo "Visit: $REPO/releases to review and publish the release."
-else
+    success "=== Step 1 of 2 complete ==="
+    echo "Review and merge the pull request above, then run:"
+    echo "  git checkout $MAIN_BRANCH && git pull"
+    echo "  ./scripts/release.sh $TAG"
+    exit 0
+fi
+
+# PHASE=tag. The CHANGELOG for this version is already on main, so the only
+# remaining work is tagging the commit that carries it. Unlike the old flow, that
+# commit has been through CI as part of its pull request.
+if ! grep -q "^## \[v$TAG\]" CHANGELOG.md; then
+    error "CHANGELOG.md here has no v$TAG section even though $MAIN_BRANCH does. Run 'git pull'."
+fi
+
+echo "Validating release notes for v$TAG..."
+if ! TAG="v$TAG" python3 scripts/release_notes.py > /dev/null; then
+    error "Could not generate release notes for v$TAG. Fix CHANGELOG.md on $MAIN_BRANCH first."
+fi
+success "Release notes validated ✓"
+
+read -p "Tag v$TAG at $(git rev-parse --short HEAD) and push? [Y/n] " prompt
+if [[ $prompt == "n" || $prompt == "N" || $prompt == "no" || $prompt == "No" ]]; then
     echo "Cancelled"
     exit 1
 fi
+
+echo "Creating git tag v$TAG..."
+git tag "v$TAG" -m "v$TAG"
+success "Tag created ✓"
+
+echo "Pushing tag to remote..."
+git push origin "v$TAG"
+success "Tag pushed ✓"
+
+echo ""
+success "=== Release v$TAG initiated successfully! ==="
+echo "GitHub Actions will now build and create a draft release."
+echo "Visit: $REPO/releases to review and publish the release."

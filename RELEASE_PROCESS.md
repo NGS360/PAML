@@ -22,10 +22,12 @@ Before starting a release, ensure:
 ## Quick Release
 
 There is no version to edit. `hatch-vcs` derives the package version from the
-git tag, so the tag you create *is* the version — pass it to the release script
-and nothing else needs updating.
+git tag, so the tag you create *is* the version.
 
-1. **Run the release script** with the version you are releasing:
+`main` does not accept direct pushes, so the CHANGELOG reaches it through a pull
+request and a release takes **two runs** of the script.
+
+1. **Open the release pull request:**
    ```bash
    ./scripts/release.sh 0.5.4
    ```
@@ -34,19 +36,31 @@ and nothing else needs updating.
    `MAJOR.MINOR.PATCH`, optionally with `-alpha.N`, `-beta.N` or `-rc.N`; the
    script rejects anything else before touching git.
 
-   The script will:
+   This run will:
    - Validate the version format
    - Validate your environment (branch, uncommitted changes, etc.)
    - Optionally run tests
    - Check that CI is green for the commit you are releasing from
+   - Create a `release/v0.5.4` branch
    - Generate CHANGELOG entries from git commits
    - Pause for you to review/edit CHANGELOG.md
-   - Verify release notes can be generated (before any tag is created)
-   - Commit the CHANGELOG
-   - Create and push a git tag (e.g., `v0.5.4`)
-   - Trigger GitHub Actions to build the package and open a draft release
+   - Verify release notes can be generated
+   - Commit the CHANGELOG and open a pull request
 
-2. **Finalize on GitHub:**
+2. **Review and merge that pull request.** Its checks run like any other, so
+   the commit that gets tagged has been through CI.
+
+3. **Tag the merged commit** by running the same command again:
+   ```bash
+   git checkout main && git pull
+   ./scripts/release.sh 0.5.4
+   ```
+
+   The script notices that `main` already carries the `v0.5.4` CHANGELOG entry,
+   skips straight to tagging, and pushes the tag. That triggers GitHub Actions
+   to build the package and open a draft release.
+
+4. **Finalize on GitHub:**
    - Navigate to https://github.com/NGS360/PAML/releases
    - Review the draft release created by GitHub Actions
    - Verify release notes and artifacts
@@ -129,10 +143,11 @@ GitHub Actions *after* the tag is pushed. Catching a malformed CHANGELOG locally
 avoids having to delete an already-published tag.
 
 Note what the CI check does and does not cover. It reads the result for the
-commit you are releasing *from*. The CHANGELOG commit that the tag actually
-lands on is created afterwards, so its own CI run is still in flight when the tag
-is pushed — it changes only `CHANGELOG.md`, but the gate is not a guarantee
-about the tagged commit itself.
+commit you are releasing *from*, during step 1. The commit that actually gets
+tagged is the merge of the release pull request, and that pull request runs the
+same checks before it can be merged — so unlike the previous flow, where the tag
+landed on a commit pushed straight to `main` with its CI still in flight, the
+tagged commit has been through CI.
 
 ## Version Numbering
 
