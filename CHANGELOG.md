@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.6.0](https://github.com/NGS360/PAML/releases/tag/v0.6.0) - 2026-08-28
+
+### Changed
+
+- Merge pull request #160 from NGS360/fix/release-script-repo
+- Merge pull request #151 from NGS360/dependabot/uv/smart-open-8.0.1
+- Merge pull request #159 from NGS360/fix/smart-open-api
+- Merge pull request #152 from NGS360/dependabot/uv/chardet-7.6.0
+- Merge pull request #150 from NGS360/dependabot/uv/pylint-4.0.7
+- Merge pull request #158 from NGS360/cicd/dependabot/collapse_prs
+- Merge pull request #157 from NGS360/docs/readme-features
+- Merge pull request #156 from NGS360/docs/readme-versioning
+- Merge pull request #155 from NGS360/chore/release-via-pull-request
+- Merge pull request #154 from NGS360/fix/no-parameters-file-side-effect
+- Merge pull request #153 from NGS360/chore/git-tag-versioning
+- Merge pull request #149 from NGS360/chore/migrate-to-uv
+- Merge pull request #143 from NGS360/chore/ci-hardening-public-repo
+- Merge pull request #142 from NGS360/docs/release-process-accuracy
+- Merge pull request #133 from NGS360/chore/harden-release-process
+- Merge pull request #129 from NGS360/feature/internal_sentieon
+
+
 ## [v0.5.3](https://github.com/NGS360/PAML/releases/tag/v0.5.3) - 2026-07-27
 
 ### Changed
