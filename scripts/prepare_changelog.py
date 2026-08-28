@@ -1,38 +1,23 @@
 '''
 This script creates a CHANGELOG.md based on the git history from the last version tag.
 '''
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-import packaging.version
+import release_utils
 
 REPO = sys.argv[1]
 VERSION = sys.argv[2]
 
 
 def get_commit_messages(version):
-    '''Get commit messages between the last tag and HEAD.'''
-    new_version = packaging.version.parse(version)
+    '''
+    Get commit messages between the last tag and HEAD.
 
-    all_tags = os.popen("git tag -l --sort=-version:refname 'v*'").read().split("\n")
-
-    last_tag = None
-    for tag in all_tags:
-        if not tag.strip():
-            continue
-        v = packaging.version.parse(tag)
-        if new_version.pre is None and v.pre is not None:
-            continue
-        if v < new_version:
-            last_tag = tag
-            break
-
-    if last_tag is not None:
-        commits = os.popen(f"git log {last_tag}..HEAD --oneline --first-parent").read()
-    else:
-        commits = os.popen("git log --oneline --first-parent").read()
+    The endpoint is always HEAD: this runs before the release is tagged.
+    '''
+    commits = release_utils.commit_log(release_utils.previous_tag(version), "HEAD")
 
     lines = []
     for line in commits.strip().split("\n"):
