@@ -22,7 +22,7 @@ classifiers = [
 # Never exact '==' pins, which would force version conflicts on anything that
 # depends on cwl_platform.
 dependencies = [
-    "chardet>=5.2.0,<6.0",
+    "chardet>=5.2.0,<8.0",
     "smart_open>=7.1.0,<8.0",
     # arvados-python-client tracks the Arvados API version and can break between
     # minor releases, so it is bounded more tightly than the others.
