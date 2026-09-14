@@ -795,6 +795,71 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         # Verify empty list returned
         self.assertListEqual(result, [])
 
+    def test_get_tasks_by_name_filters_by_workflow(self):
+        '''
+        Two tasks share a name but ran different apps; only the one whose app
+        matches the requested workflow should be returned.
+        '''
+        task_name = "sampleA"
+        wes_app = "owner/proj/wes-alignment/2"
+        pdx_app = "owner/proj/dna-disambiguate/5"
+
+        wes_task = MagicMock(spec=sevenbridges.Task)
+        wes_task.name = task_name
+        wes_task.app = wes_app
+
+        pdx_task = MagicMock(spec=sevenbridges.Task)
+        pdx_task.name = task_name
+        pdx_task.app = pdx_app
+
+        mock_all = MagicMock()
+        mock_all.return_value = [pdx_task, wes_task]
+        self.platform.api.tasks.query.return_value.all = mock_all
+
+        result = self.platform.get_tasks_by_name(
+            "test_project", task_name, workflow=wes_app
+        )
+
+        self.assertEqual(result, [wes_task],
+                         "Only the task that ran the requested workflow should match")
+
+    def test_get_tasks_by_name_workflow_matches_across_revision(self):
+        '''
+        A task whose app carries a revision should match a workflow id given
+        without (or with a different) revision.
+        '''
+        task = MagicMock(spec=sevenbridges.Task)
+        task.name = "sampleA"
+        task.app = "owner/proj/wes-alignment/7"
+
+        self.platform.api.tasks.query.return_value.all = MagicMock(return_value=[task])
+
+        result = self.platform.get_tasks_by_name(
+            "test_project", "sampleA", workflow="owner/proj/wes-alignment"
+        )
+        self.assertEqual(result, [task])
+
+    def test_get_tasks_by_name_workflow_no_match(self):
+        ''' A task that ran a different workflow is excluded. '''
+        task = MagicMock(spec=sevenbridges.Task)
+        task.name = "sampleA"
+        task.app = "owner/proj/dna-disambiguate/1"
+
+        self.platform.api.tasks.query.return_value.all = MagicMock(return_value=[task])
+
+        result = self.platform.get_tasks_by_name(
+            "test_project", "sampleA", workflow="owner/proj/wes-alignment"
+        )
+        self.assertEqual(result, [])
+
+    def test_task_matches_workflow_unknown_app_not_excluded(self):
+        ''' If a task's app cannot be determined, it is not excluded. '''
+        task = MagicMock(spec=sevenbridges.Task)
+        task.app = None
+        self.assertTrue(
+            self.platform._task_matches_workflow(task, "owner/proj/wes-alignment")
+        )
+
     def test_get_task_input_non_file_obj(self):
         '''
         Test get_task_input method where the input is not a File object (e.g. string)

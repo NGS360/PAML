@@ -693,6 +693,29 @@ class SevenBridgesPlatform(Platform):
 
         return platform_object == input_to_compare
 
+    @staticmethod
+    def _strip_app_revision(app_id):
+        '''
+        Strip a trailing numeric revision from a SevenBridges app id.
+        App ids look like "owner/project/app-name" or "owner/project/app-name/3";
+        dropping the revision lets a task match its workflow across revisions.
+        '''
+        parts = str(app_id).split("/")
+        if len(parts) > 1 and parts[-1].isdigit():
+            parts = parts[:-1]
+        return "/".join(parts)
+
+    def _task_matches_workflow(self, task, workflow):
+        '''
+        Return True if the task ran the given workflow (app), comparing app ids
+        ignoring revision. If the task's app cannot be determined, do not exclude
+        it (return True) so this never removes a task we cannot positively rule out.
+        '''
+        task_app = getattr(task, "app", None)
+        if not task_app:
+            return True
+        return self._strip_app_revision(task_app) == self._strip_app_revision(workflow)
+
     def get_tasks_by_name(self,
                           project,
                           task_name:str=None,
@@ -705,6 +728,9 @@ class SevenBridgesPlatform(Platform):
         equivalency (eg for reuse).
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
+        :param workflow: The app/workflow the task must have run to match (if None,
+            match tasks of any workflow). Tasks whose app cannot be determined are
+            not excluded.
         :param inputs_to_compare: Inputs to compare to ensure task equivalency
         :param tasks: List of tasks to search in (if None, query all tasks in project)
         :return: List of tasks
@@ -715,6 +741,11 @@ class SevenBridgesPlatform(Platform):
             tasks = self.api.tasks.query(project=project).all()
 
         for task in tasks:
+            # Only reuse a task that ran the requested workflow. A same-named task
+            # from another pipeline (e.g. a PDX de-mouser's dna-disambiguate) is a
+            # different app and is skipped here.
+            if workflow is not None and not self._task_matches_workflow(task, workflow):
+                continue
             if inputs_to_compare is None:
                 if task_name is None or task.name == task_name:
                     matching_tasks.append(task)

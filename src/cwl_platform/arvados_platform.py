@@ -828,6 +828,10 @@ class ArvadosPlatform(Platform):
         :param project: The project to search
         :param task_name: The name of the process to search for
             (if None return all tasks)
+        :param workflow: The workflow the task must have run to match, as the
+            {'uuid': ...} dict passed to submit_task (or a bare uuid). If None,
+            match tasks of any workflow. Tasks whose source workflow cannot be
+            determined are not excluded.
         :param inputs_to_compare: Inputs to compare to ensure task equivalency
         :param tasks: List of tasks to search in
             (if None, query all tasks in project)
@@ -864,6 +868,13 @@ class ArvadosPlatform(Platform):
             if container_request['container_uuid'] is None:
                 continue
 
+            # Only reuse a task that ran the requested workflow, so a same-named
+            # task from another pipeline is not mistaken for this one.
+            if workflow is not None and not self._container_request_matches_workflow(
+                container_request, workflow
+            ):
+                continue
+
             # Get the container
             container = self.api.containers().get(
                 uuid=container_request['container_uuid']
@@ -893,6 +904,28 @@ class ArvadosPlatform(Platform):
                 matching_tasks.append(task)
 
         return matching_tasks
+
+    def _container_request_matches_workflow(self, container_request, workflow):
+        '''
+        Return True if the container request was launched from the given workflow.
+        arvados-cwl-runner records the source workflow uuid in the container
+        request's properties (template_uuid). If it cannot be determined, do not
+        exclude the task (return True) so this never removes a task we cannot
+        positively rule out.
+
+        :param container_request: The container request to check
+        :param workflow: The workflow {'uuid': ...} dict (or a bare uuid string)
+        :return: True if it matches or cannot be determined, False otherwise
+        '''
+        workflow_uuid = workflow.get('uuid') if isinstance(workflow, dict) else workflow
+        if not workflow_uuid:
+            return True
+        properties = container_request.get('properties') or {}
+        task_workflow_uuid = properties.get('template_uuid')
+        if not task_workflow_uuid:
+            # Source workflow unknown; do not exclude.
+            return True
+        return task_workflow_uuid == workflow_uuid
 
     def _get_task_inputs(self, container_request, container):
         """
