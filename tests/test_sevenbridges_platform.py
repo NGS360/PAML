@@ -823,10 +823,10 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.assertEqual(result, [wes_task],
                          "Only the task that ran the requested workflow should match")
 
-    def test_get_tasks_by_name_workflow_matches_across_revision(self):
+    def test_get_tasks_by_name_workflow_revision_sensitive(self):
         '''
-        A task whose app carries a revision should match a workflow id given
-        without (or with a different) revision.
+        A task run with a different revision of the same workflow must NOT be
+        reused, so an updated workflow re-runs instead of reusing an old result.
         '''
         task = MagicMock(spec=sevenbridges.Task)
         task.name = "sampleA"
@@ -834,10 +834,20 @@ class TestSevenBridgesPlaform(unittest.TestCase):
 
         self.platform.api.tasks.query.return_value.all = MagicMock(return_value=[task])
 
-        result = self.platform.get_tasks_by_name(
-            "test_project", "sampleA", workflow="owner/proj/wes-alignment"
+        # Newer revision requested -> old task excluded (re-run).
+        self.assertEqual(
+            self.platform.get_tasks_by_name(
+                "test_project", "sampleA", workflow="owner/proj/wes-alignment/8"
+            ),
+            [],
         )
-        self.assertEqual(result, [task])
+        # Same revision -> reused.
+        self.assertEqual(
+            self.platform.get_tasks_by_name(
+                "test_project", "sampleA", workflow="owner/proj/wes-alignment/7"
+            ),
+            [task],
+        )
 
     def test_get_tasks_by_name_workflow_no_match(self):
         ''' A task that ran a different workflow is excluded. '''

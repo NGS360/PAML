@@ -693,28 +693,20 @@ class SevenBridgesPlatform(Platform):
 
         return platform_object == input_to_compare
 
-    @staticmethod
-    def _strip_app_revision(app_id):
-        '''
-        Strip a trailing numeric revision from a SevenBridges app id.
-        App ids look like "owner/project/app-name" or "owner/project/app-name/3";
-        dropping the revision lets a task match its workflow across revisions.
-        '''
-        parts = str(app_id).split("/")
-        if len(parts) > 1 and parts[-1].isdigit():
-            parts = parts[:-1]
-        return "/".join(parts)
-
     def _task_matches_workflow(self, task, workflow):
         '''
-        Return True if the task ran the given workflow (app), comparing app ids
-        ignoring revision. If the task's app cannot be determined, do not exclude
-        it (return True) so this never removes a task we cannot positively rule out.
+        Return True if the task ran the given workflow (app). SevenBridges app
+        ids include the revision (e.g. "owner/project/app-name/3"), and the
+        comparison is exact: a task run with a different version of the workflow
+        does NOT match, so an updated workflow re-runs rather than reusing a
+        result from an older version. If the task's app cannot be determined, do
+        not exclude it (return True) so this never removes a task we cannot
+        positively rule out.
         '''
         task_app = getattr(task, "app", None)
         if not task_app:
             return True
-        return self._strip_app_revision(task_app) == self._strip_app_revision(workflow)
+        return str(task_app) == str(workflow)
 
     def get_tasks_by_name(self,
                           project,
