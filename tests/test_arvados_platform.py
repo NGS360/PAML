@@ -1068,6 +1068,67 @@ class TestArvadosPlaform(unittest.TestCase):
             self.platform.get_task_state(task)
         self.assertIn('Unknown task state', str(context.exception))
 
+    def test_container_request_matches_workflow_same_uuid(self):
+        ''' Matches when the recorded source workflow uuid equals the requested one. '''
+        cr = {'properties': {'template_uuid': 'wf-123'}}
+        self.assertTrue(
+            self.platform._container_request_matches_workflow(cr, {'uuid': 'wf-123'})
+        )
+
+    def test_container_request_matches_workflow_different_uuid(self):
+        ''' Excludes when the recorded source workflow uuid differs. '''
+        cr = {'properties': {'template_uuid': 'wf-999'}}
+        self.assertFalse(
+            self.platform._container_request_matches_workflow(cr, {'uuid': 'wf-123'})
+        )
+
+    def test_container_request_matches_workflow_unknown_not_excluded(self):
+        ''' When the source workflow cannot be determined, the task is not excluded. '''
+        self.assertTrue(
+            self.platform._container_request_matches_workflow({}, {'uuid': 'wf-123'})
+        )
+        self.assertTrue(
+            self.platform._container_request_matches_workflow(
+                {'properties': {}}, {'uuid': 'wf-123'}
+            )
+        )
+
+    def test_container_request_matches_workflow_bare_uuid(self):
+        ''' Accepts a bare uuid string as the workflow argument. '''
+        cr = {'properties': {'template_uuid': 'wf-123'}}
+        self.assertTrue(self.platform._container_request_matches_workflow(cr, 'wf-123'))
+        self.assertFalse(self.platform._container_request_matches_workflow(cr, 'wf-xyz'))
+
+    def test_get_tasks_by_name_filters_by_workflow(self):
+        '''
+        Two same-named tasks from provided list ran different workflows; only the
+        one launched from the requested workflow is returned.
+        '''
+        self.platform.api.containers().get.return_value.execute.return_value = {
+            'uuid': 'container-uuid'
+        }
+        wes_task = ArvadosTask(
+            container_request={
+                'uuid': 'cr-wes', 'name': 'sampleA', 'container_uuid': 'c-wes',
+                'properties': {'template_uuid': 'wf-wes'},
+            },
+            container=None,
+        )
+        pdx_task = ArvadosTask(
+            container_request={
+                'uuid': 'cr-pdx', 'name': 'sampleA', 'container_uuid': 'c-pdx',
+                'properties': {'template_uuid': 'wf-pdx'},
+            },
+            container=None,
+        )
+
+        result = self.platform.get_tasks_by_name(
+            project={'uuid': 'proj'}, task_name='sampleA',
+            workflow={'uuid': 'wf-wes'}, tasks=[pdx_task, wes_task],
+        )
+
+        self.assertEqual([t.container_request['uuid'] for t in result], ['cr-wes'])
+
 
 if __name__ == '__main__':
     unittest.main()
