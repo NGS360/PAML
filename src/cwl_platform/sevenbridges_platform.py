@@ -693,6 +693,21 @@ class SevenBridgesPlatform(Platform):
 
         return platform_object == input_to_compare
 
+    def _task_matches_workflow(self, task, workflow):
+        '''
+        Return True if the task ran the given workflow (app). SevenBridges app
+        ids include the revision (e.g. "owner/project/app-name/3"), and the
+        comparison is exact: a task run with a different version of the workflow
+        does NOT match, so an updated workflow re-runs rather than reusing a
+        result from an older version. If the task's app cannot be determined, do
+        not exclude it (return True) so this never removes a task we cannot
+        positively rule out.
+        '''
+        task_app = getattr(task, "app", None)
+        if not task_app:
+            return True
+        return str(task_app) == str(workflow)
+
     def get_tasks_by_name(self,
                           project,
                           task_name:str=None,
@@ -705,6 +720,9 @@ class SevenBridgesPlatform(Platform):
         equivalency (eg for reuse).
         :param project: The project to search
         :param task_name: The name of the process to search for (if None return all tasks)
+        :param workflow: The app/workflow the task must have run to match (if None,
+            match tasks of any workflow). Tasks whose app cannot be determined are
+            not excluded.
         :param inputs_to_compare: Inputs to compare to ensure task equivalency
         :param tasks: List of tasks to search in (if None, query all tasks in project)
         :return: List of tasks
@@ -715,6 +733,11 @@ class SevenBridgesPlatform(Platform):
             tasks = self.api.tasks.query(project=project).all()
 
         for task in tasks:
+            # Only reuse a task that ran the requested workflow. A same-named task
+            # from another pipeline (e.g. a PDX de-mouser's dna-disambiguate) is a
+            # different app and is skipped here.
+            if workflow is not None and not self._task_matches_workflow(task, workflow):
+                continue
             if inputs_to_compare is None:
                 if task_name is None or task.name == task_name:
                     matching_tasks.append(task)
