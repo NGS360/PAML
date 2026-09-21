@@ -166,6 +166,69 @@ class TestArvadosPlaform(unittest.TestCase):
         # Check results
         self.assertIsNone(actual_value)
 
+    @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
+    def test_get_task_output_scalar(self, mock__load_cwl_output):
+        '''
+        Test that get_task_output returns a non-File scalar output (e.g. a float
+        contamination fraction) as-is, instead of raising TypeError on the
+        unguarded "\'location\' in output_field" membership test.
+        '''
+        # Set up test parameters
+        task = ArvadosTask(container_request={"uuid": "uuid", "output_uuid": "output_uuid"},
+                           container={})
+        # Set up supporting mocks
+        mock__load_cwl_output.return_value = {'contamination': 0.2706804383917324}
+        # Test
+        actual_value = self.platform.get_task_output(task, 'contamination')
+        # Check results
+        self.assertEqual(actual_value, 0.2706804383917324)
+
+    @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
+    def test_get_task_output_single_file(self, mock__load_cwl_output):
+        ''' Test that a single File output returns its keep location. '''
+        # Set up test parameters
+        task = ArvadosTask(container_request={"uuid": "uuid", "output_uuid": "output_uuid"},
+                           container={})
+        # Set up supporting mocks
+        mock__load_cwl_output.return_value = {
+            'some_output_field': {'class': 'File', 'location': 'subdir/result.vcf'}
+        }
+        # Test
+        actual_value = self.platform.get_task_output(task, 'some_output_field')
+        # Check results
+        self.assertEqual(actual_value, 'keep:output_uuid/subdir/result.vcf')
+
+    @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
+    def test_get_task_output_list_of_files(self, mock__load_cwl_output):
+        ''' Test that a list of File outputs returns a list of keep locations. '''
+        # Set up test parameters
+        task = ArvadosTask(container_request={"uuid": "uuid", "output_uuid": "output_uuid"},
+                           container={})
+        # Set up supporting mocks
+        mock__load_cwl_output.return_value = {
+            'some_output_field': [
+                {'class': 'File', 'location': 'a.txt'},
+                {'class': 'File', 'location': 'b.txt'},
+            ]
+        }
+        # Test
+        actual_value = self.platform.get_task_output(task, 'some_output_field')
+        # Check results
+        self.assertEqual(actual_value, ['keep:output_uuid/a.txt', 'keep:output_uuid/b.txt'])
+
+    @mock.patch('cwl_platform.arvados_platform.ArvadosPlatform._load_cwl_output')
+    def test_get_task_output_dict_without_location(self, mock__load_cwl_output):
+        ''' Test that a non-File dict output (no "location") returns None. '''
+        # Set up test parameters
+        task = ArvadosTask(container_request={"uuid": "uuid", "output_uuid": "output_uuid"},
+                           container={})
+        # Set up supporting mocks
+        mock__load_cwl_output.return_value = {'some_output_field': {'foo': 'bar'}}
+        # Test
+        actual_value = self.platform.get_task_output(task, 'some_output_field')
+        # Check results
+        self.assertIsNone(actual_value)
+
     @mock.patch("arvados.collection.Collection")
     def test_get_task_output_filename_single_file(self, mock_collection):
         ''' Test get_task_output_filename method with single dictionary output '''
