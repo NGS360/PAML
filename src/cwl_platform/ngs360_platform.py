@@ -75,6 +75,11 @@ class NGS360Platform(Platform):
         "CANCELING": "Cancelled",
     }
 
+    # Maximum page size accepted by the WES ListRuns endpoint. The service
+    # defaults page_size to 10 and caps it at 100, so request the max to keep
+    # the number of round-trips down while paginating.
+    MAX_PAGE_SIZE = 100
+
     def __init__(self, name):
         """
         Initialize WES Platform
@@ -529,6 +534,45 @@ class NGS360Platform(Platform):
                 return False
         return True
 
+    def _iter_runs(self, params):
+        """
+        Yield every run matching the given query params, following the WES
+        ListRuns pagination cursor.
+
+        The WES ListRuns endpoint (GET /runs) defaults page_size to 10 and
+        returns a next_page_token; without paging, callers silently receive at
+        most the newest 10 runs. This helper requests the maximum page_size and
+        follows next_page_token until the service returns an empty token ("")
+        or omits it, so callers always see the complete result set.
+
+        :param params: Query parameters for the request (e.g. {"filters": ...}).
+            The page_size and page_token keys are managed internally and will
+            overwrite any values supplied by the caller.
+        :return: Generator of run dictionaries.
+        """
+        # Copy so we don't mutate the caller's dict, then force the max page size.
+        base_params = dict(params)
+        base_params["page_size"] = self.MAX_PAGE_SIZE
+        base_params.pop("page_token", None)
+
+        page_token = None
+        while True:
+            # Build a fresh dict per request so we never mutate shared state and
+            # each request carries exactly its own page_token.
+            request_params = dict(base_params)
+            if page_token:
+                request_params["page_token"] = page_token
+
+            response = self._make_request("GET", "runs", params=request_params)
+
+            yield from response.get("runs", [])
+
+            # The service returns "" (falsy) for next_page_token when the
+            # listing is exhausted; it may also omit the key entirely.
+            page_token = response.get("next_page_token")
+            if not page_token:
+                break
+
     def get_tasks_by_name(
         self, project, task_name=None, workflow=None, inputs_to_compare=None, tasks=None
     ):
@@ -556,9 +600,8 @@ class NGS360Platform(Platform):
                 "filters": json.dumps(filters)
             }
 
-            response = self._make_request("GET", "runs", params=params)
             matching_tasks = []
-            for run in response.get("runs", []):
+            for run in self._iter_runs(params):
                 task = WESTask(
                     run_id=run.get("run_id"),
                     name=run.get("name", ""),

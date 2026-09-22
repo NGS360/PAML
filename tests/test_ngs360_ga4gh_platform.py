@@ -405,7 +405,10 @@ class TestNGS360Platform(unittest.TestCase):
             headers={'Authorization': 'Bearer test_token'},
             data=None,
             files=None,
-            params={"filters": '{"tags": {"ProjectId": "test_project", "TaskName": "Task 1"}}'},
+            params={
+                "filters": '{"tags": {"ProjectId": "test_project", "TaskName": "Task 1"}}',
+                "page_size": 100,
+            },
             timeout=120
         )
 
@@ -700,6 +703,122 @@ class TestNGS360Platform(unittest.TestCase):
 
         # Verify no tasks matched
         self.assertEqual(len(tasks), 0)
+
+    @staticmethod
+    def _make_runs_page(runs, next_page_token=None):
+        '''
+        Build a mock ListRuns response page.
+
+        :param runs: List of run dicts to return in this page.
+        :param next_page_token: Token for the next page. Omitted from the
+            payload when None to exercise the "key absent" termination path.
+        :return: A MagicMock whose .json() returns the page payload.
+        '''
+        payload = {'runs': runs}
+        if next_page_token is not None:
+            payload['next_page_token'] = next_page_token
+        mock_response = MagicMock()
+        mock_response.content = json.dumps(payload).encode('utf-8')
+        mock_response.json.return_value = payload
+        return mock_response
+
+    @patch('requests.request')
+    def test_get_tasks_by_name_paginates_beyond_first_page(self, mock_request):
+        '''
+        Regression test for #130: more than one page of matching runs must all
+        be returned, not just the first page_size worth.
+        '''
+        # Two full pages of 100 plus a short final page = 250 matching runs,
+        # well beyond the service default page_size of 10.
+        page1 = [
+            {'run_id': f'run{i}', 'name': 'Task 1', 'state': 'COMPLETE'}
+            for i in range(100)
+        ]
+        page2 = [
+            {'run_id': f'run{i}', 'name': 'Task 1', 'state': 'COMPLETE'}
+            for i in range(100, 200)
+        ]
+        page3 = [
+            {'run_id': f'run{i}', 'name': 'Task 1', 'state': 'COMPLETE'}
+            for i in range(200, 250)
+        ]
+        mock_request.side_effect = [
+            self._make_runs_page(page1, next_page_token='token-1'),
+            self._make_runs_page(page2, next_page_token='token-2'),
+            # Final page ends the listing with an empty token.
+            self._make_runs_page(page3, next_page_token=''),
+        ]
+
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+        tasks = self.platform.get_tasks_by_name(project, task_name='Task 1')
+
+        # All 250 runs across all three pages are returned.
+        self.assertEqual(len(tasks), 250)
+        self.assertEqual(tasks[0].run_id, 'run0')
+        self.assertEqual(tasks[-1].run_id, 'run249')
+
+        # Three list calls were made and each requested the max page size.
+        self.assertEqual(mock_request.call_count, 3)
+        first_call = mock_request.call_args_list[0]
+        self.assertEqual(first_call.kwargs['params']['page_size'], 100)
+        self.assertNotIn('page_token', first_call.kwargs['params'])
+        # Subsequent calls carry the token returned by the previous page.
+        self.assertEqual(
+            mock_request.call_args_list[1].kwargs['params']['page_token'], 'token-1'
+        )
+        self.assertEqual(
+            mock_request.call_args_list[2].kwargs['params']['page_token'], 'token-2'
+        )
+
+    @patch('requests.request')
+    def test_get_tasks_by_name_stops_on_empty_next_page_token(self, mock_request):
+        '''
+        Regression test for #130: an empty-string next_page_token terminates
+        pagination after a single request (no extra round-trip).
+        '''
+        runs = [{'run_id': 'run1', 'name': 'Task 1', 'state': 'COMPLETE'}]
+        mock_request.return_value = self._make_runs_page(runs, next_page_token='')
+
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+        tasks = self.platform.get_tasks_by_name(project, task_name='Task 1')
+
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(tasks[0].run_id, 'run1')
+        # Empty token means exhausted: exactly one list call, no follow-up.
+        self.assertEqual(mock_request.call_count, 1)
+
+    @patch('requests.request')
+    def test_get_tasks_by_name_project_wide_paginates(self, mock_request):
+        '''
+        Regression test for #130: a project-wide call (task_name=None) must
+        aggregate across all pages, not cap at the newest page.
+        '''
+        page1 = [
+            {'run_id': f'run{i}', 'name': f'Task {i}', 'state': 'COMPLETE'}
+            for i in range(100)
+        ]
+        page2 = [
+            {'run_id': f'run{i}', 'name': f'Task {i}', 'state': 'RUNNING'}
+            for i in range(100, 120)
+        ]
+        mock_request.side_effect = [
+            self._make_runs_page(page1, next_page_token='next'),
+            self._make_runs_page(page2, next_page_token=''),
+        ]
+
+        project = {'project_id': 'test_project', 'name': 'Test Project'}
+        tasks = self.platform.get_tasks_by_name(project, task_name=None)
+
+        # Every run across both pages is returned for the project-wide query.
+        self.assertEqual(len(tasks), 120)
+        self.assertEqual(mock_request.call_count, 2)
+
+        # task_name=None must not add a TaskName tag to the filters.
+        first_params = mock_request.call_args_list[0].kwargs['params']
+        filters = json.loads(first_params['filters'])
+        self.assertEqual(filters['tags'], {'ProjectId': 'test_project'})
+        self.assertNotIn('TaskName', filters['tags'])
+        self.assertEqual(first_params['page_size'], 100)
 
     @patch('requests.request')
     def test_delete_task(self, mock_request):
