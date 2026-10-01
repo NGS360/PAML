@@ -10,6 +10,7 @@ import re
 import subprocess
 import tempfile
 from typing import List
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import chardet
 
@@ -44,6 +45,27 @@ def find_collection_file_path(keep_uri):
     if len(keep_components) > 1:
         file_path = '/'.join(keep_components[1:])
     return keep_uuid, file_path
+
+# Query parameters that S3 adds when it presigns a URL (SigV2 and SigV4)
+PRESIGNED_URL_PARAMS = {'awsaccesskeyid', 'signature', 'expires', 'x-amz-security-token'}
+
+def _normalize_location(location):
+    '''
+    Drop the S3 presigning parameters from an http(s) location.
+    A presigned URL is signed again every time a project is loaded, so its
+    Expires/Signature change even though it names the same object.
+    Other locations (keep:, s3:, ...) and other query parameters are kept as-is.
+    :param location: File or Directory location
+    :return: The location without its signature
+    '''
+    if not isinstance(location, str) or not location.startswith(('http://', 'https://')):
+        return location
+    parts = urlsplit(location)
+    query = [
+        (key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True)
+        if key.lower() not in PRESIGNED_URL_PARAMS and not key.lower().startswith('x-amz-')
+    ]
+    return urlunsplit(parts._replace(query=urlencode(query)))
 
 class ArvadosTask():
     '''
@@ -970,7 +992,9 @@ class ArvadosPlatform(Platform):
 
     def _compare_inputs(self, task_input, input_to_compare):
         """
-        Compare a task input to an input to compare
+        Compare a task input to an input to compare.
+        File and Directory locations are compared without their presigned-URL
+        signature, so a re-signed URL for the same object still matches.
         :param task_input: The task input to compare
         :param input_to_compare: The input to compare against
         :return: True if the inputs match, False otherwise
@@ -980,13 +1004,15 @@ class ArvadosPlatform(Platform):
             # For File objects, compare the location/path
             if 'class' in input_to_compare and input_to_compare['class'] == 'File':
                 if 'location' in task_input and 'path' in input_to_compare:
-                    return task_input['location'] == input_to_compare['path']
+                    return (_normalize_location(task_input['location']) ==
+                            _normalize_location(input_to_compare['path']))
                 return False
 
             # For Directory objects, compare the location/path and listing if available
             if 'class' in input_to_compare and input_to_compare['class'] == 'Directory':
                 if 'location' in task_input and 'path' in input_to_compare:
-                    if task_input['location'] != input_to_compare['path']:
+                    if (_normalize_location(task_input['location']) !=
+                            _normalize_location(input_to_compare['path'])):
                         return False
 
                     # If listing is available, compare it
