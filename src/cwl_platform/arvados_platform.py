@@ -968,6 +968,76 @@ class ArvadosPlatform(Platform):
 
         return True
 
+    @staticmethod
+    def _looks_like_collection_uuid(value):
+        ''' True if value is an Arvados collection uuid (<cluster>-4zz18-<15>). '''
+        return bool(re.match(r'^[a-z0-9]{5}-4zz18-[a-z0-9]{15}$', value or ''))
+
+    def _pdh_to_collection_uuid(self, pdh):
+        '''
+        Resolve a portable_data_hash to an owning collection uuid, cached.
+        Returns None if the pdh resolves to no (current) collection, eg a stale
+        hash the collection has since moved past.
+        '''
+        if not hasattr(self, '_pdh_uuid_cache'):
+            self._pdh_uuid_cache = {}
+        if pdh in self._pdh_uuid_cache:
+            return self._pdh_uuid_cache[pdh]
+        uuid = None
+        try:
+            resp = self.api.collections().list(
+                filters=[['portable_data_hash', '=', pdh]],
+                select=['uuid'],
+                limit=100,
+            ).execute()
+            items = resp.get('items', [])
+            if items:
+                uuid = items[0]['uuid']
+        except Exception:  # pylint: disable=broad-except
+            uuid = None
+        self._pdh_uuid_cache[pdh] = uuid
+        return uuid
+
+    def _file_identity(self, file_obj):
+        '''
+        Return a stable (collection_uuid, basename) identity for a CWL File
+        object, independent of the collection's portable_data_hash, or None if
+        no stable identity can be derived.
+
+        A File may carry the collection uuid explicitly as
+        'http://arvados.org/cwl#collectionUUID' (as recorded on a task's stored
+        inputs), or only a keep location/path "keep:<pdh-or-uuid>/<relpath>" (as
+        produced by get_file_id for a query input). When only a pdh is present
+        it is resolved to its owning collection uuid; if that fails the pdh is
+        used as-is so two identical pdh paths still compare equal.
+        '''
+        if not isinstance(file_obj, dict):
+            return None
+        uuid = file_obj.get('http://arvados.org/cwl#collectionUUID')
+        basename = file_obj.get('basename')
+        loc = file_obj.get('location') or file_obj.get('path')
+        keep_id = None
+        if loc and loc.startswith('keep:'):
+            rest = loc[len('keep:'):]
+            parts = rest.split('/', 1)
+            keep_id = parts[0]
+            relpath = parts[1] if len(parts) > 1 else ''
+            if basename is None:
+                basename = relpath.rsplit('/', 1)[-1]
+        # Need a filename to identify the file.
+        if not basename:
+            return None
+        if uuid is None:
+            if keep_id is None:
+                return None
+            if self._looks_like_collection_uuid(keep_id):
+                uuid = keep_id
+            else:
+                uuid = self._pdh_to_collection_uuid(keep_id) or keep_id
+        if not uuid:
+            return None
+        return (uuid, basename)
+
     def _compare_inputs(self, task_input, input_to_compare):
         """
         Compare a task input to an input to compare
@@ -977,8 +1047,29 @@ class ArvadosPlatform(Platform):
         """
         # If the inputs are dictionaries, compare them recursively
         if isinstance(task_input, dict) and isinstance(input_to_compare, dict):
-            # For File objects, compare the location/path
+            # For File objects, compare by stable collection identity + basename
+            # rather than the portable-data-hash-pinned keep location.
+            #
+            # A shared input collection (eg a project's "fastq_files" holding
+            # every sample's reads) gets a new portable_data_hash whenever any
+            # file is added to or removed from it. get_file_id() pins inputs as
+            # "keep:<pdh>/<name>", so that churn changes the keep location of
+            # every file in the collection even though each file is byte
+            # identical, which otherwise defeats reuse for every task at once.
+            # It also lets a UUID-referenced input (keep:<uuid>/<name>) match a
+            # task whose stored input location is recorded by pdh. collection
+            # uuid + basename are stable across both. Falls back to the original
+            # strict location/path equality when an identity cannot be derived.
+            #
+            # NOTE: this treats "same collection uuid + same basename" as the
+            # same input, which is correct for files added/removed from a
+            # collection but would wrongly reuse if a file were replaced in
+            # place with different content under the same name.
             if 'class' in input_to_compare and input_to_compare['class'] == 'File':
+                stored_identity = self._file_identity(task_input)
+                query_identity = self._file_identity(input_to_compare)
+                if stored_identity is not None and query_identity is not None:
+                    return stored_identity == query_identity
                 if 'location' in task_input and 'path' in input_to_compare:
                     return task_input['location'] == input_to_compare['path']
                 return False

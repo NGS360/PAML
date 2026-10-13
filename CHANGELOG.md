@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- `ArvadosPlatform` task reuse now compares File inputs by collection UUID plus
+  basename instead of the portable-data-hash-pinned keep location. A shared
+  input collection changes its PDH whenever any file is added or removed, which
+  changed the keep location of every file (even byte-identical ones) and
+  defeated reuse for every task at once; it also prevented a UUID-referenced
+  input from matching a task whose stored input location was recorded by PDH.
+  Falls back to the original strict location/path comparison when a stable
+  identity cannot be derived (NWP-2276).
+
 ## [v0.6.1](https://github.com/NGS360/PAML/releases/tag/v0.6.1) - 2026-09-21
 
 ### Changed

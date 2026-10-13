@@ -876,6 +876,70 @@ class TestArvadosPlaform(unittest.TestCase):
         }
         self.assertFalse(self.platform._compare_inputs(file_missing_location, file1_compare))
 
+    def test_compare_inputs_file_collection_identity(self):
+        ''' A stored input (location pinned by PDH, with collectionUUID) matches a
+        query input that references the same file by collection UUID + basename,
+        even though the PDH in the stored location differs. '''
+        coll = 'xngs1-4zz18-aaaaaaaaaaaaaaa'
+        # stored task input: recorded by arvados-cwl-runner with an old PDH
+        stored = {
+            'class': 'File',
+            'basename': 'reads_1.fq.gz',
+            'http://arvados.org/cwl#collectionUUID': coll,
+            'location': 'keep:0000000000000000000000000000aaaa+111/reads_1.fq.gz',
+        }
+        # query input: samplesheet references by collection UUID
+        query_same = {'class': 'File', 'path': 'keep:%s/reads_1.fq.gz' % coll}
+        self.assertTrue(self.platform._compare_inputs(stored, query_same))
+
+        # different basename in the same collection must not match
+        query_other = {'class': 'File', 'path': 'keep:%s/reads_2.fq.gz' % coll}
+        self.assertFalse(self.platform._compare_inputs(stored, query_other))
+
+        # different collection, same basename must not match
+        query_other_coll = {
+            'class': 'File',
+            'path': 'keep:xngs1-4zz18-bbbbbbbbbbbbbbb/reads_1.fq.gz',
+        }
+        self.assertFalse(self.platform._compare_inputs(stored, query_other_coll))
+
+    def test_compare_inputs_file_pdh_resolved_to_uuid(self):
+        ''' When the query references the file by a (current) PDH, it is resolved
+        to the owning collection UUID so it still matches the stored input. '''
+        coll = 'xngs1-4zz18-aaaaaaaaaaaaaaa'
+        stored = {
+            'class': 'File',
+            'basename': 'reads_1.fq.gz',
+            'http://arvados.org/cwl#collectionUUID': coll,
+            'location': 'keep:0000000000000000000000000000aaaa+111/reads_1.fq.gz',
+        }
+        query_by_pdh = {
+            'class': 'File',
+            'path': 'keep:1111111111111111111111111111bbbb+222/reads_1.fq.gz',
+        }
+        with mock.patch.object(self.platform, '_pdh_to_collection_uuid',
+                               return_value=coll) as resolve:
+            self.assertTrue(self.platform._compare_inputs(stored, query_by_pdh))
+            resolve.assert_called_with('1111111111111111111111111111bbbb+222')
+
+    def test_file_identity(self):
+        ''' _file_identity derives (collection_uuid, basename) from UUID path,
+        explicit collectionUUID, and returns None when unidentifiable. '''
+        coll = 'xngs1-4zz18-aaaaaaaaaaaaaaa'
+        self.assertEqual(
+            self.platform._file_identity(
+                {'class': 'File', 'path': 'keep:%s/reads_1.fq.gz' % coll}),
+            (coll, 'reads_1.fq.gz'))
+        self.assertEqual(
+            self.platform._file_identity(
+                {'class': 'File', 'basename': 'reads_1.fq.gz',
+                 'http://arvados.org/cwl#collectionUUID': coll,
+                 'location': 'keep:0000000000000000000000000000aaaa+111/reads_1.fq.gz'}),
+            (coll, 'reads_1.fq.gz'))
+        # no basename derivable -> None (falls back to strict comparison)
+        self.assertIsNone(self.platform._file_identity({'class': 'File'}))
+        self.assertIsNone(self.platform._file_identity({'class': 'File', 'location': 'keep:file1'}))
+
     def test_compare_inputs_lists(self):
         ''' Test the _compare_inputs helper method with lists '''
         # Test matching simple lists
