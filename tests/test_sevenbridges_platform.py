@@ -10,8 +10,9 @@ from mock import MagicMock
 import sevenbridges
 
 from cwl_platform.sevenbridges_platform import SevenBridgesPlatform
+from test_base_platform import BasePlatformTests
 
-class TestSevenBridgesPlaform(unittest.TestCase):
+class TestSevenBridgesPlaform(BasePlatformTests, unittest.TestCase):
     '''
     Test Class for SevenBridges Platform
     '''
@@ -21,8 +22,54 @@ class TestSevenBridgesPlaform(unittest.TestCase):
         self.platform.api = MagicMock()
 
         logging.basicConfig(level=logging.INFO)
+        self.setup_platform_mocks()
 
         return super().setUp()
+
+    def setup_platform_mocks(self):
+        '''Set up SevenBridges-specific mocks'''
+        # API is already set up in setUp()
+        pass
+
+    def create_mock_task(self, task_id, name, state='Complete', inputs=None, outputs=None):
+        '''Create a SevenBridges-specific mock task'''
+        mock_task = MagicMock(spec=sevenbridges.Task)
+        mock_task.id = task_id
+        mock_task.name = name
+        mock_task.status = state.upper()  # SevenBridges uses uppercase states
+        mock_task.inputs = inputs or {}
+        mock_task.outputs = outputs or {}
+        return mock_task
+
+    def create_mock_file(self, file_id, filename):
+        '''Create a SevenBridges-specific mock file'''
+        mock_file = MagicMock(spec=sevenbridges.File)
+        mock_file.id = file_id
+        mock_file.name = filename
+        mock_file.is_folder.return_value = False
+        return mock_file
+
+    def create_mock_project(self, project_id, name):
+        '''Create a SevenBridges-specific mock project'''
+        mock_project = MagicMock()
+        mock_project.id = project_id
+        mock_project.name = name
+        return mock_project
+
+    def create_platform_file_input(self, file_id):
+        '''Create a SevenBridges-specific file input'''
+        mock_file = MagicMock(spec=sevenbridges.File)
+        mock_file.id = file_id
+        mock_file.is_folder.return_value = False
+        return mock_file
+
+    def get_task_name(self, task):
+        '''Get name from SevenBridges task'''
+        return task.name
+
+    def get_task_id(self, task):
+        '''Get ID from SevenBridges task'''
+        return task.id
 
     def test_add_user_to_project(self):
         ''' Test that we can add a user to a project '''
