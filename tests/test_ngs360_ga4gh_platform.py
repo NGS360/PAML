@@ -751,6 +751,9 @@ class TestNGS360Platform(unittest.TestCase):
         project2 = self.platform.get_project_by_name('Test Project')
         self.assertEqual(project2['name'], 'Test Project')
         self.assertEqual(project2['project_id'], 'test_id')
+        _, kwargs = mock_get.call_args
+        self.assertEqual(kwargs['headers'], {'Authorization': 'Bearer test_token'})
+        self.assertEqual(kwargs['params'], {'query': 'Test Project'})
 
         # Test get_projects (local virtual projects)
         projects = self.platform.get_projects()
@@ -796,6 +799,7 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertIn('files', kwargs)
         self.assertIn('data', kwargs)
         self.assertIn('project_id', 'test_project_id')
+        self.assertEqual(kwargs['headers'], {'Authorization': 'Bearer test_token'})
 
     @patch('requests.post')
     @patch('builtins.open')
@@ -870,6 +874,8 @@ class TestNGS360Platform(unittest.TestCase):
         result = self.platform.get_project_by_id('test_id')
         self.assertEqual(result['project_id'], 'test_id')
         self.assertEqual(result['name'], 'Test Project')
+        _, kwargs = mock_get.call_args
+        self.assertEqual(kwargs['headers'], {'Authorization': 'Bearer test_token'})
 
     @patch('requests.get')
     def test_get_project_by_id_failure(self, mock_get):

@@ -141,7 +141,7 @@ class NGS360Platform(Platform):
         try:
             response = requests.get(
                 f"{self.ngs360_endpoint}/api/v1/auth/me",
-                headers={"Authorization": f"Bearer {self._ngs360_auth_config['token']}"},
+                headers=self._auth_headers(),
                 timeout=30
             )
             response.raise_for_status()
@@ -151,6 +151,17 @@ class NGS360Platform(Platform):
             self.logger.error("Failed to connect to NGS360 API: %s", e)
 
         return self.connected
+
+    def _auth_headers(self):
+        """
+        Build the Authorization header carrying the NGS360 auth token
+
+        :return: Dictionary of HTTP headers
+        """
+        headers = {}
+        if 'token' in self._ngs360_auth_config:
+            headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
+        return headers
 
     def _make_request(self, method, path, **kwargs):
         """
@@ -173,15 +184,11 @@ class NGS360Platform(Platform):
             endpoint = endpoint + "/"
 
         url = urljoin(endpoint, path)
-        headers = {}
-
-        if 'token' in self._ngs360_auth_config:
-            headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
 
         response = requests.request(
             method=method,
             url=url,
-            headers=headers,
+            headers=self._auth_headers(),
             data=kwargs.get('data'),
             files=kwargs.get('files'),
             params=kwargs.get('params'),
@@ -335,6 +342,7 @@ class NGS360Platform(Platform):
         with open(filename, "rb") as f:
             response = requests.post(
                 f"{self.ngs360_endpoint}/api/v1/files/upload",
+                headers=self._auth_headers(),
                 data={
                     "filename": destination_filename or os.path.basename(filename),
                     "project_id": project["project_id"],
@@ -735,7 +743,9 @@ class NGS360Platform(Platform):
         Get a project by its name
         """
         response = requests.get(
-            f"{self.ngs360_endpoint}/api/v1/projects/search?query={project_name}",
+            f"{self.ngs360_endpoint}/api/v1/projects/search",
+            params={"query": project_name},
+            headers=self._auth_headers(),
             timeout=30
         )
         if response.status_code == 200:
@@ -753,6 +763,7 @@ class NGS360Platform(Platform):
         """
         response = requests.get(
             f"{self.ngs360_endpoint}/api/v1/projects/{project_id}",
+            headers=self._auth_headers(),
             timeout=30
         )
         if response.status_code == 200:
@@ -796,13 +807,9 @@ class NGS360Platform(Platform):
 
         :return: Dictionary with user info or None if unavailable
         """
-        headers = {}
-        if 'token' in self._ngs360_auth_config:
-            headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
-
         response = requests.get(
             f"{self.ngs360_endpoint}/api/v1/auth/me",
-            headers=headers,
+            headers=self._auth_headers(),
             timeout=30
         )
         if response.status_code == 200:
