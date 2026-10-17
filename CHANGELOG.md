@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.6.1](https://github.com/NGS360/PAML/releases/tag/v0.6.1) - 2026-09-21
+
+### Changed
+
+- Merge pull request #166 from NGS360/bug-arvados-get-task-output-scalar
+- Merge pull request #167 from NGS360/paml-get-tasks-by-name-filter-by-workflow
+- Merge pull request #164 from NGS360/refactor/release-script-git-helpers
+- Merge pull request #163 from NGS360/docs/license-text
+- Merge pull request #162 from NGS360/fix/release-notes-noise
+
+
 ## [v0.6.0](https://github.com/NGS360/PAML/releases/tag/v0.6.0) - 2026-08-28
 
 ### Added

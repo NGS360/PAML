@@ -781,12 +781,16 @@ class ArvadosPlatform(Platform):
                         )
             return output_files
 
-        if 'location' in output_field:
-            # If the output is a single file, return the file location
-            output_file = cwl_output[output_name]['location']
-            return f"keep:{task.container_request['output_uuid']}/{output_file}"
+        if isinstance(output_field, dict):
+            if 'location' in output_field:
+                # If the output is a single file, return the file location
+                output_file = output_field['location']
+                return f"keep:{task.container_request['output_uuid']}/{output_file}"
+            return None
 
-        return None
+        # Non-File scalar output (e.g. a float contamination fraction) -> return as-is,
+        # matching SevenBridgesPlatform.get_task_output.
+        return output_field
 
     def get_task_outputs(self, task):
         ''' Return a list of output fields of the task '''
