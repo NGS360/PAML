@@ -742,7 +742,7 @@ class SevenBridgesPlatform(Platform):
             tasks = self.api.tasks.query(project=project).all()
 
         for task in tasks:
-            # Only reuse a task that ran the requested workflow. 
+            # Only reuse a task that ran the requested workflow.
             # A same-named task from another pipeline is a different app and should be skipped.
             if workflow and not self._task_matches_workflow(task, workflow):
                 continue
