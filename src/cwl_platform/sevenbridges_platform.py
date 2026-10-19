@@ -719,10 +719,10 @@ class SevenBridgesPlatform(Platform):
 
     def get_tasks_by_name(self,
                           project,
-                          task_name:str=None,
-                          workflow:str=None,
-                          inputs_to_compare:dict=None,
-                          tasks:list=None) -> list: # -> list(sevenbridges.Task)
+                          task_name: str = None,
+                          workflow: str = None,
+                          inputs_to_compare: dict = None,
+                          tasks: list = None) -> list: # -> list(sevenbridges.Task)
         '''
         Get all processes/tasks in a project with a specified name, or all tasks
         if no name is specified. Optionally, compare task inputs to ensure
@@ -742,10 +742,9 @@ class SevenBridgesPlatform(Platform):
             tasks = self.api.tasks.query(project=project).all()
 
         for task in tasks:
-            # Only reuse a task that ran the requested workflow. A same-named task
-            # from another pipeline (e.g. a PDX de-mouser's dna-disambiguate) is a
-            # different app and is skipped here.
-            if workflow is not None and not self._task_matches_workflow(task, workflow):
+            # Only reuse a task that ran the requested workflow. 
+            # A same-named task from another pipeline is a different app and should be skipped.
+            if workflow and not self._task_matches_workflow(task, workflow):
                 continue
             if inputs_to_compare is None:
                 if task_name is None or task.name == task_name:
