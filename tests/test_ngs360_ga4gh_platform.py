@@ -584,10 +584,16 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].name, 'Task 1')
 
-    def test_get_tasks_by_name_with_new_task_added(self):
+    @patch('requests.request')
+    def test_get_tasks_by_name_with_new_task_added(self, mock_request):
         '''
-        Test get_tasks_by_name with a new task that may only have id, not name
+        Test get_tasks_by_name returns an empty list when no task matches the name
+        NOTE: NGS360 platform currently ignores tasks parameter and always queries API
         '''
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'runs': []}
+        mock_request.return_value = mock_response
+
         project = {'project_id': 'test_project', 'name': 'Test Project'}
 
         # Create mock task
@@ -599,6 +605,17 @@ class TestNGS360Platform(unittest.TestCase):
             project=project,
             task_name='Task 2',
             tasks=tasks
+        )
+
+        # Verify the API was queried with the task name filter
+        mock_request.assert_called_once_with(
+            method='GET',
+            url='https://wes.example.com/ga4gh/wes/v1/runs',
+            headers={'Authorization': 'Bearer test_token'},
+            data=None,
+            files=None,
+            params={"filters": '{"tags": {"ProjectId": "test_project", "TaskName": "Task 2"}}'},
+            timeout=120
         )
 
         # Verify empty list returned
@@ -1040,6 +1057,7 @@ class TestNGS360Platform(unittest.TestCase):
         with patch.dict('os.environ', {}, clear=True):
             result = NGS360Platform.detect()
             self.assertFalse(result)
+
 
 if __name__ == '__main__':
     unittest.main()
