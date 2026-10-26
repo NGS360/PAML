@@ -13,6 +13,9 @@ import requests
 
 from .base_platform import Platform
 
+OMICS_ENGINE = "AWSHealthOmics (us-east)"
+PROD_ALIAS = "prod"
+
 
 class WESTask:
     """
@@ -362,13 +365,81 @@ class NGS360Platform(Platform):
         return None
 
     # Task/Workflow methods
+    def _resolve_workflow_version(self, project_id, workflow_id):
+        """
+        Ask NGS360 which version of a workflow this project uses, recording the
+        version the `prod` alias points at if the project has none yet.
+
+        :param project_id: NGS360 project business key, e.g. P-00000000-0001
+        :param workflow_id: NGS360 workflow UUID
+        :return: The resolved record as a dict, including `version`
+        :raises RuntimeError: If NGS360 will not resolve a version
+        """
+        response = requests.post(
+            f"{self.ngs360_endpoint}/api/v1/projects/{project_id}"
+            f"/workflow-versions/{workflow_id}/resolve",
+            json={"engine": OMICS_ENGINE, "alias": PROD_ALIAS},
+            headers=self._auth_headers(),
+            timeout=30
+        )
+        if response.status_code not in (200, 201):
+            # Deliberately fatal. Raising error instead of returning the bare
+            # workflow id, which would leave WES to pick the highest version.
+            try:
+                detail = response.json().get("detail", response.text)
+            except ValueError:
+                detail = response.text
+            self.logger.error(
+                "NGS360 would not resolve a version of workflow %s for project %s: %s",
+                workflow_id, project_id, detail
+            )
+            raise RuntimeError(
+                f"Could not resolve a version of workflow {workflow_id} for "
+                f"project {project_id} on {OMICS_ENGINE}: {detail}"
+            )
+        return response.json()
+
     def copy_workflow(self, src_workflow, destination_project):
         """
-        Copy a workflow from one project to another
+        Return the workflow identifier this project should submit with.
 
-        Note: WES API doesn't have a direct concept of projects, so this returns the workflow
+        Nothing is copied: NGS360 has no per-project copy of a workflow. Instead
+        the project's recorded version is resolved and returned as
+        "<uuid>:<version>", so every run of a project uses the same version even
+        after the `prod` alias moves on.
+
+        An identifier that already carries an alias or version ("<uuid>:prod",
+        "<uuid>:3") is returned untouched, and the project's recorded version is
+        neither read nor written -- a one-off run must not change what the
+        project uses from then on.
+
+        :param src_workflow: NGS360 workflow UUID, optionally ":<alias-or-version>"
+        :param destination_project: The project the workflow will run for
+        :return: The workflow identifier to submit
+        :raises RuntimeError: If NGS360 will not resolve a version
         """
-        return src_workflow
+        if ":" in src_workflow:
+            self.logger.info(
+                "Workflow %s names a version explicitly; using it unchanged",
+                src_workflow
+            )
+            return src_workflow
+
+        project_id = (destination_project or {}).get("project_id")
+        if not project_id:
+            raise RuntimeError(
+                f"A project with a project_id is required to resolve a version of "
+                f"workflow {src_workflow}; got {destination_project!r}"
+            )
+
+        record = self._resolve_workflow_version(project_id, src_workflow)
+        version = record["version"]
+        self.logger.info(
+            "Workflow %s resolved to version %s for project %s (%s)",
+            src_workflow, version, project_id,
+            "newly recorded" if record.get("created") else "already recorded"
+        )
+        return f"{src_workflow}:{version}"
 
     def copy_workflows(self, reference_project, destination_project):
         """

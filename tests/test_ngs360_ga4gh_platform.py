@@ -915,10 +915,6 @@ class TestNGS360Platform(unittest.TestCase):
         '''
         project = {'project_id': 'test_project'}
 
-        # Test copy_workflow
-        result = self.platform.copy_workflow('src_workflow', project)
-        self.assertEqual(result, 'src_workflow')
-
         # Test copy_workflows
         result = self.platform.copy_workflows('ref_project', project)
         self.assertEqual(result, [])
@@ -1043,6 +1039,112 @@ class TestNGS360Platform(unittest.TestCase):
         # Test get_project_users
         result = self.platform.get_project_users(project)
         self.assertEqual(result, [])
+
+    # --- copy_workflow: resolving the version a project uses -----------------
+
+    PROJECT = {'project_id': 'P-00000000-0001'}
+    WORKFLOW_ID = 'b6fd2ade-0000-0000-0000-000000000001'
+    RESOLVE_URL = (
+        'https://ngs360.example.com/api/v1/projects/P-00000000-0001'
+        '/workflow-versions/b6fd2ade-0000-0000-0000-000000000001/resolve'
+    )
+
+    @staticmethod
+    def _resolve_response(status_code=200, **body):
+        '''Build a mock NGS360 resolve response'''
+        response = MagicMock()
+        response.status_code = status_code
+        response.json.return_value = body
+        return response
+
+    @patch('requests.post')
+    def test_copy_workflow_records_version_on_first_use(self, mock_post):
+        '''
+        A bare workflow id resolves to the project's version, and is returned
+        suffixed with it so WES runs that exact version
+        '''
+        mock_post.return_value = self._resolve_response(201, version=2, created=True)
+
+        result = self.platform.copy_workflow(self.WORKFLOW_ID, self.PROJECT)
+
+        self.assertEqual(result, f'{self.WORKFLOW_ID}:2')
+        mock_post.assert_called_once_with(
+            self.RESOLVE_URL,
+            json={'engine': 'AWSHealthOmics (us-east)', 'alias': 'prod'},
+            headers={'Authorization': 'Bearer test_token'},
+            timeout=30
+        )
+
+    @patch('requests.post')
+    def test_copy_workflow_reuses_recorded_version(self, mock_post):
+        '''
+        The recorded version is used even once the alias has moved past it,
+        which is the whole point of recording it
+        '''
+        mock_post.return_value = self._resolve_response(
+            200, version=2, created=False,
+            message='Project already records version 2; returned it instead of alias \'prod\'.'
+        )
+
+        result = self.platform.copy_workflow(self.WORKFLOW_ID, self.PROJECT)
+
+        self.assertEqual(result, f'{self.WORKFLOW_ID}:2')
+
+    @patch('requests.post')
+    def test_copy_workflow_leaves_explicit_versions_alone(self, mock_post):
+        '''
+        An id that already names an alias or version is submitted as given, and
+        the project's recorded version is neither read nor written
+        '''
+        for explicit in (f'{self.WORKFLOW_ID}:3', f'{self.WORKFLOW_ID}:prod'):
+            result = self.platform.copy_workflow(explicit, self.PROJECT)
+            self.assertEqual(result, explicit)
+
+        mock_post.assert_not_called()
+
+    @patch('requests.post')
+    def test_copy_workflow_raises_when_no_version_can_be_resolved(self, mock_post):
+        '''
+        A refusal from NGS360 stops the caller rather than falling back to the
+        bare id, which WES would resolve to the highest version
+        '''
+        for status_code in (404, 422):
+            mock_post.return_value = self._resolve_response(
+                status_code, detail='No deployment on that engine'
+            )
+            with self.assertRaises(RuntimeError) as raised:
+                self.platform.copy_workflow(self.WORKFLOW_ID, self.PROJECT)
+            self.assertIn('No deployment on that engine', str(raised.exception))
+
+    @patch('requests.post')
+    def test_copy_workflow_requires_a_project(self, mock_post):
+        '''
+        Without a project there is nothing to resolve a version for, and the
+        error should say so rather than failing on a missing key
+        '''
+        for no_project in (None, {}, {'name': 'Test Project'}):
+            with self.assertRaises(RuntimeError) as raised:
+                self.platform.copy_workflow(self.WORKFLOW_ID, no_project)
+            self.assertIn('project_id', str(raised.exception))
+
+        mock_post.assert_not_called()
+
+    @patch('requests.request')
+    def test_task_reuse_ignores_the_version_suffix(self, mock_request):
+        '''
+        Tasks are matched on tags, so the change from "<uuid>" to "<uuid>:N"
+        does not stop a rerun reusing completed tasks
+        '''
+        mock_response = MagicMock()
+        mock_response.content = b'{"runs": []}'
+        mock_response.json.return_value = {'runs': []}
+        mock_request.return_value = mock_response
+
+        self.platform.get_tasks_by_name(self.PROJECT, task_name='Sample 1 - alignment')
+
+        _, kwargs = mock_request.call_args
+        filters = json.loads(kwargs['params']['filters'])
+        self.assertNotIn('workflow_url', filters)
 
     def test_detect_method(self):
         '''
