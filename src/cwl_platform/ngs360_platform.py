@@ -439,10 +439,6 @@ class NGS360Platform(Platform):
             src_workflow, version, project_id,
             "newly recorded" if record.get("created") else "already recorded"
         )
-        if record.get("message"):
-            # Set when the recorded version is not what this call asked for,
-            # i.e. the alias has moved since the project first ran.
-            self.logger.info("NGS360: %s", record["message"])
         return f"{src_workflow}:{version}"
 
     def copy_workflows(self, reference_project, destination_project):
