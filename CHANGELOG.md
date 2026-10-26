@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- `NGS360Platform.copy_workflow` now resolves the workflow version the project
+  uses and returns `<uuid>:<version>`, instead of returning the workflow id
+  unchanged. A project therefore keeps running one version of a workflow even
+  after the `prod` alias moves on. An id that already names an alias or version
+  (`<uuid>:3`) is still returned untouched. Requires an NGS360 API server with
+  `/projects/{id}/workflow-versions`. SevenBridges and Arvados are unaffected,
+  and callers need no change.
+
 ## [v0.6.1](https://github.com/NGS360/PAML/releases/tag/v0.6.1) - 2026-09-21
 
 ### Changed
