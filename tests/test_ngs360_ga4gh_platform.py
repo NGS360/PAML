@@ -15,6 +15,7 @@ from cwl_platform.ngs360_platform import NGS360Platform, WESTask
 # shell running the tests would change what those tests exercise.
 LAUNCHER_ENV_VARS = (
     'NGS360_AUTH_TOKEN',
+    'NGS360_AUTH_KEY_ID',
     'WES_RUN_ID',
 )
 
@@ -155,6 +156,74 @@ class TestNGS360Platform(unittest.TestCase):
         )
 
         self.assertFalse(result)
+
+    @patch('atexit.register')
+    @patch('requests.get')
+    @patch('requests.request')
+    def test_connect_registers_auth_key_retirement(self, mock_request, mock_get, mock_register):
+        '''
+        Test a per-launch API key is set to be retired at exit, once
+        '''
+        mock_request.return_value.json.return_value = {}
+        mock_get.return_value.status_code = 200
+
+        platform = NGS360Platform('WES')
+        with hidden_launcher_env():
+            for _ in range(2):
+                platform.connect(
+                    api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+                    ngs360_auth_token='ngs360_key',
+                    ngs360_endpoint='https://ngs360.example.com',
+                    ngs360_auth_key_id='key-123'
+                )
+
+        mock_register.assert_called_once_with(platform.retire_auth_key)
+
+    @patch('atexit.register')
+    @patch('requests.get')
+    @patch('requests.request')
+    def test_connect_without_auth_key_id_registers_nothing(self, mock_request, mock_get, mock_register):
+        '''
+        Test a user's own token is never retired at exit
+        '''
+        mock_request.return_value.json.return_value = {}
+        mock_get.return_value.status_code = 200
+
+        with hidden_launcher_env():
+            NGS360Platform('WES').connect(
+                api_endpoint='https://wes.example.com/ga4gh/wes/v1',
+                ngs360_auth_token='test_token',
+                ngs360_endpoint='https://ngs360.example.com'
+            )
+
+        mock_register.assert_not_called()
+
+    @patch('requests.delete')
+    def test_retire_auth_key(self, mock_delete):
+        '''
+        Test the key retires itself through the API key endpoint
+        '''
+        self.platform._auth_key_id = 'key-123' # pylint: disable=protected-access
+
+        self.assertTrue(self.platform.retire_auth_key())
+
+        args, kwargs = mock_delete.call_args
+        self.assertEqual(args[0], 'https://ngs360.example.com/api/v1/auth/api-keys/key-123')
+        self.assertEqual(kwargs['headers']['Authorization'], 'Bearer test_token')
+        # Retiring twice is a no-op rather than a second call
+        self.assertFalse(self.platform.retire_auth_key())
+        mock_delete.assert_called_once()
+
+    @patch('requests.delete')
+    def test_retire_auth_key_failure_is_not_raised(self, mock_delete):
+        '''
+        Test a failed retirement is logged, not raised, from the exit handler
+        '''
+        self.platform._auth_key_id = 'key-123' # pylint: disable=protected-access
+        mock_delete.side_effect = requests.RequestException("unreachable")
+
+        with self.assertLogs(level='WARNING'):
+            self.assertFalse(self.platform.retire_auth_key())
 
     @patch('requests.request')
     def test_submit_task(self, mock_request):

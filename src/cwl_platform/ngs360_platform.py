@@ -10,12 +10,17 @@ Environment contract, set by whoever starts the launcher container:
     NGS360_API_ENDPOINT NGS360 API base URL (projects, file upload)
     NGS360_AUTH_TOKEN   Bearer token (or ngs360_ API key) of the user the
                         launcher runs as; sent to both WES and the NGS360 API
+    NGS360_AUTH_KEY_ID  Id of that API key, when it was minted for this one
+                        launch. The key is retired when the launcher exits, so
+                        it does not outlive the run; its expiry covers a
+                        launcher that is killed before it can retire it.
     WES_RUN_ID          This launcher's own WES run id, when the launcher is
                         itself running as a WES run (e.g. as an AWS Batch job).
                         Makes get_current_task() work and links every task this
                         launcher submits back to it.
 """
 
+import atexit
 import os
 import json
 import logging
@@ -97,6 +102,7 @@ class NGS360Platform(Platform):
 
         self.ngs360_endpoint = None
         self._ngs360_auth_config = {}
+        self._auth_key_id = None
 
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
@@ -109,6 +115,8 @@ class NGS360Platform(Platform):
         :param kwargs: Connection parameters
             - api_endpoint: WES API endpoint URL
             - ngs360_auth_token: Authentication token for the WES API
+            - ngs360_auth_key_id: Id of the API key in ngs360_auth_token, to be
+              retired when this process exits
         """
         self.connected = False
 
@@ -148,6 +156,16 @@ class NGS360Platform(Platform):
         if not self.ngs360_endpoint:
             raise ValueError("NGS360 API endpoint URL is required")
 
+        # Registered before the /auth/me probe so that a launcher which fails to
+        # connect still retires its key on the way out.
+        auth_key_id = kwargs.get(
+            "ngs360_auth_key_id",
+            os.environ.get("NGS360_AUTH_KEY_ID")
+        )
+        if auth_key_id and not self._auth_key_id:
+            self._auth_key_id = auth_key_id
+            atexit.register(self.retire_auth_key)
+
         # Test connection by getting current user info
         try:
             response = requests.get(
@@ -173,6 +191,32 @@ class NGS360Platform(Platform):
         if 'token' in self._ngs360_auth_config:
             headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
         return headers
+
+    def retire_auth_key(self):
+        """
+        Retire the API key this launcher was given for its run
+
+        Runs at process exit when NGS360_AUTH_KEY_ID is set. The key authenticates
+        its own retirement. Failure is logged, not raised: the key's expiry still
+        bounds it, and an exit handler has no caller to report to.
+
+        :return: True if the key was retired, False otherwise
+        """
+        if not self._auth_key_id:
+            return False
+        try:
+            response = requests.delete(
+                f"{self.ngs360_endpoint}/api/v1/auth/api-keys/{self._auth_key_id}",
+                headers=self._auth_headers(),
+                timeout=30
+            )
+            response.raise_for_status()
+        except requests.RequestException as e:
+            self.logger.warning("Failed to retire API key %s: %s", self._auth_key_id, e)
+            return False
+        self.logger.info("Retired API key %s", self._auth_key_id)
+        self._auth_key_id = None
+        return True
 
     def _make_request(self, method, path, **kwargs):
         """
