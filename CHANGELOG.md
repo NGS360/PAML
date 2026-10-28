@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- NGS360: a launcher running as a WES run (e.g. an AWS Batch job) finds its own run
+  through `WES_RUN_ID`: `get_current_task()` returns it, and `submit_task()` tags each
+  run it submits with `ParentRunId` (PR #132)
+- NGS360: when `NGS360_AUTH_KEY_ID` names the API key in `NGS360_AUTH_TOKEN`, the key is
+  retired when the process exits, so a key minted for one launch does not outlive it
+  (PR #132)
+
+### Fixed
+
+- `PlatformFactory.detect_platform()` no longer logs credential values in the
+  environment dump it writes when no platform is detected (PR #132)
+
 ## [v0.6.1](https://github.com/NGS360/PAML/releases/tag/v0.6.1) - 2026-09-21
 
 ### Changed
