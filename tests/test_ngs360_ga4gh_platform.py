@@ -1046,7 +1046,7 @@ class TestNGS360Platform(unittest.TestCase):
     WORKFLOW_ID = 'b6fd2ade-0000-0000-0000-000000000001'
     RESOLVE_URL = (
         'https://ngs360.example.com/api/v1/projects/P-00000000-0001'
-        '/workflow-versions/b6fd2ade-0000-0000-0000-000000000001/resolve'
+        '/workflow/b6fd2ade-0000-0000-0000-000000000001/resolve'
     )
 
     @staticmethod
@@ -1070,7 +1070,7 @@ class TestNGS360Platform(unittest.TestCase):
         self.assertEqual(result, f'{self.WORKFLOW_ID}:2')
         mock_post.assert_called_once_with(
             self.RESOLVE_URL,
-            json={'engine': 'AWSHealthOmics (us-east)', 'alias': 'prod'},
+            json={'alias': 'prod'},
             headers={'Authorization': 'Bearer test_token'},
             timeout=30
         )
@@ -1110,11 +1110,11 @@ class TestNGS360Platform(unittest.TestCase):
         '''
         for status_code in (404, 422):
             mock_post.return_value = self._resolve_response(
-                status_code, detail='No deployment on that engine'
+                status_code, detail="Alias 'prod' is not set for workflow"
             )
             with self.assertRaises(RuntimeError) as raised:
                 self.platform.copy_workflow(self.WORKFLOW_ID, self.PROJECT)
-            self.assertIn('No deployment on that engine', str(raised.exception))
+            self.assertIn("Alias 'prod' is not set", str(raised.exception))
 
     @patch('requests.post')
     def test_copy_workflow_requires_a_project(self, mock_post):

@@ -13,7 +13,6 @@ import requests
 
 from .base_platform import Platform
 
-OMICS_ENGINE = "AWSHealthOmics (us-east)"
 PROD_ALIAS = "prod"
 
 
@@ -377,8 +376,8 @@ class NGS360Platform(Platform):
         """
         response = requests.post(
             f"{self.ngs360_endpoint}/api/v1/projects/{project_id}"
-            f"/workflow-versions/{workflow_id}/resolve",
-            json={"engine": OMICS_ENGINE, "alias": PROD_ALIAS},
+            f"/workflow/{workflow_id}/resolve",
+            json={"alias": PROD_ALIAS},
             headers=self._auth_headers(),
             timeout=30
         )
@@ -395,7 +394,7 @@ class NGS360Platform(Platform):
             )
             raise RuntimeError(
                 f"Could not resolve a version of workflow {workflow_id} for "
-                f"project {project_id} on {OMICS_ENGINE}: {detail}"
+                f"project {project_id}: {detail}"
             )
         return response.json()
 
