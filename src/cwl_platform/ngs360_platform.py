@@ -364,11 +364,105 @@ class NGS360Platform(Platform):
     # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
         """
-        Copy a workflow from one project to another
+        Return the workflow identifier of the copied workflow in the
+        destination_project.
 
-        Note: WES API doesn't have a direct concept of projects, so this returns the workflow
+        Workflow is being "copied" by creating new records in NGS360
+        ProjectWorkflowVersion table, instead of making actual copies of
+        workflows.
+        First look for workflow record in destination project; if found,
+        return <workflow_id>:<version> from the record; else, get the
+        specified version of src_workflow, write a record into
+        ProjectWorkflowVersion table as copied workflow, and return that.
+        When no suffix is in src_workflow, use prod alias.
+
+        :param src_workflow: NGS360 workflow ID, optionally :<version> or :<alias>
+        :param destination_project: The project the workflow will run for
+        :return: The copied workflow identifier, "<workflow_id>:<version>"
+        :raises RuntimeError: If no version can be determined or recorded
         """
-        return src_workflow
+        requested_version = None
+        requested_alias = None
+        if ":" not in src_workflow:
+            src_workflow_id = src_workflow
+            requested_alias = "prod"
+        elif src_workflow.count(":") == 1:
+            src_workflow_id, suffix = src_workflow.split(":")
+            try:
+                requested_version = int(suffix)
+            except ValueError:
+                requested_alias = suffix
+        else:
+            raise RuntimeError(
+                f"Wrong format of src_workflow {src_workflow!r}, should be either "
+                f"<workflow_id>, <workflow_id>:<version>, or <workflow_id>:<alias>."
+            )
+
+        project_id = (destination_project or {}).get("project_id")
+        if not project_id:
+            raise RuntimeError(
+                f"A project with a project_id is required to record a version of "
+                f"workflow {src_workflow}; got {destination_project!r}"
+            )
+
+        api = f"{self.ngs360_endpoint}/api/v1"
+        headers = self._auth_headers()
+
+        # Look for existing record for {Project, Workflow}
+        recorded = requests.get(
+            f"{api}/projects/{project_id}/workflow",
+            params={"workflow_id": src_workflow_id},
+            headers=headers, timeout=30
+        )
+        if recorded.status_code != 200:
+            raise RuntimeError(
+                f"Could not read the recorded version of workflow {src_workflow_id} "
+                f"for project {project_id}: {recorded.status_code} {recorded.text}"
+            )
+        rows = recorded.json()
+
+        # Found existing record, return the recorded version
+        if rows:
+            version = rows[0]["version"]
+            self.logger.info(
+                "Workflow %s already recorded at version %s for project %s",
+                src_workflow, version, project_id
+            )
+            return f"{src_workflow_id}:{version}"
+
+        # No existing records found; get specified version and write to ProjectWorkflowVersion
+        if requested_alias is not None:
+            aliases = requests.get(
+                f"{api}/workflows/{src_workflow_id}/aliases", headers=headers, timeout=30
+            )
+            if aliases.status_code != 200:
+                raise RuntimeError(
+                    f"Could not read the aliases of workflow {src_workflow_id}: "
+                    f"{aliases.status_code} {aliases.text}"
+                )
+            requested_version = next(
+                (a["version"] for a in aliases.json() if a["alias"] == requested_alias), None
+            )
+            if requested_version is None:
+                raise RuntimeError(
+                    f"Alias '{requested_alias}' is not set for workflow {src_workflow_id}, "
+                    f"so there is no version to record for project {project_id}."
+                )
+
+        written = requests.put(
+            f"{api}/projects/{project_id}/workflow/{src_workflow_id}",
+            json={"version": requested_version}, headers=headers, timeout=30
+        )
+        if written.status_code != 200:
+            raise RuntimeError(
+                f"Could not record version {requested_version} of workflow {src_workflow_id} "
+                f"for project {project_id}: {written.status_code} {written.text}"
+            )
+        self.logger.info(
+            "Workflow %s recorded at version %s for project %s",
+            src_workflow, requested_version, project_id
+        )
+        return f"{src_workflow_id}:{requested_version}"
 
     def copy_workflows(self, reference_project, destination_project):
         """

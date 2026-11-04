@@ -915,10 +915,6 @@ class TestNGS360Platform(unittest.TestCase):
         '''
         project = {'project_id': 'test_project'}
 
-        # Test copy_workflow
-        result = self.platform.copy_workflow('src_workflow', project)
-        self.assertEqual(result, 'src_workflow')
-
         # Test copy_workflows
         result = self.platform.copy_workflows('ref_project', project)
         self.assertEqual(result, [])
@@ -1043,6 +1039,148 @@ class TestNGS360Platform(unittest.TestCase):
         # Test get_project_users
         result = self.platform.get_project_users(project)
         self.assertEqual(result, [])
+
+    # --- copy_workflow: the version a project uses ---------------------------
+
+    PROJECT = {'project_id': 'P-00000000-0001'}
+    WORKFLOW_ID = 'b6fd2ade-0000-0000-0000-000000000001'
+    API = 'https://ngs360.example.com/api/v1'
+    RECORD_URL = f'{API}/projects/P-00000000-0001/workflow'
+    ALIASES_URL = f'{API}/workflows/b6fd2ade-0000-0000-0000-000000000001/aliases'
+    PIN_URL = f'{API}/projects/P-00000000-0001/workflow/b6fd2ade-0000-0000-0000-000000000001'
+    HEADERS = {'Authorization': 'Bearer test_token'}
+
+    @staticmethod
+    def _json(body, status_code=200):
+        '''Build a mock NGS360 JSON response'''
+        response = MagicMock()
+        response.status_code = status_code
+        response.json.return_value = body
+        response.text = str(body)
+        return response
+
+    def _gets(self, recorded, aliases=None):
+        '''
+        A requests.get side effect answering the two reads copy_workflow can
+        make: the project's recorded version, then the workflow's aliases.
+        Raises on any other URL so an unexpected call fails loudly.
+        '''
+        def side_effect(url, **_kwargs):
+            if url == self.RECORD_URL:
+                return self._json(recorded)
+            if url == self.ALIASES_URL:
+                return self._json([] if aliases is None else aliases)
+            raise AssertionError(f'unexpected GET {url}')
+        return side_effect
+
+    @patch('requests.put')
+    @patch('requests.get')
+    def test_copy_workflow_records_what_the_suffix_names(self, mock_get, mock_put):
+        '''
+        With nothing recorded, a bare id records the version prod points at, a
+        numeric suffix is recorded as given, and a named alias is resolved
+        first. The identifier returned carries the version so WES runs that
+        exact one.
+        '''
+        aliases = [{'alias': 'prod', 'version': 2}, {'alias': 'staging', 'version': 4}]
+        for asked, expected in ((self.WORKFLOW_ID, 2),
+                                (f'{self.WORKFLOW_ID}:3', 3),
+                                (f'{self.WORKFLOW_ID}:staging', 4)):
+            with self.subTest(asked):
+                mock_get.side_effect = self._gets(recorded=[], aliases=aliases)
+                mock_put.return_value = self._json({'version': expected})
+
+                result = self.platform.copy_workflow(asked, self.PROJECT)
+
+                self.assertEqual(result, f'{self.WORKFLOW_ID}:{expected}')
+                # The version is sent as a number, and the listing is filtered
+                # to one workflow -- a project records a version per workflow.
+                mock_put.assert_called_with(
+                    self.PIN_URL,
+                    json={'version': expected},
+                    headers=self.HEADERS,
+                    timeout=30,
+                )
+                mock_get.assert_any_call(
+                    self.RECORD_URL,
+                    params={'workflow_id': self.WORKFLOW_ID},
+                    headers=self.HEADERS,
+                    timeout=30,
+                )
+
+    @patch('requests.put')
+    @patch('requests.get')
+    def test_copy_workflow_reuses_the_record(self, mock_get, mock_put):
+        '''
+        An existing record always wins -- after prod has moved past it, and
+        whatever a suffix asks for. That is the whole point of recording a
+        version, and nothing is written.
+        '''
+        for asked in (self.WORKFLOW_ID,
+                      f'{self.WORKFLOW_ID}:5',
+                      f'{self.WORKFLOW_ID}:staging'):
+            with self.subTest(asked):
+                mock_get.side_effect = self._gets(
+                    recorded=[{'version': 2}], aliases=[{'alias': 'prod', 'version': 5}]
+                )
+
+                result = self.platform.copy_workflow(asked, self.PROJECT)
+
+                self.assertEqual(result, f'{self.WORKFLOW_ID}:2')
+        mock_put.assert_not_called()
+
+    @patch('requests.put')
+    @patch('requests.get')
+    def test_copy_workflow_raises_rather_than_guessing(self, mock_get, mock_put):
+        '''
+        Every way this can fail stops the caller. Falling back to the bare id
+        would leave WES to pick the highest version -- the drift recording a
+        version exists to prevent -- and returning a version the write never
+        stored would leave the next run free to record a different one.
+        '''
+        prod = [{'alias': 'prod', 'version': 2}]
+        error = self._json({'detail': 'nope'}, 403)
+        cases = (
+            # no prod alias to record from
+            ("Alias 'prod' is not set", self.WORKFLOW_ID,
+             self._gets(recorded=[], aliases=[]), None),
+            # the write failed
+            ('Could not record version 2', self.WORKFLOW_ID,
+             self._gets(recorded=[], aliases=prod), error),
+            # a read failed: an error body would otherwise be indexed as a list
+            ('Could not read the recorded version', self.WORKFLOW_ID,
+             lambda url, **_kw: error, None),
+            # shapes that are not understood, refused before any call
+            ('Wrong format of src_workflow', f'{self.WORKFLOW_ID}:prod:3', None, None),
+            ('project_id', self.WORKFLOW_ID, None, None),
+        )
+        for expected, asked, get_side_effect, put_return in cases:
+            with self.subTest(expected):
+                mock_get.side_effect = get_side_effect
+                mock_put.return_value = put_return
+                project = self.PROJECT if expected != 'project_id' else {}
+
+                with self.assertRaises(RuntimeError) as raised:
+                    self.platform.copy_workflow(asked, project)
+
+                self.assertIn(expected, str(raised.exception))
+
+    @patch('requests.request')
+    def test_task_reuse_ignores_the_version_suffix(self, mock_request):
+        '''
+        Tasks are matched on tags, so the change from "<uuid>" to "<uuid>:N"
+        does not stop a rerun reusing completed tasks
+        '''
+        mock_response = MagicMock()
+        mock_response.content = b'{"runs": []}'
+        mock_response.json.return_value = {'runs': []}
+        mock_request.return_value = mock_response
+
+        self.platform.get_tasks_by_name(self.PROJECT, task_name='Sample 1 - alignment')
+
+        _, kwargs = mock_request.call_args
+        filters = json.loads(kwargs['params']['filters'])
+        self.assertNotIn('workflow_url', filters)
 
     def test_detect_method(self):
         '''
