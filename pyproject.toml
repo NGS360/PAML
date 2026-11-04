@@ -55,7 +55,7 @@ dev = [
     # which can turn 'make lint' red with no code change, so an upgrade should
     # arrive as a reviewed Dependabot pull request rather than an incidental
     # re-resolve.
-    "pylint>=3.3.7,<4.1",
+    "pylint>=3.3.7,<4.2",
 ]
 
 [project.urls]

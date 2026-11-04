@@ -876,6 +876,88 @@ class TestArvadosPlaform(unittest.TestCase):
         }
         self.assertFalse(self.platform._compare_inputs(file_missing_location, file1_compare))
 
+    def test_compare_inputs_presigned_urls(self):
+        ''' Test that a re-signed URL for the same object still matches '''
+        base = 'https://bucket.s3.amazonaws.com/run1/sample_R1.fastq.gz'
+        task_file = {
+            'class': 'File',
+            'location': f'{base}?AWSAccessKeyId=AKIAEXAMPLE&Signature=abc%3D&Expires=1700000000'
+        }
+        # Same object, signed again later (SigV2)
+        resigned = {
+            'class': 'File',
+            'path': f'{base}?AWSAccessKeyId=AKIAEXAMPLE&Signature=xyz%3D&Expires=1800000000'
+        }
+        self.assertTrue(self.platform._compare_inputs(task_file, resigned))
+
+        # Same object, SigV4 signature
+        sigv4 = {
+            'class': 'File',
+            'path': (f'{base}?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE'
+                     '&X-Amz-Date=20260101T000000Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host'
+                     '&X-Amz-Signature=deadbeef')
+        }
+        self.assertTrue(self.platform._compare_inputs(task_file, sigv4))
+
+        # Unsigned URL for the same object
+        self.assertTrue(self.platform._compare_inputs(task_file, {'class': 'File', 'path': base}))
+
+        # Different object, same signature
+        other_key = {
+            'class': 'File',
+            'path': ('https://bucket.s3.amazonaws.com/run1/sample_R2.fastq.gz'
+                     '?AWSAccessKeyId=AKIAEXAMPLE&Signature=abc%3D&Expires=1700000000')
+        }
+        self.assertFalse(self.platform._compare_inputs(task_file, other_key))
+        other_bucket = {
+            'class': 'File',
+            'path': ('https://other.s3.amazonaws.com/run1/sample_R1.fastq.gz'
+                     '?AWSAccessKeyId=AKIAEXAMPLE&Signature=abc%3D&Expires=1700000000')
+        }
+        self.assertFalse(self.platform._compare_inputs(task_file, other_bucket))
+
+        # A query parameter that is not part of the signature still counts
+        version_1 = {'class': 'File', 'location': f'{base}?versionId=1&Signature=abc'}
+        version_2 = {'class': 'File', 'path': f'{base}?versionId=2&Signature=xyz'}
+        self.assertFalse(self.platform._compare_inputs(version_1, version_2))
+        self.assertTrue(self.platform._compare_inputs(
+            version_1, {'class': 'File', 'path': f'{base}?versionId=1&Signature=xyz'}))
+
+        # Keep locations are compared exactly
+        self.assertFalse(self.platform._compare_inputs(
+            {'class': 'File', 'location': 'keep:abc+1/file?Signature=1'},
+            {'class': 'File', 'path': 'keep:abc+1/file?Signature=2'}))
+
+    def test_compare_inputs_presigned_directory(self):
+        ''' Test that Directory locations are compared without their signature '''
+        base = 'https://bucket.s3.amazonaws.com/run1/'
+        task_dir = {'class': 'Directory', 'location': f'{base}?Signature=abc&Expires=1', 'listing': []}
+        self.assertTrue(self.platform._compare_inputs(
+            task_dir, {'class': 'Directory', 'path': f'{base}?Signature=xyz&Expires=2', 'listing': []}))
+        self.assertFalse(self.platform._compare_inputs(
+            task_dir, {'class': 'Directory', 'path': 'https://bucket.s3.amazonaws.com/run2/?Signature=abc',
+                       'listing': []}))
+
+    def test_inputs_match_presigned_file_list(self):
+        ''' Test that a reloaded project with re-signed FASTQ URLs matches the completed task '''
+        def signed(name, signature):
+            return (f'https://bucket.s3.amazonaws.com/run1/{name}'
+                    f'?AWSAccessKeyId=AKIAEXAMPLE&Signature={signature}&Expires=1700000000')
+        task_inputs = {
+            'sample_id': 'S1',
+            'input_fastq_1': [{'class': 'File', 'location': signed('S1_L001_R1.fastq.gz', 'a')},
+                              {'class': 'File', 'location': signed('S1_L002_R1.fastq.gz', 'b')}],
+        }
+        query = {
+            'sample_id': 'S1',
+            'input_fastq_1': [{'class': 'File', 'path': signed('S1_L001_R1.fastq.gz', 'c')},
+                              {'class': 'File', 'path': signed('S1_L002_R1.fastq.gz', 'd')}],
+        }
+        self.assertTrue(self.platform._inputs_match(task_inputs, query, 'task-uuid'))
+
+        query['input_fastq_1'][1]['path'] = signed('S1_L003_R1.fastq.gz', 'd')
+        self.assertFalse(self.platform._inputs_match(task_inputs, query, 'task-uuid'))
+
     def test_compare_inputs_lists(self):
         ''' Test the _compare_inputs helper method with lists '''
         # Test matching simple lists
