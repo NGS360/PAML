@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- `NGS360Platform.get_tasks_by_name` now paginates the WES `GET /runs` listing,
+  requesting the maximum `page_size` and following `next_page_token` until it is
+  empty. Previously it read only the first page and silently returned at most 10
+  runs, causing missed matches and incomplete project-wide rollups (#130)
+
 ## [v0.6.1](https://github.com/NGS360/PAML/releases/tag/v0.6.1) - 2026-09-21
 
 ### Changed
