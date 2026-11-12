@@ -38,11 +38,11 @@ class PlatformFactory():
             if creator.detect():
                 return platform
 
-        # If we can't detect the platform,
-        # print out environment variables and raise an error
-        logging.info("Environment Variables:")
-        for name, value in os.environ.items():
-            logging.info("%s: %s", name, value)
+        # If we can't detect the platform, log which environment variables
+        # are set to help diagnose it, and raise an error. Names only: values
+        # routinely hold credentials and must not reach the logs.
+        logging.debug("Unable to detect platform. Environment variables set: %s",
+                      ", ".join(sorted(os.environ)))
 
         raise ValueError("Unable to detect platform")
 
