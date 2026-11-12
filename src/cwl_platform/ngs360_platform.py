@@ -364,22 +364,12 @@ class NGS360Platform(Platform):
     # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
         """
-        Return the workflow identifier of the copied workflow in the
-        destination_project.
+        Copy a workflow from one project to another, if a workflow with the same name
+        does not already exist in the destination project.
 
-        Workflow is being "copied" by creating new records in NGS360
-        ProjectWorkflowVersion table, instead of making actual copies of
-        workflows.
-        First look for workflow record in destination project; if found,
-        return <workflow_id>:<version> from the record; else, get the
-        specified version of src_workflow, write a record into
-        ProjectWorkflowVersion table as copied workflow, and return that.
-        When no suffix is in src_workflow, use prod alias.
-
-        :param src_workflow: NGS360 workflow ID, optionally :<version> or :<alias>
-        :param destination_project: The project the workflow will run for
-        :return: The copied workflow identifier, "<workflow_id>:<version>"
-        :raises RuntimeError: If no version can be determined or recorded
+        :param src_workflow: The workflow to copy
+        :param destination_project: The project to copy the workflow to
+        :return: The workflow that was copied or exists in the destination project
         """
         requested_version = None
         requested_alias = None
