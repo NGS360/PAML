@@ -841,6 +841,47 @@ class TestNGS360Platform(unittest.TestCase):
         # Verify result
         self.assertIsNone(result)
 
+    @patch('requests.post')
+    @patch('builtins.open')
+    def test_upload_file_default_dest_folder(self, mock_open, mock_post):
+        '''
+        upload_file with no dest_folder uploads to the project root instead of
+        raising AttributeError (regression test)
+        '''
+        mock_open.return_value.__enter__.return_value = MagicMock()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {'id': 'test_file_id'}
+        mock_post.return_value = mock_response
+
+        project = {'project_id': 'test_project_id'}
+        result = self.platform.upload_file('test_file.txt', project)
+
+        self.assertEqual(result, 'ngs360://test_file_id')
+        mock_post.assert_called_once()
+        _, kwargs = mock_post.call_args
+        self.assertIsNone(kwargs['data']['relative_path'])
+
+    @patch('requests.post')
+    @patch('builtins.open')
+    def test_upload_file_strips_leading_slash(self, mock_open, mock_post):
+        '''
+        A leading slash on dest_folder is removed before upload
+        '''
+        mock_open.return_value.__enter__.return_value = MagicMock()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {'id': 'test_file_id'}
+        mock_post.return_value = mock_response
+
+        project = {'project_id': 'test_project_id'}
+        self.platform.upload_file('test_file.txt', project, dest_folder='/data/run1')
+
+        _, kwargs = mock_post.call_args
+        self.assertEqual(kwargs['data']['relative_path'], 'data/run1')
+
     @patch('requests.get')
     def test_download_file_url(self, mock_get):
         '''
