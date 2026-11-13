@@ -371,88 +371,70 @@ class NGS360Platform(Platform):
         :param destination_project: The project to copy the workflow to
         :return: The workflow that was copied or exists in the destination project
         """
-        requested_version = None
-        requested_alias = None
-        if ":" not in src_workflow:
-            src_workflow_id = src_workflow
-            requested_alias = "prod"
-        elif src_workflow.count(":") == 1:
-            src_workflow_id, suffix = src_workflow.split(":")
-            try:
-                requested_version = int(suffix)
-            except ValueError:
-                requested_alias = suffix
-        else:
-            raise RuntimeError(
-                f"Wrong format of src_workflow {src_workflow!r}, should be either "
-                f"<workflow_id>, <workflow_id>:<version>, or <workflow_id>:<alias>."
-            )
+        project_id = destination_project.get("project_id")
 
-        project_id = (destination_project or {}).get("project_id")
-        if not project_id:
-            raise RuntimeError(
-                f"A project with a project_id is required to record a version of "
-                f"workflow {src_workflow}; got {destination_project!r}"
-            )
-
+        # TODO: Use _make_request
         api = f"{self.ngs360_endpoint}/api/v1"
         headers = self._auth_headers()
 
-        # Look for existing record for {Project, Workflow}
-        recorded = requests.get(
+        # Look for existing workflow in the project
+        # Get the workflow from the project corresponding to the src_workflow identifier, which could be
+        # workflow -> [return a list consisting of a single workflow]
+        # workflow:tag -> [return a list consisting of a single workflow (ignoring the tag)]
+        # Regardless, the API strips off the tag and looks up the workflow in the project
+        # The response is always a single workflow version the project
+        # because we are using a filter on params
+        response = requests.get(
             f"{api}/projects/{project_id}/workflow",
-            params={"workflow_id": src_workflow_id},
+            params={"workflow_id": src_workflow},
             headers=headers, timeout=30
         )
-        if recorded.status_code != 200:
+        if response.status_code != 200:
             raise RuntimeError(
-                f"Could not read the recorded version of workflow {src_workflow_id} "
-                f"for project {project_id}: {recorded.status_code} {recorded.text}"
+                "Failed to fetch project workflows: "
+                f"{response.status_code} {response.text}"
             )
-        rows = recorded.json()
+        workflows = response.json()
 
-        # Found existing record, return the recorded version
-        if rows:
-            version = rows[0]["version"]
+        # We found an existing workflow in the project.  Use the existing workflow
+        if workflows:
+            if len(workflows) != 1:
+                raise RuntimeError(
+                    "Expected a single workflow returned, %s", workflows
+                )
+            workflow_id = workflows[0]["id"]
+            version = workflows[0]["version"]
             self.logger.info(
-                "Workflow %s already recorded at version %s for project %s",
-                src_workflow, version, project_id
+                "Returning existing workflow in project, %s:%s",
+                workflow_id, version
             )
-            return f"{src_workflow_id}:{version}"
+            return f"{workflow_id}:{version}"
 
-        # No existing records found; get specified version and write to ProjectWorkflowVersion
-        if requested_alias is not None:
-            aliases = requests.get(
-                f"{api}/workflows/{src_workflow_id}/aliases", headers=headers, timeout=30
-            )
-            if aliases.status_code != 200:
-                raise RuntimeError(
-                    f"Could not read the aliases of workflow {src_workflow_id}: "
-                    f"{aliases.status_code} {aliases.text}"
-                )
-            requested_version = next(
-                (a["version"] for a in aliases.json() if a["alias"] == requested_alias), None
-            )
-            if requested_version is None:
-                raise RuntimeError(
-                    f"Alias '{requested_alias}' is not set for workflow {src_workflow_id}, "
-                    f"so there is no version to record for project {project_id}."
-                )
+        # No existing workflow found; copy the src_workflow to the destination project
+        # src_workflow is:
+        # id[:tag] where tag is a version/alias, where tag is optional
 
-        written = requests.put(
-            f"{api}/projects/{project_id}/workflow/{src_workflow_id}",
-            json={"version": requested_version}, headers=headers, timeout=30
+        # Copy the requested_version to the project
+        response = requests.put(
+            f"{api}/projects/{project_id}/workflow",
+            params={"workflow_id": src_workflow},
+            headers=headers, timeout=30
         )
-        if written.status_code != 200:
+        if response.status_code != 200:
             raise RuntimeError(
-                f"Could not record version {requested_version} of workflow {src_workflow_id} "
-                f"for project {project_id}: {written.status_code} {written.text}"
+                f"Could not copy workflow {src_workflow} "
+                f"to project {project_id}: "
+                f"{response.status_code} {response.text}"
             )
+        workflow = response.json()
+        workflow_id = workflow["id"]
+        version = workflow["version"]
+
         self.logger.info(
-            "Workflow %s recorded at version %s for project %s",
-            src_workflow, requested_version, project_id
+            "Workflow %s:%s copied to project %s",
+            workflow_id, version, project_id
         )
-        return f"{src_workflow_id}:{requested_version}"
+        return f"{workflow_id}:{version}"
 
     def copy_workflows(self, reference_project, destination_project):
         """
