@@ -402,7 +402,7 @@ class NGS360Platform(Platform):
                 raise RuntimeError(
                     "Expected a single workflow returned, %s", workflows
                 )
-            workflow_id = workflows[0]["id"]
+            workflow_id = workflows[0]["workflow_id"]
             version = workflows[0]["version"]
             self.logger.info(
                 "Returning existing workflow in project, %s:%s",
