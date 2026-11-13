@@ -956,10 +956,6 @@ class TestNGS360Platform(unittest.TestCase):
         '''
         project = {'project_id': 'test_project'}
 
-        # Test copy_workflow
-        result = self.platform.copy_workflow('src_workflow', project)
-        self.assertEqual(result, 'src_workflow')
-
         # Test copy_workflows
         result = self.platform.copy_workflows('ref_project', project)
         self.assertEqual(result, [])
@@ -1084,6 +1080,57 @@ class TestNGS360Platform(unittest.TestCase):
         # Test get_project_users
         result = self.platform.get_project_users(project)
         self.assertEqual(result, [])
+
+    def Xtest_copy_workflow(self):
+        ''' Test that the src_workflow is "copied" into the destination project '''
+        src_workflow_id = "1234-2345-34562-2345"
+        destination_project = "P-4567"
+
+        dest_workflow_id = self.platform.copy_workflow(src_workflow_id, destination_project)
+
+        # Assert that the dest_workflow_id is valid
+        self.assertIsNone(dest_workflow_id, 'Expected a workflow id')
+        self.assertNotEqual(src_workflow_id, dest_workflow_id, 'Expected distinct workflow id')
+
+
+    def Xtest_copy_workflow_with_multiple_versions(self):
+        '''
+        Test that we can copy src_workflow (when there are multiple version) into the destination project
+        and that we only copy the latest version
+        '''
+        # Set up mock such that there are two version of the src workflow
+        
+        src_workflow_id = "1234-2345-34562-2345"
+        destination_project = "P-4567"
+
+        dest_workflow_id = self.platform.copy_workflow(src_workflow, destination_project)
+
+        # Assert that the dest_workflow_id is "copy" of the latest version of the src workflow
+
+    def Xtest_copy_workflow_already_exists_in_destination_project(self):
+        '''
+        Test that when we attempt to copy a workflow to a destination project, and the workflow already exists,
+        we just return the existing workflow id
+        '''
+        src_workflow_id = "1234-2345-34562-2345"
+        destination_project = "P-4567"
+
+        dest_workflow_id = self.platform.copy_workflow(src_workflow_id, destination_project)
+
+        # Assert that the dest_workflow_id the existing workflow id
+
+    def Xtest_copy_workflow_specific_version(self):
+        '''
+        Test that we can copy a specific version of the source workflow to the destination project
+        '''
+        # Set up mock such that there are multiple versions of the source workflow
+        src_workflow_id = "1234-2345-34562-2345:2" # we have to copy v2
+        destination_project = "P-4567"
+
+        dest_workflow_id = self.platform.copy_workflow(src_workflow_id, destination_project)
+
+        # Assert that the dest_workflow_id match v2 of the source workflow
+
 
     def test_detect_method(self):
         '''

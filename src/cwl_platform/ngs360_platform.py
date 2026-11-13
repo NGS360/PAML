@@ -364,11 +364,77 @@ class NGS360Platform(Platform):
     # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
         """
-        Copy a workflow from one project to another
+        Copy a workflow from one project to another, if a workflow with the same name
+        does not already exist in the destination project.
 
-        Note: WES API doesn't have a direct concept of projects, so this returns the workflow
+        :param src_workflow: The workflow to copy
+        :param destination_project: The project to copy the workflow to
+        :return: The workflow that was copied or exists in the destination project
         """
-        return src_workflow
+        project_id = destination_project.get("project_id")
+
+        # TODO: Use _make_request
+        api = f"{self.ngs360_endpoint}/api/v1"
+        headers = self._auth_headers()
+
+        # Look for existing workflow in the project
+        # Get the workflow from the project corresponding to the src_workflow identifier, which could be
+        # workflow -> [return a list consisting of a single workflow]
+        # workflow:tag -> [return a list consisting of a single workflow (ignoring the tag)]
+        # Regardless, the API strips off the tag and looks up the workflow in the project
+        # The response is always a single workflow version the project
+        # because we are using a filter on params
+        response = requests.get(
+            f"{api}/projects/{project_id}/workflow",
+            params={"workflow_id": src_workflow},
+            headers=headers, timeout=30
+        )
+        if response.status_code != 200:
+            raise RuntimeError(
+                "Failed to fetch project workflows: "
+                f"{response.status_code} {response.text}"
+            )
+        workflows = response.json()
+
+        # We found an existing workflow in the project.  Use the existing workflow
+        if workflows:
+            if len(workflows) != 1:
+                raise RuntimeError(
+                    "Expected a single workflow returned, %s", workflows
+                )
+            workflow_id = workflows[0]["workflow_id"]
+            version = workflows[0]["version"]
+            self.logger.info(
+                "Returning existing workflow in project, %s:%s",
+                workflow_id, version
+            )
+            return f"{workflow_id}:{version}"
+
+        # No existing workflow found; copy the src_workflow to the destination project
+        # src_workflow is:
+        # id[:tag] where tag is a version/alias, where tag is optional
+
+        # Copy the requested_version to the project
+        response = requests.put(
+            f"{api}/projects/{project_id}/workflow",
+            params={"workflow_id": src_workflow},
+            headers=headers, timeout=30
+        )
+        if response.status_code != 200:
+            raise RuntimeError(
+                f"Could not copy workflow {src_workflow} "
+                f"to project {project_id}: "
+                f"{response.status_code} {response.text}"
+            )
+        workflow = response.json()
+        workflow_id = workflow["id"]
+        version = workflow["version"]
+
+        self.logger.info(
+            "Workflow %s:%s copied to project %s",
+            workflow_id, version, project_id
+        )
+        return f"{workflow_id}:{version}"
 
     def copy_workflows(self, reference_project, destination_project):
         """
