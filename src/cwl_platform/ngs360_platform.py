@@ -400,7 +400,7 @@ class NGS360Platform(Platform):
         if workflows:
             if len(workflows) != 1:
                 raise RuntimeError(
-                    "Expected a single workflow returned, %s", workflows
+                    f"Expected a single workflow returned, {workflows}"
                 )
             workflow_id = workflows[0]["workflow_id"]
             version = workflows[0]["version"]
