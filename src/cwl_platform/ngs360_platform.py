@@ -416,8 +416,7 @@ class NGS360Platform(Platform):
 
         # Copy the requested_version to the project
         response = requests.put(
-            f"{api}/projects/{project_id}/workflow",
-            params={"workflow_id": src_workflow},
+            f"{api}/projects/{project_id}/workflow/{src_workflow}",
             headers=headers, timeout=30
         )
         if response.status_code != 200:
@@ -427,7 +426,7 @@ class NGS360Platform(Platform):
                 f"{response.status_code} {response.text}"
             )
         workflow = response.json()
-        workflow_id = workflow["id"]
+        workflow_id = workflow["workflow_id"]
         version = workflow["version"]
 
         self.logger.info(
