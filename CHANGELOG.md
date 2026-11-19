@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- NGS360: a launcher running as a WES run (e.g. an AWS Batch job) finds its own run
+  through `WES_RUN_ID`: `get_current_task()` returns it, and `submit_task()` tags each
+  run it submits with `ParentRunId` (PR #132)
+- NGS360: when `NGS360_AUTH_KEY_ID` names the API key in `NGS360_AUTH_TOKEN`, the key is
+  retired when the process exits, so a key minted for one launch does not outlive it
+  (PR #132)
+
+### Changed
+
+- `NGS360Platform.copy_workflow` now returns `<uuid>:<version>` instead of the
+  workflow id unchanged, so a project keeps running one version of a workflow
+  even after the `prod` alias moves on.
+
+  An existing record always wins. A suffix (`<uuid>:3`, `<uuid>:prod`) decides
+  only which version gets recorded on the first copy, and is ignored after
+  that, so `<uuid>:5` against a project already recording version 2 returns
+  version 2. This matches SevenBridges and Arvados, which return an app already
+  present in the destination project without consulting the source.
+
+
 ## [v0.6.1](https://github.com/NGS360/PAML/releases/tag/v0.6.1) - 2026-09-21
 
 ### Changed
