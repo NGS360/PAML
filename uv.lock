@@ -688,7 +688,7 @@ requires-dist = [
     { name = "arvados-python-client", specifier = ">=3.2.1,<3.3.0" },
     { name = "chardet", specifier = ">=5.2.0,<8.0" },
     { name = "sevenbridges-python", specifier = ">=2.11.2,<3.0" },
-    { name = "smart-open", specifier = ">=7.1.0,<9.0" },
+    { name = "smart-open", specifier = ">=7.1.0,<10.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -1349,14 +1349,14 @@ wheels = [
 
 [[package]]
 name = "smart-open"
-version = "8.0.3"
+version = "9.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/51/5f/4c6d2be8dc4737d209f583a9c61e40c7b90d86313308e1d82e79a1b857b4/smart_open-8.0.3.tar.gz", hash = "sha256:398eb1d6af1e887ccd30347af540793235369bd6602dc42f72c44f939ae9c80f", size = 61941, upload-time = "2026-10-12T20:21:50.154Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/b9/64f33524ac42fc079f7b6cb471ed15415acf80e5fc4ca02f0821b754d93d/smart_open-9.0.4.tar.gz", hash = "sha256:b14abc01a8a778225fcacaf26e2021ff67c04a5d6810433c42b621200ec42ea6", size = 65241, upload-time = "2026-11-14T11:32:58.272Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d1/79/60e14c5a19f39ebcf4fecd8ae8b0b01418ff5839bd7e66cf02b019d31826/smart_open-8.0.3-py3-none-any.whl", hash = "sha256:c3f67795b1a2bdb62dd9aca9ba4d4018e8f11e4188700b3246ea5ae049f65887", size = 73451, upload-time = "2026-10-12T20:21:48.353Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/af/62ef87f267e9f5aeed76392d3d25d5a1a36893743e67fb727b61fff6994b/smart_open-9.0.4-py3-none-any.whl", hash = "sha256:a0194ca29b392127c0cfc51183e0d9492ca129be91169250996c307ef293d80c", size = 76143, upload-time = "2026-11-14T11:32:56.777Z" },
 ]
 
 [[package]]
