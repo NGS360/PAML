@@ -1198,19 +1198,23 @@ class TestNGS360Platform(unittest.TestCase):
     @patch('requests.get')
     def test_copy_workflow_with_multiple_versions(self, mock_get, mock_put):
         '''
-        Test that we can copy src_workflow (when there are multiple version) into the destination project
-        and that we only copy the latest version
+        Test that we can copy src_workflow (when there are multiple versions)
+        into the destination project and that we only copy the latest version
         '''
         # Set up mock such that there are two version of the src workflow
         # Versions 1, 2 and 3 exist; src_workflow is untagged, so the API copies v3
         src_workflow_id = "1234-2345-34562-2345"
         destination_project = {'project_id': 'P-4567'}
 
+        # Mock there are no workflows in the dest project
         mock_get.return_value = self._workflow_response(200, [])
+
+        # Mock that we copy v3 of the workflow
         mock_put.return_value = self._workflow_response(
             200, {'workflow_id': self.WORKFLOW_ID, 'version': 3}
         )
 
+        # Test
         dest_workflow_id = self.platform.copy_workflow(src_workflow_id, destination_project)
 
         # Assert that the dest_workflow_id is "copy" of the latest version of the src workflow
@@ -1223,8 +1227,8 @@ class TestNGS360Platform(unittest.TestCase):
     @patch('requests.get')
     def test_copy_workflow_already_exists_in_destination_project(self, mock_get, mock_put):
         '''
-        Test that when we attempt to copy a workflow to a destination project, and the workflow already exists,
-        we just return the existing workflow id
+        Test that when we attempt to copy a workflow to a destination project,
+        and the workflow already exists, we just return the existing workflow id
         '''
         src_workflow_id = "1234-2345-34562-2345:prod"
         destination_project = {'project_id': 'P-4567'}
@@ -1246,10 +1250,11 @@ class TestNGS360Platform(unittest.TestCase):
     @patch('requests.get')
     def test_copy_workflow_specific_version(self, mock_get, mock_put):
         '''
-        Test that we can copy a specific version of the source workflow to the destination project
+        Test that we can copy a specific version of the source workflow
+        to the destination project
         '''
         # Set up mock such that there are multiple versions of the source workflow
-        src_workflow_id = "1234-2345-34562-2345:2" # we have to copy v2
+        src_workflow_id = "1234-2345-34562-2345:2"  # we have to copy v2
         destination_project = {'project_id': 'P-4567'}
 
         # No existing record in the destination project
