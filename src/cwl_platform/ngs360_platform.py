@@ -336,7 +336,7 @@ class NGS360Platform(Platform):
         :return: ID of uploaded file.
         """
 
-        if dest_folder.startswith('/'):
+        if dest_folder and dest_folder.startswith('/'):
             dest_folder = dest_folder[1:]
 
         with open(filename, "rb") as f:
