@@ -426,69 +426,58 @@ class NGS360Platform(Platform):
         :param destination_project: The project to copy the workflow to
         :return: The workflow that was copied or exists in the destination project
         """
-        project_id = destination_project.get("project_id")
-
         # TODO: Use _make_request
         api = f"{self.ngs360_endpoint}/api/v1"
         headers = self._auth_headers()
+        project_id = destination_project.get("project_id")
 
-        # Look for existing workflow in the project
-        # Get the workflow from the project corresponding to the src_workflow identifier, which could be
-        # workflow -> [return a list consisting of a single workflow]
-        # workflow:tag -> [return a list consisting of a single workflow (ignoring the tag)]
-        # Regardless, the API strips off the tag and looks up the workflow in the project
-        # The response is always a single workflow version the project
-        # because we are using a filter on params
-        response = requests.get(
+        # Look up the name of the workflow
+        def get_workflow(workflow_id) -> dict | None:
+            response = requests.get(
+                f"{api}/workflows/{workflow_id}",
+                headers=headers, timeout=30
+            )
+            if response.status_code != 200:
+                return None
+            workflow = response.json()
+            return workflow
+
+        workflow = get_workflow(src_workflow)
+        if not workflow:
+            return None
+        wf_name = workflow['name']
+
+        # Get the existing (if any) workflow in the destination project
+        # with the same name as the reference workflow
+        def get_project_workflow(project_id, wf_name) -> dict | None:
+            response = requests.get(
+                f"{api}/projects/{project_id}/workflow",
+                params={"name": wf_name},
+                headers=headers, timeout=30
+            )
+            if response.status_code != 200:
+                return None
+            workflow = response.json()
+            return workflow
+
+        project_workflow = get_project_workflow(
+            project_id,
+            wf_name
+        )
+        if project_workflow:
+            return project_workflow
+
+        # If there is no workflow in the project with the same name
+        # as the reference workflow, copy the workflow into the project.
+        response = requests.post(
             f"{api}/projects/{project_id}/workflow",
-            params={"workflow_id": src_workflow},
+            params={"src_workflow": src_workflow},
             headers=headers, timeout=30
         )
         if response.status_code != 200:
-            raise RuntimeError(
-                "Failed to fetch project workflows: "
-                f"{response.status_code} {response.text}"
-            )
-        workflows = response.json()
-
-        # We found an existing workflow in the project.  Use the existing workflow
-        if workflows:
-            if len(workflows) != 1:
-                raise RuntimeError(
-                    f"Expected a single workflow returned, {workflows}"
-                )
-            workflow_id = workflows[0]["workflow_id"]
-            version = workflows[0]["version"]
-            self.logger.info(
-                "Returning existing workflow in project, %s:%s",
-                workflow_id, version
-            )
-            return f"{workflow_id}:{version}"
-
-        # No existing workflow found; copy the src_workflow to the destination project
-        # src_workflow is:
-        # id[:tag] where tag is a version/alias, where tag is optional
-
-        # Copy the requested_version to the project
-        response = requests.put(
-            f"{api}/projects/{project_id}/workflow/{src_workflow}",
-            headers=headers, timeout=30
-        )
-        if response.status_code != 200:
-            raise RuntimeError(
-                f"Could not copy workflow {src_workflow} "
-                f"to project {project_id}: "
-                f"{response.status_code} {response.text}"
-            )
+            return None
         workflow = response.json()
-        workflow_id = workflow["workflow_id"]
-        version = workflow["version"]
-
-        self.logger.info(
-            "Workflow %s:%s copied to project %s",
-            workflow_id, version, project_id
-        )
-        return f"{workflow_id}:{version}"
+        return workflow
 
     def copy_workflows(self, reference_project, destination_project):
         """
