@@ -3,8 +3,24 @@ NGS360 / GA4GH WES Platform class
 
 This module implements the Platform abstract base class using the GA4GH
 Workflow Execution Service (WES) API.
+
+Environment contract, set by whoever starts the launcher container:
+
+    WES_API_ENDPOINT    WES API base URL, including the /ga4gh/wes/v1 prefix
+    NGS360_API_ENDPOINT NGS360 API base URL (projects, file upload)
+    NGS360_AUTH_TOKEN   Bearer token (or ngs360_ API key) of the user the
+                        launcher runs as; sent to both WES and the NGS360 API
+    NGS360_AUTH_KEY_ID  Id of that API key, when it was minted for this one
+                        launch. The key is retired when the launcher exits, so
+                        it does not outlive the run; its expiry covers a
+                        launcher that is killed before it can retire it.
+    WES_RUN_ID          This launcher's own WES run id, when the launcher is
+                        itself running as a WES run (e.g. as an AWS Batch job).
+                        Makes get_current_task() work and links every task this
+                        launcher submits back to it.
 """
 
+import atexit
 import os
 import json
 import logging
@@ -86,6 +102,7 @@ class NGS360Platform(Platform):
 
         self.ngs360_endpoint = None
         self._ngs360_auth_config = {}
+        self._auth_key_id = None
 
         self.projects = {}  # Map project names to project objects
         self.workflows = {}  # Map workflow names to workflow objects
@@ -98,6 +115,8 @@ class NGS360Platform(Platform):
         :param kwargs: Connection parameters
             - api_endpoint: WES API endpoint URL
             - ngs360_auth_token: Authentication token for the WES API
+            - ngs360_auth_key_id: Id of the API key in ngs360_auth_token, to be
+              retired when this process exits
         """
         self.connected = False
 
@@ -137,6 +156,16 @@ class NGS360Platform(Platform):
         if not self.ngs360_endpoint:
             raise ValueError("NGS360 API endpoint URL is required")
 
+        # Registered before the /auth/me probe so that a launcher which fails to
+        # connect still retires its key on the way out.
+        auth_key_id = kwargs.get(
+            "ngs360_auth_key_id",
+            os.environ.get("NGS360_AUTH_KEY_ID")
+        )
+        if auth_key_id and not self._auth_key_id:
+            self._auth_key_id = auth_key_id
+            atexit.register(self.retire_auth_key)
+
         # Test connection by getting current user info
         try:
             response = requests.get(
@@ -162,6 +191,32 @@ class NGS360Platform(Platform):
         if 'token' in self._ngs360_auth_config:
             headers["Authorization"] = f"Bearer {self._ngs360_auth_config['token']}"
         return headers
+
+    def retire_auth_key(self):
+        """
+        Retire the API key this launcher was given for its run
+
+        Runs at process exit when NGS360_AUTH_KEY_ID is set. The key authenticates
+        its own retirement. Failure is logged, not raised: the key's expiry still
+        bounds it, and an exit handler has no caller to report to.
+
+        :return: True if the key was retired, False otherwise
+        """
+        if not self._auth_key_id:
+            return False
+        try:
+            response = requests.delete(
+                f"{self.ngs360_endpoint}/api/v1/auth/api-keys/{self._auth_key_id}",
+                headers=self._auth_headers(),
+                timeout=30
+            )
+            response.raise_for_status()
+        except requests.RequestException as e:
+            self.logger.warning("Failed to retire API key %s: %s", self._auth_key_id, e)
+            return False
+        self.logger.info("Retired API key %s", self._auth_key_id)
+        self._auth_key_id = None
+        return True
 
     def _make_request(self, method, path, **kwargs):
         """
@@ -364,11 +419,65 @@ class NGS360Platform(Platform):
     # Task/Workflow methods
     def copy_workflow(self, src_workflow, destination_project):
         """
-        Copy a workflow from one project to another
+        Copy a workflow from one project to another, if a workflow with the same name
+        does not already exist in the destination project.
 
-        Note: WES API doesn't have a direct concept of projects, so this returns the workflow
+        :param src_workflow: The workflow to copy
+        :param destination_project: The project to copy the workflow to
+        :return: The workflow that was copied or exists in the destination project
         """
-        return src_workflow
+        # TODO: Use _make_request
+        api = f"{self.ngs360_endpoint}/api/v1"
+        headers = self._auth_headers()
+        project_id = destination_project.get("project_id")
+
+        # Look up the name of the workflow
+        def get_workflow_by_id(workflow_id) -> dict | None:
+            response = requests.get(
+                f"{api}/workflows/{workflow_id}",
+                headers=headers, timeout=30
+            )
+            if response.status_code != 200:
+                return None
+            workflow = response.json()
+            return workflow
+
+        workflow = get_workflow_by_id(src_workflow)
+        if not workflow:
+            return None
+        wf_name = workflow['name']
+
+        # Get the existing (if any) workflow in the destination project
+        # with the same name as the reference workflow
+        def get_project_workflows(project_id, wf_name) -> dict | None:
+            response = requests.get(
+                f"{api}/projects/{project_id}/workflows",
+                params={"name": wf_name},
+                headers=headers, timeout=30
+            )
+            if response.status_code != 200:
+                return None
+            workflow = response.json()
+            return workflow
+
+        project_workflows = get_project_workflows(
+            project_id,
+            wf_name
+        )
+        if project_workflows:
+            # Return the first and only one
+            return project_workflows[0]
+
+        # If there is no workflow in the project with the same name
+        # as the reference workflow, copy the workflow into the project.
+        response = requests.post(
+            f"{api}/projects/{project_id}/workflows/copy",
+            params={"src_workflow_id": src_workflow},
+            headers=headers, timeout=30
+        )
+        if response.status_code != 201:
+            return None
+        return response.json()
 
     def copy_workflows(self, reference_project, destination_project):
         """
@@ -407,9 +516,36 @@ class NGS360Platform(Platform):
         """
         Get the current task
 
-        Note: WES API doesn't have a concept of current task, so this returns None
+        A launcher that is itself a WES run -- e.g. one running as an AWS Batch
+        job -- is told its own run id through WES_RUN_ID, the same way the
+        SevenBridges platform uses TASK_ID. Its own run record is where the
+        launcher reads back the inputs it was started with.
+
+        Unlike SevenBridges, detecting this platform does not mean running as
+        one of its tasks: WES_API_ENDPOINT is just as set for a launcher started
+        from a laptop or as a plain Batch job. So no WES_RUN_ID means there is
+        no current task, not an error.
+
+        :return: WESTask object for this launcher's own run, or None if the
+            launcher is not running as a WES run
         """
-        return None
+        run_id = os.environ.get("WES_RUN_ID")
+        if not run_id:
+            return None
+        self.logger.info("WES_RUN_ID: %s", run_id)
+
+        response = self._make_request("GET", f"runs/{run_id}")
+        request = response.get("request") or {}
+
+        return WESTask(
+            run_id=run_id,
+            name=response.get("name") or "",
+            state=self.STATE_MAP.get(response.get("state", "UNKNOWN"), "Unknown"),
+            # workflow_params are what the launcher was submitted with, which is
+            # what get_task_input reads back.
+            inputs=request.get("workflow_params") or {},
+            outputs=response.get("outputs") or {},
+        )
 
     def get_task_cost(self, task):
         """
@@ -654,16 +790,25 @@ class NGS360Platform(Platform):
         else:
             files = None
 
+        tags = {
+            "ProjectId": project["project_id"],
+            "TaskName": name,
+        }
+        # When this launcher is itself a WES run, link what it submits back to it.
+        # WES promotes ParentRunId into an indexed column, which is what lets it
+        # roll up launcher progress without the launcher reporting its own status,
+        # and what lets a restarted launcher find work it already submitted.
+        launcher_run_id = os.environ.get("WES_RUN_ID")
+        if launcher_run_id:
+            tags["ParentRunId"] = launcher_run_id
+
         # Prepare the request data
         data = {
             "workflow_params": json.dumps(parameters),
             "workflow_type": workflow_type,
             "workflow_type_version": workflow_type_version,
             "workflow_url": workflow_url,
-            "tags": json.dumps({
-                "ProjectId": project["project_id"],
-                "TaskName": name,
-            }),
+            "tags": json.dumps(tags),
             "workflow_engine_parameters": json.dumps(
                 workflow_engine_parameters
             ),
