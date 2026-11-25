@@ -432,7 +432,7 @@ class NGS360Platform(Platform):
         project_id = destination_project.get("project_id")
 
         # Look up the name of the workflow
-        def get_workflow(workflow_id) -> dict | None:
+        def get_workflow_by_id(workflow_id) -> dict | None:
             response = requests.get(
                 f"{api}/workflows/{workflow_id}",
                 headers=headers, timeout=30
@@ -442,16 +442,16 @@ class NGS360Platform(Platform):
             workflow = response.json()
             return workflow
 
-        workflow = get_workflow(src_workflow)
+        workflow = get_workflow_by_id(src_workflow)
         if not workflow:
             return None
         wf_name = workflow['name']
 
         # Get the existing (if any) workflow in the destination project
         # with the same name as the reference workflow
-        def get_project_workflow(project_id, wf_name) -> dict | None:
+        def get_project_workflows(project_id, wf_name) -> dict | None:
             response = requests.get(
-                f"{api}/projects/{project_id}/workflow",
+                f"{api}/projects/{project_id}/workflows",
                 params={"name": wf_name},
                 headers=headers, timeout=30
             )
@@ -460,21 +460,22 @@ class NGS360Platform(Platform):
             workflow = response.json()
             return workflow
 
-        project_workflow = get_project_workflow(
+        project_workflows = get_project_workflows(
             project_id,
             wf_name
         )
-        if project_workflow:
-            return project_workflow
+        if project_workflows:
+            # Return the first and only one
+            return project_workflows[0]
 
         # If there is no workflow in the project with the same name
         # as the reference workflow, copy the workflow into the project.
         response = requests.post(
-            f"{api}/projects/{project_id}/workflow",
-            params={"src_workflow": src_workflow},
+            f"{api}/projects/{project_id}/workflows/copy",
+            params={"src_workflow_id": src_workflow},
             headers=headers, timeout=30
         )
-        if response.status_code != 200:
+        if response.status_code != 201:
             return None
         workflow = response.json()
         return workflow
