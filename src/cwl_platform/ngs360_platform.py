@@ -477,8 +477,7 @@ class NGS360Platform(Platform):
         )
         if response.status_code != 201:
             return None
-        workflow = response.json()
-        return workflow
+        return response.json()
 
     def copy_workflows(self, reference_project, destination_project):
         """
